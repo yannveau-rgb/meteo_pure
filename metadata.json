@@ -1,0 +1,6 @@
+{
+  "name": "Météo Pure",
+  "description": "Une superbe application météo épurée et interactive avec recherche de communes de France, météo en temps réel, prévisions heure par heure, pluie dans l'heure et vigilance.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

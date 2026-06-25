@@ -1,0 +1,446 @@
+@import "tailwindcss";
+
+/* 3D Liquid and Frosted Glassmorphism Styles for Météo Pure */
+
+@layer base {
+  body {
+    background: linear-gradient(135deg, #0a1128 0%, #102a43 40%, #1e3a8a 75%, #020617 100%);
+    min-height: 100vh;
+    overflow-x: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "SF Pro", Helvetica, Arial, sans-serif;
+  }
+}
+
+/* Custom gorgeous liquid flowing background overlay */
+.liquid-wave-top {
+  position: absolute;
+  top: 0;
+  right: -20px;
+  width: 280px;
+  height: 380px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.15) 60%, rgba(255, 255, 255, 0) 100%);
+  border-radius: 0 0 100px 180px / 0 0 120px 140px;
+  filter: blur(0.5px);
+  border-left: 2px solid rgba(255, 255, 255, 0.55);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 
+    inset -10px -20px 30px rgba(255, 255, 255, 0.2),
+    inset 10px 10px 25px rgba(255, 255, 255, 0.4),
+    0 15px 35px rgba(120, 160, 255, 0.15);
+  pointer-events: none;
+  z-index: 5;
+  transform: rotate(-5deg);
+}
+
+.liquid-wave-top::after {
+  content: '';
+  position: absolute;
+  bottom: 20px;
+  left: 45%;
+  width: 9px;
+  height: 25px;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 5px;
+  filter: blur(1px);
+  box-shadow: 0 5px 8px rgba(147, 197, 253, 0.3);
+}
+
+/* Drips dripping down the main container */
+.liquid-drip-lone {
+  position: absolute;
+  top: 360px;
+  right: 110px;
+  width: 4px;
+  height: 18px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.liquid-drip-lone::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: -1px;
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Premium 3D Liquid/Glass Gel sphere definitions */
+.orb-3d-green {
+  background: radial-gradient(circle at 35% 30%, #a7f3d0 8%, #10b981 35%, #047857 70%, #064e3b 100%);
+  box-shadow: 
+    inset -4px -4px 10px rgba(0, 0, 0, 0.4),
+    inset 4px 4px 8px rgba(255, 255, 255, 0.85),
+    0 4px 14px rgba(16, 185, 129, 0.45);
+  border-radius: 50%;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.orb-3d-green::after {
+  content: '';
+  position: absolute;
+  top: 12%;
+  left: 20%;
+  width: 32%;
+  height: 18%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0));
+  border-radius: 50%;
+  transform: rotate(-15deg);
+}
+
+.orb-3d-yellow {
+  background: radial-gradient(circle at 35% 30%, #fef08a 8%, #eab308 35%, #a16207 70%, #713f12 100%);
+  box-shadow: 
+    inset -4px -4px 10px rgba(0, 0, 0, 0.4),
+    inset 4px 4px 8px rgba(255, 255, 255, 0.85),
+    0 4px 14px rgba(234, 179, 8, 0.45);
+  border-radius: 50%;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.orb-3d-yellow::after {
+  content: '';
+  position: absolute;
+  top: 12%;
+  left: 20%;
+  width: 32%;
+  height: 18%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0));
+  border-radius: 50%;
+  transform: rotate(-15deg);
+}
+
+.orb-3d-orange {
+  background: radial-gradient(circle at 35% 30%, #ffedd5 8%, #f97316 35%, #c2410c 70%, #7c2d12 100%);
+  box-shadow: 
+    inset -4px -4px 10px rgba(0, 0, 0, 0.4),
+    inset 4px 4px 8px rgba(255, 255, 255, 0.85),
+    0 4px 14px rgba(249, 115, 22, 0.45);
+  border-radius: 50%;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.orb-3d-orange::after {
+  content: '';
+  position: absolute;
+  top: 12%;
+  left: 20%;
+  width: 32%;
+  height: 18%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0));
+  border-radius: 50%;
+  transform: rotate(-15deg);
+}
+
+.orb-3d-red {
+  background: radial-gradient(circle at 35% 30%, #ffe4e6 8%, #f43f5e 35%, #be123c 70%, #4c0519 100%);
+  box-shadow: 
+    inset -4px -4px 10px rgba(0, 0, 0, 0.4),
+    inset 4px 4px 8px rgba(255, 255, 255, 0.85),
+    0 4px 14px rgba(244, 63, 94, 0.45);
+  border-radius: 50%;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.orb-3d-red::after {
+  content: '';
+  position: absolute;
+  top: 12%;
+  left: 20%;
+  width: 32%;
+  height: 18%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0));
+  border-radius: 50%;
+  transform: rotate(-15deg);
+}
+
+/* 3D Glass Tubes / Cylinders for rain progress chart */
+.rain-glass-tube {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 
+    inset -4px -4px 10px rgba(255, 255, 255, 0.1),
+    inset 4px 4px 10px rgba(0, 0, 0, 0.05),
+    0 4px 10px rgba(147, 197, 253, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.rain-liquid-fill {
+  background: linear-gradient(to top, #0284c7 0%, #38bdf8 80%, #7dd3fc 100%);
+  box-shadow: 
+    inset -3px 0 6px rgba(0, 0, 0, 0.2),
+    inset 3px 0 6px rgba(255, 255, 255, 0.4),
+    0 0 10px rgba(56, 189, 248, 0.4);
+  border-radius: 12px 12px 0 0;
+  position: relative;
+}
+
+/* Glass slider bar styles */
+.slider-track-glass {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.slider-handle-mercury {
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(circle at 35% 35%, #ffffff 20%, #cbd5e1 60%, #64748b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 
+    0 0 0 4px rgba(255, 255, 255, 0.25),
+    0 3px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 50%;
+}
+
+/* Super premium frosting classes */
+.glass-premium {
+  background: linear-gradient(135deg, rgba(8, 20, 52, 0.55) 0%, rgba(255, 255, 255, 0.12) 100%);
+  backdrop-filter: blur(40px) saturate(170%);
+  -webkit-backdrop-filter: blur(40px) saturate(170%);
+  border: 1.5px solid rgba(255, 255, 255, 0.32);
+  box-shadow: 
+    0 18px 40px rgba(0, 0, 0, 0.4),
+    inset 0 12px 24px rgba(255, 255, 255, 0.18),
+    inset 0 -12px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Hide scrollbar completely */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Premium Standard Lucide Weather Icon Color Consistency */
+
+/* 1. Global / Single Colors targeting */
+.lucide-sun {
+  color: #fbbf24 !important; /* Yellow-amber */
+  fill: rgba(251, 191, 36, 0.15) !important;
+}
+
+.lucide-moon {
+  color: #a5b4fc !important; /* Soft indigo moonlight */
+  fill: rgba(165, 180, 252, 0.1) !important;
+}
+
+.lucide-cloud {
+  stroke: #94a3b8 !important; /* Elegant gray clouds */
+  fill: rgba(148, 163, 184, 0.1) !important;
+}
+
+/* 2. Multi-part coloring for Cloud + Sun */
+.lucide-cloud-sun circle,
+.lucide-cloud-sun path:not(:last-child) {
+  stroke: #fbbf24 !important; /* Yellow sun */
+}
+.lucide-cloud-sun path:last-child {
+  stroke: #94a3b8 !important; /* Gray cloud overlapping */
+  fill: rgba(148, 163, 184, 0.1) !important;
+}
+
+/* 3. Multi-part coloring for Cloud + Moon */
+.lucide-cloud-moon path:not(:last-child) {
+  stroke: #a5b4fc !important; /* Indigo moon */
+}
+.lucide-cloud-moon path:last-child {
+  stroke: #94a3b8 !important; /* Gray cloud overlapping */
+  fill: rgba(148, 163, 184, 0.1) !important;
+}
+
+/* 4. Multi-part coloring for Cloud + Rain */
+.lucide-cloud-rain path:first-of-type {
+  stroke: #94a3b8 !important; /* Gray cloud */
+  fill: rgba(148, 163, 184, 0.1) !important;
+}
+.lucide-cloud-rain path:not(:first-of-type) {
+  stroke: #38bdf8 !important; /* Sky blue raindrops */
+}
+
+/* 5. Cloud + Drizzle */
+.lucide-cloud-drizzle path:first-of-type {
+  stroke: #94a3b8 !important; /* Gray cloud */
+  fill: rgba(148, 163, 184, 0.1) !important;
+}
+.lucide-cloud-drizzle path:not(:first-of-type),
+.lucide-cloud-drizzle line {
+  stroke: #7dd3fc !important; /* Light blue drizzle lines */
+}
+
+/* 6. Cloud + Snow */
+.lucide-cloud-snow path:first-of-type {
+  stroke: #94a3b8 !important; /* Gray cloud */
+  fill: rgba(148, 163, 184, 0.1) !important;
+}
+.lucide-cloud-snow path:not(:first-of-type),
+.lucide-cloud-snow line,
+.lucide-cloud-snow path[d^="M8"],
+.lucide-cloud-snow path[d^="M12"],
+.lucide-cloud-snow path[d^="M16"] {
+  stroke: #a5f3fc !important; /* Cyan snow stars */
+}
+
+/* 7. Cloud + Lightning (Storm) */
+.lucide-cloud-lightning {
+  color: #fbbf24 !important; /* Force global fallback yellow */
+}
+.lucide-cloud-lightning path:nth-child(1) {
+  stroke: #94a3b8 !important; /* Gray cloud */
+  fill: rgba(148, 163, 184, 0.1) !important;
+}
+.lucide-cloud-lightning polygon,
+.lucide-cloud-lightning path:last-child {
+  stroke: #fbbf24 !important; /* Yellow lightning bolt */
+  fill: #fbbf24 !important;
+}
+
+/* 8. Cloud + Fog */
+.lucide-cloud-fog path:first-of-type {
+  stroke: #94a3b8 !important; /* Gray cloud */
+  fill: rgba(148, 163, 184, 0.1) !important;
+}
+.lucide-cloud-fog path:not(:first-of-type),
+.lucide-cloud-fog line {
+  stroke: #cbd5e1 !important; /* Slate fog lines */
+}
+
+/* Custom Burning & Freezing Animations */
+@keyframes heat-shimmer {
+  0%, 100% {
+    transform: skewX(0deg) scaleY(1);
+    filter: blur(0px) hue-rotate(0deg);
+  }
+  25% {
+    transform: skewX(1deg) scaleY(1.02);
+    filter: blur(0.5px) hue-rotate(2deg);
+  }
+  50% {
+    transform: skewX(-0.5deg) scaleY(0.99);
+    filter: blur(0.1px) hue-rotate(-1deg);
+  }
+  75% {
+    transform: skewX(1.5deg) scaleY(1.01);
+    filter: blur(0.6px) hue-rotate(3deg);
+  }
+}
+
+@keyframes fire-glow {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.6), 0 0 20px rgba(249, 115, 22, 0.4), 0 0 35px rgba(234, 179, 8, 0.2);
+  }
+  50% {
+    text-shadow: 0 0 18px rgba(239, 68, 68, 1), 0 0 35px rgba(249, 115, 22, 0.8), 0 0 50px rgba(234, 179, 8, 0.5);
+  }
+}
+
+@keyframes freeze-shiver {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  15%, 55%, 95% {
+    transform: translate(-1px, 0.5px) rotate(-0.5deg);
+  }
+  35%, 75% {
+    transform: translate(1px, -0.5px) rotate(0.5deg);
+  }
+}
+
+@keyframes ice-glow {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(56, 189, 248, 0.5), 0 0 20px rgba(186, 230, 253, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 22px rgba(56, 189, 248, 0.9), 0 0 35px rgba(14, 165, 233, 0.7), 0 0 45px rgba(224, 242, 254, 0.6);
+  }
+}
+
+@keyframes float-spark {
+  0% {
+    transform: translateY(20px) translateX(0) scale(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-110px) translateX(var(--drift-x, 15px)) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes float-frost {
+  0% {
+    transform: translateY(-20px) translateX(0) scale(0.4) rotate(0deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(70px) translateX(var(--drift-x, -15px)) scale(1.1) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+.burning-temp {
+  animation: heat-shimmer 2.2s infinite ease-in-out, fire-glow 1.8s infinite ease-in-out;
+  background: linear-gradient(to top, #ef4444 10%, #f97316 60%, #eab308 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  display: inline-block;
+}
+
+.freezing-temp {
+  animation: freeze-shiver 0.25s infinite ease-in-out, ice-glow 2.5s infinite ease-in-out;
+  background: linear-gradient(to bottom, #e0f2fe 10%, #38bdf8 60%, #0284c7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  display: inline-block;
+}
+
+.spark-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #facc15 30%, #f97316 70%, #ef4444);
+  pointer-events: none;
+  animation: float-spark var(--duration, 2s) infinite ease-out;
+  animation-delay: var(--delay, 0s);
+  left: var(--left, 50%);
+}
+
+.frost-particle {
+  position: absolute;
+  pointer-events: none;
+  color: #bae6fd;
+  opacity: 0;
+  animation: float-frost var(--duration, 3s) infinite ease-in-out;
+  animation-delay: var(--delay, 0s);
+  left: var(--left, 50%);
+  top: var(--top, 10%);
+}
+

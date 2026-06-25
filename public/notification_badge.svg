@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- Clean white flat weather outline (clouds & small sun/raindrop) for Android status bar / badge notifications -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Semi-sun behind cloud -->
+    <path d="M19 15c1.1-4.1 4.9-7 9.4-7 4.9 0 9 3.5 9.7 8.2" stroke-dasharray="2 3" opacity="0.8"/>
+    
+    <!-- Cloud main outline -->
+    <path d="M12 38c-4.4 0-8-3.6-8-8s3.6-8 8-8c.5 0 1 .1 1.5.2C15.8 16.5 21.5 12 28 12c7.2 0 13 5.4 13.8 12.3 2.4.9 4.2 3.2 4.2 6 0 3.9-3.1 7-7 7H12z" fill="#FFFFFF" fill-opacity="0.1"/>
+  </g>
+</svg>

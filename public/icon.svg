@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient: Rich dark space blue -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1F395D" />
+      <stop offset="50%" stop-color="#142A4A" />
+      <stop offset="100%" stop-color="#0B172E" />
+    </linearGradient>
+
+    <!-- Glass inner bezel -->
+    <linearGradient id="glassBorder" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6"/>
+      <stop offset="20%" stop-color="#ffffff" stop-opacity="0.1"/>
+      <stop offset="80%" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.35"/>
+    </linearGradient>
+
+    <!-- Sun Gradient: Rich vibrant orange-yellow -->
+    <linearGradient id="sunGrad" x1="10%" y1="10%" x2="90%" y2="90%">
+      <stop offset="0%" stop-color="#FFF2CA" />
+      <stop offset="25%" stop-color="#FFC14F" />
+      <stop offset="65%" stop-color="#DE7910" />
+      <stop offset="100%" stop-color="#914300" />
+    </linearGradient>
+
+    <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFC14F" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#DE7910" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Liquid/Raindrop blue -->
+    <linearGradient id="rainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#80D6FF"/>
+      <stop offset="100%" stop-color="#218EEA"/>
+    </linearGradient>
+
+    <!-- Large Reflection -->
+    <linearGradient id="glassReflect" x1="0%" y1="0%" x2="60%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="50.1%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Dropshadows -->
+    <filter id="dropShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="2" dy="14" stdDeviation="16" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="1" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <clipPath id="appClip">
+      <rect x="22" y="22" width="468" height="468" rx="90" />
+    </clipPath>
+  </defs>
+
+  <!-- Base Icon Shape -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Outer ambient rim light glow -->
+  <rect x="18" y="18" width="476" height="476" rx="94" fill="transparent" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2" />
+
+  <!-- The Dark Lip inside -->
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="transparent" stroke="#060C18" stroke-width="10" />
+
+  <!-- Glass container bezel -->
+  <rect x="22" y="22" width="468" height="468" rx="90" fill="transparent" stroke="url(#glassBorder)" stroke-width="5" />
+
+  <g clip-path="url(#appClip)">
+    <!-- Diagonal Glass Reflection at the back -->
+    <path d="M -50,-50 L 560,-50 L 560,200 C 350,200 200,380 -50,560 Z" fill="url(#glassReflect)" />
+    
+    <!-- Deep subtle sun rays intersecting the background -->
+    <polygon points="340,-60 560,-60 400,320 180,120" fill="#ffffff" opacity="0.04" />
+  </g>
+
+  <!-- Sun -->
+  <g>
+    <!-- Glow -->
+    <circle cx="340" cy="225" r="140" fill="url(#sunGlow)" opacity="0.8"/>
+    <!-- Orb Body -->
+    <circle cx="340" cy="225" r="95" fill="url(#sunGrad)" filter="url(#dropShadow)" />
+    <!-- Specular Highlight for 3D Pop -->
+    <circle cx="305" cy="190" r="50" fill="#ffffff" opacity="0.25" filter="url(#glow)" />
+    <!-- Secondary rim highlight on sun -->
+    <path d="M 285,145 C 315,135 345,140 375,150 C 345,155 315,160 285,145 Z" fill="#ffffff" opacity="0.25" filter="url(#glow)" />
+  </g>
+
+  <!-- Liquid Pillars -->
+  <!-- Pill 1 -->
+  <g transform="translate(130, 120)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="24" height="106" rx="12" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.5" stroke-width="3" />
+    <rect x="4" y="60" width="16" height="42" rx="8" fill="url(#rainGrad)" />
+    <!-- Liquid Surface Highlight -->
+    <path d="M 6,61 C 10,58 14,58 18,61" stroke="#ffffff" stroke-opacity="0.6" stroke-width="2" fill="transparent" stroke-linecap="round" />
+    <path d="M6,6 Q12,2 18,6" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="transparent" opacity="0.6" />
+  </g>
+  <g transform="translate(142, 235)">
+    <path d="M 0,0 C 7,14 10,21 0,26 C -10,21 -7,14 0,0 Z" fill="url(#rainGrad)" filter="url(#softShadow)"/>
+  </g>
+  <g transform="translate(142, 275)">
+    <path d="M 0,0 C 5,10 7,15 0,19 C -7,15 -5,10 0,0 Z" fill="url(#rainGrad)" filter="url(#softShadow)"/>
+  </g>
+
+  <!-- Pill 2 -->
+  <g transform="translate(164, 120)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="24" height="106" rx="12" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.5" stroke-width="3" />
+    <rect x="4" y="80" width="16" height="22" rx="8" fill="url(#rainGrad)" />
+    <path d="M 6,81 C 10,78 14,78 18,81" stroke="#ffffff" stroke-opacity="0.6" stroke-width="2" fill="transparent" stroke-linecap="round" />
+    <path d="M6,6 Q12,2 18,6" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="transparent" opacity="0.6" />
+  </g>
+  <g transform="translate(176, 255)">
+    <path d="M 0,0 C 7,14 10,21 0,26 C -10,21 -7,14 0,0 Z" fill="url(#rainGrad)" filter="url(#softShadow)"/>
+  </g>
+
+  <!-- Pill 3 -->
+  <g transform="translate(198, 120)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="24" height="106" rx="12" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.5" stroke-width="3" />
+    <rect x="4" y="24" width="16" height="78" rx="8" fill="url(#rainGrad)" />
+    <path d="M 6,25 C 10,22 14,22 18,25" stroke="#ffffff" stroke-opacity="0.6" stroke-width="2" fill="transparent" stroke-linecap="round" />
+    <path d="M6,6 Q12,2 18,6" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="transparent" opacity="0.6" />
+  </g>
+
+  <!-- Pill 4 -->
+  <g transform="translate(232, 120)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="24" height="106" rx="12" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.5" stroke-width="3" />
+    <rect x="4" y="50" width="16" height="52" rx="8" fill="url(#rainGrad)" />
+    <path d="M 6,51 C 10,48 14,48 18,51" stroke="#ffffff" stroke-opacity="0.6" stroke-width="2" fill="transparent" stroke-linecap="round" />
+    <path d="M6,6 Q12,2 18,6" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="transparent" opacity="0.6" />
+  </g>
+
+  <!-- Thick Outline Cloud overlapping elements -->
+  <g transform="translate(256, 260) scale(1.45)" filter="url(#dropShadow)">
+    <!-- Semi-transparent interior acting like smoked glass -->
+    <path d="M-110 50 C-110 11 -61 11 -61 11 C-61 -28 -17 -40 10 -40 C50 -40 76 -13 76 20 C76 20 120 23 120 54 C120 83 91 90 70 90 L-80 90 C-99 90 -110 74 -110 50 Z" 
+          fill="#0D2040" fill-opacity="0.30" />
+
+    <!-- Pure white chunky rim -->
+    <path d="M-110 50 C-110 11 -61 11 -61 11 C-61 -28 -17 -40 10 -40 C50 -40 76 -13 76 20 C76 20 120 23 120 54 C120 83 91 90 70 90 L-80 90 C-99 90 -110 74 -110 50 Z" 
+          fill="transparent" stroke="#E6F2FF" stroke-width="8.5" stroke-linejoin="round" opacity="0.95" />
+  </g>
+
+  <!-- Large Raindrops at the bottom -->
+  <g transform="translate(225, 415)">
+    <path d="M 0,0 C 7,16 10,24 0,30 C -10,24 -7,16 0,0 Z" fill="url(#rainGrad)" filter="url(#softShadow)"/>
+  </g>
+  <g transform="translate(275, 445)">
+    <path d="M 0,0 C 6,14 9,21 0,26 C -9,21 -6,14 0,0 Z" fill="url(#rainGrad)" filter="url(#softShadow)"/>
+  </g>
+  <g transform="translate(325, 410)">
+    <path d="M 0,0 C 7,16 10,24 0,30 C -10,24 -7,16 0,0 Z" fill="url(#rainGrad)" filter="url(#softShadow)"/>
+  </g>
+</svg>
