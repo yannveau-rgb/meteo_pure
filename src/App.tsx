@@ -172,6 +172,8 @@ export default function App() {
     message: string;
     intensity: NotificationIntensity;
   } | null>(null);
+  const [testingPush, setTestingPush] = useState<boolean>(false);
+  const [testingCron, setTestingCron] = useState<boolean>(false);
 
   const [showMoonModal, setShowMoonModal] = useState<boolean>(false);
   const [showMorningBriefModal, setShowMorningBriefModal] = useState<boolean>(false);
@@ -1529,6 +1531,145 @@ export default function App() {
                         }`} />
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* Section de Test des Notifications */}
+                <div className="glass-premium rounded-3xl p-5 shadow-lg space-y-4 overflow-hidden relative">
+                  <div className="flex items-center gap-1.5 pb-2 border-b border-white/10 z-10 relative">
+                    <Sparkles className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
+                    <h4 className="text-[12px] font-extrabold uppercase tracking-widest text-amber-200">
+                      🧪 Labo de Test des Notifications
+                    </h4>
+                  </div>
+
+                  <p className="text-[11px] text-white/70 leading-relaxed italic z-10 relative">
+                    Validez le bon fonctionnement de votre système de notifications (directes et en arrière-plan) en un clic.
+                  </p>
+
+                  <div className="flex flex-col gap-2.5">
+                    {/* Test local */}
+                    <button
+                      onClick={() => {
+                        triggerFunnyNotification('moderate', true);
+                      }}
+                      className="w-full bg-white/10 hover:bg-white/15 border border-white/10 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-between transition-all active:scale-[0.98]"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-sky-400" />
+                        Tester en Direct (Notification Locale)
+                      </span>
+                      <span className="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-md font-mono font-bold">
+                        LOCAL
+                      </span>
+                    </button>
+
+                    {/* Test push serveur */}
+                    <button
+                      onClick={async () => {
+                        if (testingPush) return;
+                        setTestingPush(true);
+                        try {
+                          const res = await fetch('/api/test-push', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              intensity: 'moderate',
+                              humorLevel: notifSettings.humorLevel
+                            })
+                          });
+                          const data = await res.json();
+                          if (res.ok) {
+                            setActiveToast({
+                              id: Math.random().toString(),
+                              title: "Web Push Réussi !",
+                              message: `Test envoyé à ${data.successCount} abonné(s) actif(s). Fermez l'app pour voir le push !`,
+                              intensity: "moderate"
+                            });
+                          } else {
+                            setActiveToast({
+                              id: Math.random().toString(),
+                              title: "Échec Web Push",
+                              message: data.error || "Une erreur s'est produite lors de l'envoi du test.",
+                              intensity: "alert_orange"
+                            });
+                          }
+                        } catch (err) {
+                          setActiveToast({
+                            id: Math.random().toString(),
+                            title: "Erreur de Connexion",
+                            message: "Impossible de joindre le serveur de notifications.",
+                            intensity: "alert_red"
+                          });
+                        } finally {
+                          setTestingPush(false);
+                        }
+                      }}
+                      disabled={testingPush}
+                      className="w-full bg-white/10 hover:bg-white/15 border border-white/10 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-between transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      <span className="flex items-center gap-2">
+                        {testingPush ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                        ) : (
+                          <CloudRain className="w-4 h-4 text-amber-400" />
+                        )}
+                        Tester le Web Push (Serveur Cloud Run)
+                      </span>
+                      <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-md font-mono font-bold">
+                        CLOUD
+                      </span>
+                    </button>
+
+                    {/* Test CRON trigger */}
+                    <button
+                      onClick={async () => {
+                        if (testingCron) return;
+                        setTestingCron(true);
+                        try {
+                          const res = await fetch('/api/cron/check-weather');
+                          const data = await res.json();
+                          if (res.ok) {
+                            setActiveToast({
+                              id: Math.random().toString(),
+                              title: "Vérification Forcée !",
+                              message: "Le serveur a scanné toutes les villes abonnées avec succès.",
+                              intensity: "alert_yellow"
+                            });
+                          } else {
+                            setActiveToast({
+                              id: Math.random().toString(),
+                              title: "Erreur Surveillance",
+                              message: data.error || "Échec de l'exécution de la surveillance.",
+                              intensity: "alert_orange"
+                            });
+                          }
+                        } catch (err) {
+                          setActiveToast({
+                            id: Math.random().toString(),
+                            title: "Erreur Serveur",
+                            message: "Impossible de lancer le scan des communes.",
+                            intensity: "alert_red"
+                          });
+                        } finally {
+                          setTestingCron(false);
+                        }
+                      }}
+                      disabled={testingCron}
+                      className="w-full bg-white/10 hover:bg-white/15 border border-white/10 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-between transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      <span className="flex items-center gap-2">
+                        {testingCron ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
+                        ) : (
+                          <Clock className="w-4 h-4 text-rose-400" />
+                        )}
+                        Forcer la Vérification Météo (CRON API)
+                      </span>
+                      <span className="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-md font-mono font-bold">
+                        CRON
+                      </span>
+                    </button>
                   </div>
                 </div>
 

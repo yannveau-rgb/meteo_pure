@@ -44,7 +44,7 @@ function saveSubscriptions(subs: any[]): void {
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT || 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
 
@@ -105,6 +105,77 @@ async function startServer() {
   // API Route: Healthcheck/Status
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', subscriptionsCount: getSubscriptions().length });
+  });
+
+  // API Route: Trigger background weather checking manually (ideal for Cloud Scheduler cron tasks)
+  app.get('/api/cron/check-weather', async (req, res) => {
+    console.log('[CRON] Manual or Cloud Scheduler trigger received.');
+    try {
+      await checkAllSubscriptions();
+      res.json({ success: true, message: 'Surveillance météo terminée avec succès.' });
+    } catch (err: any) {
+      console.error('[CRON ERROR] Failed to run weather check:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // API Route: Send a test Web Push notification to all active subscribers or a specific subscription endpoint
+  app.post('/api/test-push', async (req, res) => {
+    const { intensity, humorLevel } = req.body;
+    const level = humorLevel || 'spicy';
+    const type = intensity || 'moderate';
+    
+    const subs = getSubscriptions();
+    if (subs.length === 0) {
+      return res.status(404).json({ error: 'Aucun abonnement actif enregistré sur le serveur.' });
+    }
+
+    console.log(`[PUSH TEST] Sending test notification of type: ${type}, humor: ${level} to ${subs.length} subscriber(s).`);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const sub of subs) {
+      try {
+        let msg;
+        if (type === 'morning_brief') {
+          const birth = sub.birthDate || '1990-01-01';
+          const brief = getMorningBriefContent(level, birth, 61); // code 61 is moderate rain
+          if (brief) {
+            msg = { title: brief.title, message: brief.body };
+          }
+        } else if (type === 'christmas') {
+          const christmasMsg = getSarcasticChristmasCountdownMessage(new Date(), level);
+          if (christmasMsg) {
+            msg = { title: christmasMsg.title, message: christmasMsg.body };
+          }
+        }
+
+        if (!msg) {
+          msg = getFunnyRainMessage(type, level);
+        }
+
+        await webPush.sendNotification(
+          sub.subscription,
+          JSON.stringify({
+            title: msg.title,
+            message: msg.message || msg.body || "Ceci est un test de notification !",
+            intensity: type,
+            city: sub.commune.nom
+          })
+        );
+        successCount++;
+      } catch (err: any) {
+        failCount++;
+        console.error('[PUSH TEST ERROR] Failed to send push to subscription:', sub.id, err.statusCode);
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          // Clean up old subscriptions
+          const currentSubs = getSubscriptions();
+          saveSubscriptions(currentSubs.filter(s => s.id !== sub.id));
+        }
+      }
+    }
+
+    res.json({ success: true, successCount, failCount });
   });
 
   // Background weather checking logic
@@ -224,6 +295,11 @@ async function startServer() {
           // Rain start (only if not storming to avoid duplication)
           else if (isRainingNow && !sub.prevRain && !isStormingNow) {
             transitionType = 'moderate';
+            shouldTrigger = true;
+          }
+          // Heatwave (Strong heat) start
+          else if (isHotNow && !sub.prevHot) {
+            transitionType = 'heatwave';
             shouldTrigger = true;
           }
           // End rain
