@@ -3,8 +3,9 @@ import path from 'path';
 import fs from 'fs';
 import webPush from 'web-push';
 import { createServer as createViteServer } from 'vite';
-import { getFunnyRainMessage, getMorningBriefContent, getSarcasticChristmasCountdownMessage } from './src/utils/notificationService';
+import { getFunnyRainMessage, getMorningBriefContent, getSarcasticChristmasCountdownMessage, getZodiacSign } from './src/utils/notificationService';
 import { calculateVigilance } from './src/utils/weatherUtils';
+import { GoogleGenAI, Type } from '@google/genai';
 
 // Initialize VAPID Keys
 const VAPID_FILE = path.join(process.cwd(), 'vapid.json');
@@ -40,6 +41,120 @@ function getSubscriptions(): any[] {
 
 function saveSubscriptions(subs: any[]): void {
   fs.writeFileSync(SUBSCRIPTIONS_FILE, JSON.stringify(subs, null, 2));
+}
+
+// Lazy Gemini AI initialization to prevent boot-up crashes if key is missing
+let aiClient: GoogleGenAI | null = null;
+
+function getGeminiClient(): GoogleGenAI {
+  if (!aiClient) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) {
+      throw new Error("GEMINI_API_KEY environment variable is missing.");
+    }
+    aiClient = new GoogleGenAI({
+      apiKey: key,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
+  }
+  return aiClient;
+}
+
+function getWeatherDescription(code: number): string {
+  if (code === 0) return "Ciel totalement dégagé, grand soleil";
+  if (code === 1 || code === 2 || code === 3) return "Ciel peu nuageux ou très nuageux, pas de pluie";
+  if ([45, 48].includes(code)) return "Brouillard épais, visibilité réduite";
+  if ([51, 53, 55].includes(code)) return "Bruine fine ou crachin";
+  if ([61, 63, 65].includes(code)) return "Pluie modérée à forte";
+  if ([71, 73, 75, 85, 86].includes(code)) return "Chute de neige";
+  if ([80, 81, 82].includes(code)) return "Averses de pluie passagères";
+  if ([95, 96, 99].includes(code)) return "Orages violents";
+  return "Temps mitigé ou indéterminé";
+}
+
+async function generateAiMorningBrief(
+  birthDate: string,
+  weatherCode: number,
+  humorLevel: string,
+  cityName: string
+): Promise<{ title: string; body: string }> {
+  const sign = getZodiacSign(birthDate);
+  const weatherDesc = getWeatherDescription(weatherCode);
+
+  if (!process.env.GEMINI_API_KEY) {
+    console.log('[GEMINI] API Key missing, falling back to static generation.');
+    const staticBrief = getMorningBriefContent(humorLevel as any, birthDate, weatherCode);
+    return staticBrief || { title: `🔮 Brief Matinal ${sign}`, body: `Météo mitigée aujourd'hui.` };
+  }
+
+  try {
+    const ai = getGeminiClient();
+    
+    let toneInstruction = '';
+    if (humorLevel === 'safe') {
+      toneInstruction = "Le ton doit être bienveillant, diplomate, chaleureux et plein de sagesse d'un astrologue de bien-être. Encourage l'utilisateur, donne-lui une astuce positive.";
+    } else if (humorLevel === 'spicy') {
+      toneInstruction = "Le ton doit être cynique, sarcastique, moqueur, un brin pince-sans-rire. Taquine l'utilisateur sur son signe astrologique et la météo (qui est une excuse parfaite pour ses échecs ou sa paresse). Ne sois pas vulgaire mais sois très ironique.";
+    } else {
+      // hardcore
+      toneInstruction = "Le ton doit être extrêmement drôle, familier, argotique, un peu piquant, direct et théâtral. Utilise des expressions françaises fleuries comme 'temps de merde', 'sa mère', 'un mardi de l'enfer', 'sors de ta grotte', 'bordel de merde', mais reste drôle, rafraîchissant et bienveillant au fond. C'est le style de farce le plus intense.";
+    }
+
+    const prompt = `Rédige un brief météo + horoscope ultra-créatif, varié, sur-mesure et personnalisé en français pour la journée.
+Informations sur l'utilisateur :
+- Signe Astrologique : ${sign}
+- Date de naissance : ${birthDate}
+- Ville actuelle : ${cityName}
+- Météo du jour : ${weatherDesc} (Code météo WMO : ${weatherCode})
+
+Instructions de style :
+${toneInstruction}
+
+Règles impératives :
+1. Fais de l'humour, varie le style, ne copie pas les clichés astrologiques ennuyeux.
+2. Crée une métaphore amusante entre l'état du ciel (météo) et la destinée de l'utilisateur (horoscope).
+3. Ne dépasse pas 3 phrases ou 80 mots pour le corps de texte pour que ce soit court, percutant et facile à lire sur un écran de téléphone en notification ou carte.
+4. Reste unique et original à chaque génération (ne commence pas toujours par les mêmes phrases).`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { 
+              type: Type.STRING, 
+              description: "Un titre court (max 4-5 mots) incluant un emoji adapté, par exemple '🔮 Astro-Frayeur Bélier', '⛈️ Douche Céleste Scorpion', '☀️ Alerte Miracle Verseau'" 
+            },
+            body: { 
+              type: Type.STRING, 
+              description: "Le texte du brief combinant horoscope et météo avec le ton demandé. Maximum 80 mots." 
+            }
+          },
+          required: ["title", "body"]
+        }
+      }
+    });
+
+    if (response.text) {
+      const data = JSON.parse(response.text.trim());
+      if (data.title && data.body) {
+        return { title: data.title, body: data.body };
+      }
+    }
+    throw new Error("Invalid response format from Gemini");
+  } catch (err) {
+    console.error('[GEMINI ERROR] Failed to generate AI morning brief:', err);
+    // Fallback to static
+    const staticBrief = getMorningBriefContent(humorLevel as any, birthDate, weatherCode);
+    return staticBrief || { title: `🔮 Brief Matinal ${sign}`, body: `Météo mitigée aujourd'hui.` };
+  }
 }
 
 async function startServer() {
@@ -107,6 +222,26 @@ async function startServer() {
     res.json({ status: 'ok', subscriptionsCount: getSubscriptions().length });
   });
 
+  // API Route: Generate a fresh morning brief using Gemini AI
+  app.post('/api/morning-brief', async (req, res) => {
+    const { birthDate, weatherCode, humorLevel, cityName } = req.body;
+    if (!birthDate) {
+      return res.status(400).json({ error: "birthDate is required" });
+    }
+    try {
+      const brief = await generateAiMorningBrief(
+        birthDate,
+        Number(weatherCode) || 0,
+        humorLevel || 'spicy',
+        cityName || 'Inconnu'
+      );
+      res.json(brief);
+    } catch (err: any) {
+      console.error('[API MORNING BRIEF ERROR] Failed to generate:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // API Route: Trigger background weather checking manually (ideal for Cloud Scheduler cron tasks)
   app.get('/api/cron/check-weather', async (req, res) => {
     console.log('[CRON] Manual or Cloud Scheduler trigger received.');
@@ -139,7 +274,7 @@ async function startServer() {
         let msg;
         if (type === 'morning_brief') {
           const birth = sub.birthDate || '1990-01-01';
-          const brief = getMorningBriefContent(level, birth, 61); // code 61 is moderate rain
+          const brief = await generateAiMorningBrief(birth, 61, level, sub.commune.nom);
           if (brief) {
             msg = { title: brief.title, message: brief.body };
           }
@@ -218,7 +353,7 @@ async function startServer() {
 
           if (parisHour === 8 && sub.lastBriefDate !== dateStrParis) {
             console.log(`[PUSH SERVICE] Generating 8 AM horoscope/morning brief for sub ${sub.id} (${sub.commune.nom})`);
-            const brief = getMorningBriefContent(sub.humorLevel, sub.birthDate, weather.current.weather_code || 0);
+            const brief = await generateAiMorningBrief(sub.birthDate, weather.current.weather_code || 0, sub.humorLevel, sub.commune.nom);
             if (brief) {
               await webPush.sendNotification(
                 sub.subscription,

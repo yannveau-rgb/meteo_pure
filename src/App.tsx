@@ -177,6 +177,8 @@ export default function App() {
 
   const [showMoonModal, setShowMoonModal] = useState<boolean>(false);
   const [showMorningBriefModal, setShowMorningBriefModal] = useState<boolean>(false);
+  const [aiBrief, setAiBrief] = useState<{ title: string; body: string } | null>(null);
+  const [loadingBrief, setLoadingBrief] = useState<boolean>(false);
   const [currentRoast, setCurrentRoast] = useState<string>('');
 
   // Favorites bookmarked cities state load/save
@@ -309,6 +311,40 @@ export default function App() {
 
     return () => clearInterval(refreshInterval);
   }, [currentCommune]);
+
+  const handleOpenMorningBrief = async () => {
+    setShowMorningBriefModal(true);
+    if (!notifSettings.birthDate) {
+      setAiBrief(null);
+      return;
+    }
+    setLoadingBrief(true);
+    setAiBrief(null);
+    try {
+      const res = await fetch('/api/morning-brief', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          birthDate: notifSettings.birthDate,
+          weatherCode: weather?.current.weatherCode || 0,
+          humorLevel: notifSettings.humorLevel,
+          cityName: currentCommune?.nom || 'Inconnu'
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAiBrief({ title: data.title, body: data.body });
+      } else {
+        const brief = getMorningBriefContent(notifSettings.humorLevel, notifSettings.birthDate || '', weather?.current.weatherCode || 0);
+        setAiBrief(brief);
+      }
+    } catch (err) {
+      const brief = getMorningBriefContent(notifSettings.humorLevel, notifSettings.birthDate || '', weather?.current.weatherCode || 0);
+      setAiBrief(brief);
+    } finally {
+      setLoadingBrief(false);
+    }
+  };
 
   // Master controller for sending hilarious customized rain/storm notifications
   const triggerFunnyNotification = (intensity: NotificationIntensity, bypassSpam = false) => {
@@ -629,36 +665,39 @@ export default function App() {
                 </div>
                 
                 <div className="flex flex-col gap-3 w-full text-white/90 z-10 relative">
-                  {weather ? (
-                    (() => {
-                      const brief = getMorningBriefContent(notifSettings.humorLevel, notifSettings.birthDate || '', weather.current.weatherCode);
-                      if (brief) {
-                        return (
-                          <>
-                            <h3 className="font-bold text-sky-400 text-sm mb-2 uppercase tracking-widest">{brief.title}</h3>
-                            <p className="leading-relaxed text-sm italic">{brief.body}</p>
-                          </>
-                        );
-                      } else {
-                        return (
-                          <div className="flex flex-col items-center gap-4 text-center">
-                            <span className="text-4xl animate-pulse">🤫</span>
-                            <p className="italic opacity-80 text-sm">
-                              Pour lire ton astro-brief quotidien, renseigne d'abord ta date de naissance.
-                            </p>
-                            <button
-                              onClick={() => {
-                                setShowMorningBriefModal(false);
-                                setActiveTab('reglages');
-                              }}
-                              className="mt-2 bg-white/10 hover:bg-white/20 border border-white/20 px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all shadow-lg active:scale-95"
-                            >
-                              Ouvrir les Réglages
-                            </button>
-                          </div>
-                        );
-                      }
-                    })()
+                  {loadingBrief ? (
+                    <div className="flex flex-col items-center justify-center py-8 gap-3">
+                      <Loader2 className="w-8 h-8 animate-spin text-sky-400" />
+                      <p className="text-xs text-white/70 animate-pulse text-center">
+                        Gemini interroge les constellations et la météo de {currentCommune?.nom || "ta ville"}...
+                      </p>
+                    </div>
+                  ) : aiBrief ? (
+                    <>
+                      <h3 className="font-bold text-sky-400 text-sm mb-2 uppercase tracking-widest flex items-center gap-2">
+                        {aiBrief.title}
+                        <span className="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.5 rounded font-mono font-bold tracking-normal uppercase">
+                          IA active
+                        </span>
+                      </h3>
+                      <p className="leading-relaxed text-sm italic">{aiBrief.body}</p>
+                    </>
+                  ) : !notifSettings.birthDate ? (
+                    <div className="flex flex-col items-center gap-4 text-center">
+                      <span className="text-4xl animate-pulse">🤫</span>
+                      <p className="italic opacity-80 text-sm">
+                        Pour lire ton astro-brief quotidien personnalisé par l'IA, renseigne d'abord ta date de naissance.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setShowMorningBriefModal(false);
+                          setActiveTab('reglages');
+                        }}
+                        className="mt-2 bg-white/10 hover:bg-white/20 border border-white/20 px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all shadow-lg active:scale-95"
+                      >
+                        Ouvrir les Réglages
+                      </button>
+                    </div>
                   ) : (
                     <p className="text-center italic opacity-70">Données météo manquantes pour le brief.</p>
                   )}
@@ -1186,7 +1225,7 @@ export default function App() {
                               <span className="text-[9px] font-bold tracking-wider uppercase opacity-80 truncate max-w-[70px]">{getMoonPhase().name}</span>
                             </button>
                             <button
-                              onClick={() => setShowMorningBriefModal(true)}
+                              onClick={handleOpenMorningBrief}
                               className="flex flex-col items-center gap-1 px-3 hover:bg-sky-500/20 rounded-xl transition-colors active:scale-95 border border-transparent hover:border-sky-400/30 py-1 text-sky-200" 
                               title="Ton Brief du Jour"
                             >
