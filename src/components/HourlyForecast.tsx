@@ -1,14 +1,16 @@
 import React from 'react';
 import { HourlyForecastItem } from '../types';
-import { getWeatherUI } from '../utils/weatherUtils';
+import { getWeatherUI, isHourNight } from '../utils/weatherUtils';
 
 interface HourlyForecastProps {
   hourlyData: HourlyForecastItem[];
   humidity: number;
   dayName?: string;
+  sunrise?: string;
+  sunset?: string;
 }
 
-export default function HourlyForecast({ hourlyData, humidity, dayName = "Aujourd'hui" }: HourlyForecastProps) {
+export default function HourlyForecast({ hourlyData, humidity, dayName = "Aujourd'hui", sunrise, sunset }: HourlyForecastProps) {
   // Allow full horizontal scrolling for the given data
   const displayItems = hourlyData;
 
@@ -31,7 +33,7 @@ export default function HourlyForecast({ hourlyData, humidity, dayName = "Aujour
         {displayItems.map((hour, index) => {
           const hourStr = hour.time.split(':')[0];
           const h = parseInt(hourStr, 10);
-          const isNight = isNaN(h) ? false : (h < 6 || h >= 22);
+          const isNight = isHourNight(h, sunrise, sunset);
           const weatherUI = getWeatherUI(hour.weatherCode, isNight);
           const WeatherIcon = weatherUI.icon;
 

@@ -34,7 +34,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Commune, WeatherData } from './types';
 import { fetchWeatherData, searchFrenchCommunes, getCommuneByCoords } from './utils/weatherApi';
-import { getWeatherUI, getMoonPhase, getNext7DaysMoonPhases, calculateCurrentUv } from './utils/weatherUtils';
+import { getWeatherUI, getMoonPhase, getNext7DaysMoonPhases, calculateCurrentUv, isNightTime, isHourNight } from './utils/weatherUtils';
 import { generateWeatherRoast } from './utils/roastService';
 import { getSaintDuJour } from './utils/ephemeris';
 import {
@@ -204,15 +204,7 @@ export default function App() {
 
   useEffect(() => {
     if (weather) {
-      const h = new Date().getHours();
-      let isNight = h < 6 || h >= 22;
-      if (weather.sunrise && weather.sunset) {
-        try {
-          const srHour = parseInt(weather.sunrise.split(':')[0], 10);
-          const ssHour = parseInt(weather.sunset.split(':')[0], 10);
-          isNight = h < srHour || h >= ssHour;
-        } catch (e) {}
-      }
+      const isNight = isNightTime(weather.sunrise, weather.sunset);
       setCurrentRoast(generateWeatherRoast(weather, isNight));
     }
   }, [weather]);
@@ -572,23 +564,14 @@ export default function App() {
 
   // Resolve background style from WMO code of active weather
   const currentCode = weather?.current.weatherCode ?? 0;
-  // Let's check weather hour is night or not
-  const hour = new Date().getHours();
-  
-  let isNightTime;
-  if (weather && weather.sunrise && weather.sunset) {
-    const srHour = parseInt(weather.sunrise.split(':')[0], 10);
-    const ssHour = parseInt(weather.sunset.split(':')[0], 10);
-    isNightTime = hour < srHour || hour >= ssHour;
-  } else {
-    isNightTime = hour < 6 || hour >= 22;
-  }
-  
-  const weatherStyle = getWeatherUI(currentCode, isNightTime);
+  // Let's check weather hour is night or not, using real sunrise/sunset when available
+  const isNightTimeNow = isNightTime(weather?.sunrise, weather?.sunset);
+
+  const weatherStyle = getWeatherUI(currentCode, isNightTimeNow);
   const ActiveWeatherIcon = weatherStyle.icon;
 
   return (
-    <div className={`min-h-screen w-full flex justify-center items-center p-0 sm:p-6 text-white antialiased overflow-x-hidden bg-gradient-to-br ${isNightTime ? 'from-[#020617] via-[#0b1329] to-[#111827]' : 'from-[#081430] via-[#0f244a] to-[#020617]'}`}>
+    <div className={`min-h-screen w-full flex justify-center items-center p-0 sm:p-6 text-white antialiased overflow-x-hidden bg-gradient-to-br ${isNightTimeNow ? 'from-[#020617] via-[#0b1329] to-[#111827]' : 'from-[#081430] via-[#0f244a] to-[#020617]'}`}>
       
       {/* Container Principal (Mobile-First responsive frame) */}
       <div 
@@ -1080,7 +1063,7 @@ export default function App() {
                                 }`} />
                                 <AnimatePresence mode="wait">
                                   <motion.div
-                                    key={`${currentCode}-${isNightTime}`}
+                                    key={`${currentCode}-${isNightTimeNow}`}
                                     initial={{ opacity: 0, scale: 0.8 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.8 }}
@@ -1139,15 +1122,7 @@ export default function App() {
                             <button
                               id="regenerate-roast-btn"
                               onClick={() => {
-                                const h = new Date().getHours();
-                                let isNight = h < 6 || h >= 22;
-                                if (weather.sunrise && weather.sunset) {
-                                  try {
-                                    const srHour = parseInt(weather.sunrise.split(':')[0], 10);
-                                    const ssHour = parseInt(weather.sunset.split(':')[0], 10);
-                                    isNight = h < srHour || h >= ssHour;
-                                  } catch (e) {}
-                                }
+                                const isNight = isNightTime(weather.sunrise, weather.sunset);
                                 setCurrentRoast(generateWeatherRoast(weather, isNight));
                               }}
                               className="text-[9px] uppercase tracking-widest font-bold text-white/50 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-full px-3 py-1 transition-all cursor-pointer flex items-center gap-1 active:scale-95"
@@ -1183,6 +1158,8 @@ export default function App() {
                           hourlyData={selectedDayIndex === 0 ? weather.hourly : (weather.daily[selectedDayIndex]?.hourly || [])} 
                           humidity={selectedDayIndex === 0 ? weather.current.humidity : 55} 
                           dayName={selectedDayIndex === 0 ? "Aujourd'hui" : (weather.daily[selectedDayIndex]?.date || "Sélectionné")}
+                          sunrise={weather.sunrise}
+                          sunset={weather.sunset}
                         />
                       </TiltCard>
 

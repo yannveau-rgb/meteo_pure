@@ -19,7 +19,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Commune, WeatherData } from '../types';
 import { fetchWeatherData, searchFrenchCommunes } from '../utils/weatherApi';
-import { getWeatherUI } from '../utils/weatherUtils';
+import { getWeatherUI, isNightTime } from '../utils/weatherUtils';
 
 interface CityComparisonProps {
   currentCommune: Commune;
@@ -320,7 +320,7 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
                   <span className="text-xs uppercase font-bold tracking-wider text-slate-300 mt-1 truncate max-w-full">
                     {currentCommune.nom}
                   </span>
-                  {renderWeatherIcon(currentWeather.current.weatherCode, false, "w-11 h-11")}
+                  {renderWeatherIcon(currentWeather.current.weatherCode, isNightTime(currentWeather.sunrise, currentWeather.sunset), "w-11 h-11")}
                   <div>
                     <span className="text-3xl font-extralight tracking-tighter text-white">
                       {Math.round(currentWeather.current.temperature)}
@@ -340,7 +340,7 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
                   <span className="text-xs uppercase font-bold tracking-wider text-amber-300 mt-1 truncate max-w-full">
                     {comparedCommune.nom}
                   </span>
-                  {renderWeatherIcon(comparedWeather.current.weatherCode, false, "w-11 h-11")}
+                  {renderWeatherIcon(comparedWeather.current.weatherCode, isNightTime(comparedWeather.sunrise, comparedWeather.sunset), "w-11 h-11")}
                   <div>
                     <span className="text-3xl font-extralight tracking-tighter text-white">
                       {Math.round(comparedWeather.current.temperature)}

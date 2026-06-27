@@ -89,6 +89,54 @@ export function getNext7DaysMoonPhases(): MoonPhaseInfo[] {
 }
 
 /**
+ * Determines whether it is currently night time (Europe/Paris), using the real
+ * sunrise/sunset for the searched commune when available, with a 6h-22h fallback
+ * otherwise. Centralizing this avoids each component guessing day/night on its own
+ * with inconsistent rules, which previously caused mismatched sun/moon icons.
+ */
+export function isNightTime(sunrise?: string, sunset?: string, referenceDate: Date = new Date()): boolean {
+  try {
+    const parisFormatter = new Intl.DateTimeFormat('fr-FR', {
+      timeZone: 'Europe/Paris',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    const parts = parisFormatter.formatToParts(referenceDate);
+    let hour = 12, minute = 0;
+    parts.forEach(p => {
+      if (p.type === 'hour') hour = parseInt(p.value, 10);
+      if (p.type === 'minute') minute = parseInt(p.value, 10);
+    });
+    return isHourNight(hour + minute / 60, sunrise, sunset);
+  } catch (e) {
+    console.error('Error calculating night time:', e);
+    const h = referenceDate.getHours();
+    return h < 6 || h >= 22;
+  }
+}
+
+/**
+ * Same logic as isNightTime, but for an arbitrary hour-of-day (e.g. an hourly
+ * forecast slot at 19:00) rather than "now". Accepts a decimal hour (19.5 = 19:30).
+ */
+export function isHourNight(decimalHour: number, sunrise?: string, sunset?: string): boolean {
+  if (isNaN(decimalHour)) return false;
+
+  if (sunrise && sunset) {
+    const [srH, srM] = sunrise.split(':').map(Number);
+    const [ssH, ssM] = sunset.split(':').map(Number);
+    if (!isNaN(srH) && !isNaN(ssH)) {
+      const sunriseDec = srH + (isNaN(srM) ? 0 : srM) / 60;
+      const sunsetDec = ssH + (isNaN(ssM) ? 0 : ssM) / 60;
+      return decimalHour < sunriseDec || decimalHour >= sunsetDec;
+    }
+  }
+  // Fallback when sunrise/sunset unavailable
+  return decimalHour < 6 || decimalHour >= 22;
+}
+
+/**
  * Maps WMO code to French weather metadata
  */
 export function getWeatherUI(code: number, isNight = false): WeatherUI {

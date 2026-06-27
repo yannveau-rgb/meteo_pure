@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Map, Pin, Sun, Cloud, CloudRain, Star, Info } from 'lucide-react';
 import { motion } from 'motion/react';
-import { getWeatherUI } from '../utils/weatherUtils';
+import { getWeatherUI, isHourNight } from '../utils/weatherUtils';
 
 interface CityPin {
   id: string;
@@ -77,6 +77,11 @@ export default function WeatherMap({ onSelectCity, currentCityName }: WeatherMap
       default: return <Sun className="w-3.5 h-3.5 text-amber-400 animate-pulse" />;
     }
   };
+
+  // No per-city sunrise/sunset is fetched here, but sunrise/sunset times barely
+  // vary across mainland France, so a single current-hour-based check (instead
+  // of always assuming daytime) is enough to avoid showing sun icons at night.
+  const mapIsNight = isHourNight(new Date().getHours());
 
   return (
     <div 
@@ -163,7 +168,7 @@ export default function WeatherMap({ onSelectCity, currentCityName }: WeatherMap
                   <Star className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
                 ) : (
                   cityData[city.id] !== undefined ? (() => {
-                    const UI = getWeatherUI(cityData[city.id].code, false);
+                    const UI = getWeatherUI(cityData[city.id].code, mapIsNight);
                     const RealIcon = UI.icon;
                     return <RealIcon className={`w-3.5 h-3.5 ${UI.colorClass}`} />;
                   })() : getWeatherIconComponent(city.weatherIcon)

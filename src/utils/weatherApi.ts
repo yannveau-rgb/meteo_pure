@@ -41,9 +41,6 @@ export async function getCommuneByCoords(lat: number, lon: number): Promise<Comm
  */
 export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
   const [longitude, latitude] = commune.centre.coordinates;
-  const isOiseDepartment = commune.codeDepartement === '60' || (commune.codesPostaux && commune.codesPostaux.some(cp => cp.startsWith('60')));
-  const isCompiegneOrJaux = commune.nom.toLowerCase().includes('compiègne') || commune.nom.toLowerCase().includes('jaux');
-  
   const urlMeteoFrance = `https://api.open-meteo.com/v1/meteofrance?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability,precipitation,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset&timezone=Europe/Paris`;
   const urlStandard = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability,precipitation,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset&timezone=Europe/Paris`;
 
@@ -509,41 +506,6 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
       current.weatherCode,
       current.precipitation
     );
-
-    // Smart real-world override: Département 60 (Oise) - including Jaux, Compiègne, etc. - is currently under an exceptional and severe Red Vigilance for Canicule (heatwave).
-    // Let's ensure the app perfectly reflects this critical real-world state so users are fully warned of the danger.
-    if (isOiseDepartment || isCompiegneOrJaux) {
-      vigilance.globalLevel = 'red';
-      vigilance.globalLabel = 'Rouge';
-      
-      // Upgrade 'Canicule / Grand Froid' to Red Alert Canicule with precise French warning details
-      const tempCat = vigilance.categories.find(c => c.name.includes('Canicule') || c.name.includes('Température') || c.name.includes('Froid'));
-      if (tempCat) {
-        tempCat.name = 'Canicule';
-        tempCat.level = 'red';
-        tempCat.description = 'ALERTE ROUGE CANICULE : Épisode de canicule exceptionnel par son intensité et sa durée en cours sur le département de l\'Oise (60). Les températures nocturnes restent extrêmement élevées, empêchant toute récupération thermique.';
-        tempCat.advice = 'Buvez de l\'eau plusieurs fois par jour sans attendre d\'avoir soif. Mouillez-vous le corps, maintenez vos fenêtres et volets fermés le jour, aérez la nuit, et évitez impérativement tout effort physique extérieur.';
-      }
-      
-      // If the searched commune is specifically Compiègne, also retain flooding and convective storm warnings
-      if (commune.nom.toLowerCase().includes('compiègne')) {
-        // Upgrade 'Inondation / Pluie-Inondation' to Red Alert with precise local details
-        const inondationCat = vigilance.categories.find(c => c.name.includes('Inondation'));
-        if (inondationCat) {
-          inondationCat.level = 'red';
-          inondationCat.description = 'ALERTE ROUGE INONDATION & CRUES : Crue exceptionnelle et majeure de l\'Oise et de l\'Aisne en cours. Des débordements d\'une violence historique menacent les habitations proches des berges à Compiègne.';
-          inondationCat.advice = 'Évitez impérativement tout déplacement inutile. Réfugiez-vous en hauteur (étage). Ne descendez sous aucun prétexte dans les sous-sols ou parkings souterrains.';
-        }
-        
-        // Upgrade 'Orages' to Red Alert for dangerous convective systems
-        const orageCat = vigilance.categories.find(c => c.name.includes('Orages'));
-        if (orageCat) {
-          orageCat.level = 'red';
-          orageCat.description = 'ALERTE ROUGE ORAGES VIOLENTS : Risque d\'orages extrêmement violents accompagné de chutes de grêle dévastatrices et d\'une activité électrique maximale.';
-          orageCat.advice = 'Mettez-vous immédiatement à l\'abri dans un bâtiment sécurisé. Coupez les disjoncteurs et débranchez les équipements sensibles.';
-        }
-      }
-    }
 
     // Extract sunrise & sunset times
     const sunriseRaw = data.daily?.sunrise?.[0] || '';
