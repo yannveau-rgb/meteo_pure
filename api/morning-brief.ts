@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { generateAiMorningBrief } from './_lib/gemini';
-import { rateLimit } from './_lib/rateLimit';
+import { generateAiMorningBrief } from './_lib/gemini.js';
+import { rateLimit } from './_lib/rateLimit.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

@@ -1,9 +1,9 @@
 import webPush from 'web-push';
-import { calculateVigilance } from '../../src/utils/weatherUtils';
-import { getFunnyRainMessage, getSarcasticChristmasCountdownMessage } from '../../src/utils/notificationService';
-import { generateAiMorningBrief } from './gemini';
-import { getSubscriptions, saveSubscriptions } from './storage';
-import { configureVapid } from './vapid';
+import { calculateVigilance } from '../../src/utils/weatherUtils.js';
+import { getFunnyRainMessage, getSarcasticChristmasCountdownMessage } from '../../src/utils/notificationService.js';
+import { generateAiMorningBrief } from './gemini.js';
+import { getSubscriptions, saveSubscriptions } from './storage.js';
+import { configureVapid } from './vapid.js';
 
 export async function checkAllSubscriptions(): Promise<{ checked: number; sent: number }> {
   configureVapid();

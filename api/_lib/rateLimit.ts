@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getRedis } from './storage';
+import { getRedis } from './storage.js';
 
 export async function rateLimit(
   req: VercelRequest,

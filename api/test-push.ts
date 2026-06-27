@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import webPush from 'web-push';
-import { requireAdminToken } from './_lib/auth';
-import { configureVapid } from './_lib/vapid';
-import { getSubscriptions, saveSubscriptions } from './_lib/storage';
-import { generateAiMorningBrief } from './_lib/gemini';
-import { getFunnyRainMessage, getSarcasticChristmasCountdownMessage } from '../src/utils/notificationService';
+import { requireAdminToken } from './_lib/auth.js';
+import { configureVapid } from './_lib/vapid.js';
+import { getSubscriptions, saveSubscriptions } from './_lib/storage.js';
+import { generateAiMorningBrief } from './_lib/gemini.js';
+import { getFunnyRainMessage, getSarcasticChristmasCountdownMessage } from '../src/utils/notificationService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import { getMorningBriefContent, getZodiacSign } from '../../src/utils/notificationService';
+import { getMorningBriefContent, getZodiacSign } from '../../src/utils/notificationService.js';
 
 let aiClient: GoogleGenAI | null = null;
 

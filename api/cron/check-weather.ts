@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { checkAllSubscriptions } from '../_lib/weatherCheck';
+import { checkAllSubscriptions } from '../_lib/weatherCheck.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Vercel Cron sends an `Authorization: Bearer <CRON_SECRET>` header.
