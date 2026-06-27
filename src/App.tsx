@@ -74,7 +74,6 @@ import HourlyForecast from './components/HourlyForecast';
 import DailyForecast from './components/DailyForecast';
 import AmbientWeatherBackground from './components/AmbientWeatherBackground';
 import ClimateComparison from './components/ClimateComparison';
-import FlemmeScore from './components/FlemmeScore';
 import TiltCard from './components/TiltCard';
 
 // Lazy-loaded: only fetched when their tab/modal is opened
@@ -974,11 +973,6 @@ export default function App() {
                           </div>
                         </div>
                       )}
-
-                      {/* Score de Flemme */}
-                      <TiltCard>
-                        <FlemmeScore weather={weather} humorLevel={notifSettings.humorLevel} />
-                      </TiltCard>
 
                       {/* 2. Immediate alerts & short-term: Rain Grid & Vigilance side by side in glass panels */}
                       <div className="grid grid-cols-2 gap-4">
