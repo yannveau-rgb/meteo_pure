@@ -74,6 +74,7 @@ import HourlyForecast from './components/HourlyForecast';
 import DailyForecast from './components/DailyForecast';
 import AmbientWeatherBackground from './components/AmbientWeatherBackground';
 import ClimateComparison from './components/ClimateComparison';
+import RainRadar from './components/RainRadar';
 import TiltCard from './components/TiltCard';
 
 // Lazy-loaded: only fetched when their tab/modal is opened
@@ -1076,13 +1077,22 @@ export default function App() {
                   {/* Climatology comparison to 30-year historical climate averages (normals) */}
                   {weather && (
                     <TiltCard>
-                      <ClimateComparison 
+                      <ClimateComparison
                         latitude={weather.latitude}
                         longitude={weather.longitude}
                         currentMin={weather.daily[0]?.tempMin ?? Math.round(weather.current.temperature - 4)}
                         currentMax={weather.daily[0]?.tempMax ?? Math.round(weather.current.temperature + 4)}
                       />
                     </TiltCard>
+                  )}
+
+                  {/* Radar pluie & orages — RainViewer, historique + nowcast 30 min */}
+                  {weather && (
+                    <RainRadar
+                      latitude={weather.latitude}
+                      longitude={weather.longitude}
+                      cityName={weather.city}
+                    />
                   )}
                 </div>
               </motion.div>
