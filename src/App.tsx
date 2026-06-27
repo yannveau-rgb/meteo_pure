@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { 
   MapPin, 
   Search, 
@@ -71,12 +71,20 @@ import VigilanceCard from './components/VigilanceCard';
 import WeatherStats from './components/WeatherStats';
 import HourlyForecast from './components/HourlyForecast';
 import DailyForecast from './components/DailyForecast';
-import CityComparison from './components/CityComparison';
-import AlertsView from './components/AlertsView';
 import AmbientWeatherBackground from './components/AmbientWeatherBackground';
 import ClimateComparison from './components/ClimateComparison';
 import TiltCard from './components/TiltCard';
-import PwaInstallWizard from './components/PwaInstallWizard';
+
+// Lazy-loaded: only fetched when their tab/modal is opened
+const CityComparison = lazy(() => import('./components/CityComparison'));
+const AlertsView = lazy(() => import('./components/AlertsView'));
+const PwaInstallWizard = lazy(() => import('./components/PwaInstallWizard'));
+
+const LazyFallback = () => (
+  <div className="flex items-center justify-center py-16">
+    <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
+  </div>
+);
 
 export default function App() {
   // Navigation & Screen tab state
@@ -1071,10 +1079,12 @@ export default function App() {
                 className="flex-1 flex flex-col justify-between text-white"
               >
                 {weather ? (
-                  <CityComparison 
-                    currentCommune={currentCommune}
-                    currentWeather={weather}
-                  />
+                  <Suspense fallback={<LazyFallback />}>
+                    <CityComparison
+                      currentCommune={currentCommune}
+                      currentWeather={weather}
+                    />
+                  </Suspense>
                 ) : (
                   <div className="flex flex-col items-center justify-center p-8 text-center bg-white/5 border border-white/10 rounded-2xl">
                     <Loader2 className="w-8 h-8 animate-spin text-sky-400 mb-2" />
@@ -1094,14 +1104,16 @@ export default function App() {
                 transition={{ duration: 0.3 }}
                 className="flex-1 flex flex-col justify-between text-white"
               >
-                <AlertsView 
-                  vigilance={weather?.vigilance || {
-                    globalLevel: 'green',
-                    globalLabel: 'Verte',
-                    categories: []
-                  }}
-                  cityName={currentCommune.nom}
-                />
+                <Suspense fallback={<LazyFallback />}>
+                  <AlertsView
+                    vigilance={weather?.vigilance || {
+                      globalLevel: 'green',
+                      globalLabel: 'Verte',
+                      categories: []
+                    }}
+                    cityName={currentCommune.nom}
+                  />
+                </Suspense>
               </motion.div>
             )}
 
@@ -1509,11 +1521,13 @@ export default function App() {
                 </div>
 
                 {/* Guide d'installation de la PWA mobile */}
-                <PwaInstallWizard 
-                  deferredPrompt={deferredPrompt}
-                  isAppInstalled={isAppInstalled}
-                  onInstallTrigger={triggerPwaInstall}
-                />
+                <Suspense fallback={<LazyFallback />}>
+                  <PwaInstallWizard
+                    deferredPrompt={deferredPrompt}
+                    isAppInstalled={isAppInstalled}
+                    onInstallTrigger={triggerPwaInstall}
+                  />
+                </Suspense>
 
                 {/* Dev / Application information */}
                 <div className="glass-premium rounded-3xl p-4 shadow-sm text-center">
