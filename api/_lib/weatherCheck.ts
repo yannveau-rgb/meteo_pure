@@ -1,6 +1,6 @@
 import webPush from 'web-push';
 import { calculateVigilance } from '../../src/utils/weatherUtils.js';
-import { getFunnyRainMessage, getSarcasticChristmasCountdownMessage } from '../../src/utils/notificationService.js';
+import { getFunnyRainMessage, getSarcasticChristmasCountdownMessage, getMonthlyChristmasCountdown } from '../../src/utils/notificationService.js';
 import { generateAiMorningBrief } from './gemini.js';
 import { getSubscriptions, saveSubscriptions } from './storage.js';
 import { configureVapid } from './vapid.js';
@@ -59,6 +59,31 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
             } catch (err: any) {
               console.error('[PUSH] morning brief failed:', sub.id, err.statusCode);
             }
+          }
+        }
+      }
+
+      // 1st of month: monthly Christmas countdown (all year long)
+      {
+        const now1 = new Date();
+        const pHour1 = parseInt(now1.toLocaleTimeString('en-US', { timeZone: 'Europe/Paris', hour: '2-digit', hour12: false }), 10);
+        const pDay1 = parseInt(now1.toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', day: '2-digit' }), 10);
+        const monthKey = now1.toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' }).substring(0, 7); // "YYYY-MM"
+
+        if (pDay1 === 1 && pHour1 >= 7 && pHour1 <= 10 && (sub as any).lastMonthlyXmasDate !== monthKey) {
+          const parisNow1 = new Date(now1.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+          const msg = getMonthlyChristmasCountdown(parisNow1, sub.humorLevel as any);
+          try {
+            await webPush.sendNotification(sub.subscription, JSON.stringify({
+              title: msg.title,
+              message: msg.body,
+              intensity: 'alert_yellow',
+              city: sub.commune.nom
+            }), { urgency: 'high', TTL: 7200 });
+            (sub as any).lastMonthlyXmasDate = monthKey;
+            sent++;
+          } catch (err: any) {
+            console.error('[PUSH] monthly xmas failed:', sub.id, err.statusCode);
           }
         }
       }

@@ -600,6 +600,108 @@ export function getSarcasticChristmasCountdownMessage(now: Date, humorLevel: Hum
   };
 }
 
+export function getMonthlyChristmasCountdown(now: Date, humorLevel: HumorLevel): { title: string; body: string } {
+  const days = getDaysUntilChristmas(now);
+  const month = now.getMonth(); // 0 = janvier
+
+  // Titres : punchline courte avec le compte J-X
+  const titles: Record<HumorLevel, string[]> = {
+    safe: [
+      `🎄 Janvier déjà ! Plus que ${days} jours avant Noël`,
+      `🎄 Février : ${days} jours pour préparer Noël`,
+      `🌷 Mars : ${days} jours avant les cadeaux`,
+      `🐣 Avril : encore ${days} jours de répit`,
+      `☀️ Mai fleuri, ${days} jours avant Noël`,
+      `🏖️ Juin : ${days} jours avant la hotte`,
+      `🌞 Mi-chemin ! ${days} jours avant Noël`,
+      `🌴 Août : ${days} jours avant la dinde`,
+      `🍂 Septembre sonne : J-${days} pour Noël`,
+      `🎃 Octobre : ${days} jours avant les cadeaux`,
+      `🍁 Novembre : J-${days} avant Noël !`,
+      `🔔 Décembre : Noël dans ${days} jours !`,
+    ],
+    spicy: [
+      `🥂 Ça repart. ${days} jours avant de te ruiner à Noël`,
+      `💘 Mois de l'amour, ${days} jours avant le vide du compte`,
+      `🌷 Printemps et dèjà ${days} jours jusqu'à l'horreur familiale`,
+      `🐟 Poisson d'avril ? Non, Noël dans ${days} jours — c'est vrai`,
+      `💸 Mai : ${days} jours pour pas économiser un centime`,
+      `☀️ Profite du soleil. Dans ${days} jours : dinde, oncles soûls`,
+      `🌊 Mi-parcours. ${days} jours avant le carnage budgétaire de Noël`,
+      `🏖️ Vacances ? Dans ${days} jours tu fais la queue aux caisses`,
+      `🍂 Rentrée. Les décos de Noël arrivent et il reste ${days} jours`,
+      `🎃 Citrouilles et décos Noël en rayon : encore ${days} jours`,
+      `🌧️ Novembre gris. ${days} jours avant de feindre la joie en famille`,
+      `⏰ Décembre. ${days} jours et le Père Noël vide ton compte`,
+    ],
+    vulgar: [
+      `🥂 Bonne année et merde. Noël dans ${days} jours, ta thune aussi`,
+      `💘 Mois de l'amour. Dans ${days} jours : cadeaux de merde et sourires forcés`,
+      `🌷 Printemps en fleurs, faillite en ${days} jours. Magnifique`,
+      `🐟 Dans ${days} jours tu te taperas la bouffe de Noël. Joyeuses fêtes de tes morts`,
+      `💸 Mai, ça pousse. Ta thune aussi — vers la sortie dans ${days} jours`,
+      `☀️ Il fait beau. Profites-en : dans ${days} jours c'est la merde de Noël`,
+      `🌊 Mi-parcours vers le calvaire. ${days} jours avant Noël, courage l'ami`,
+      `🏖️ En vacances ? Dans ${days} jours tu coures dans les rayons cadeaux comme un con`,
+      `🍂 La rentrée et ses emmerdes. Noël rajoute sa couche dans ${days} jours`,
+      `🎃 Halloween c'est quoi comparé à Noël ? Dans ${days} jours, l'horreur vraie`,
+      `🌧️ Novembre pluvieux et déprimant. Dans ${days} jours : Noël par-dessus la merde`,
+      `⏰ Plus que ${days} jours avant que tout le monde te casse les couilles avec Noël`,
+    ],
+  };
+
+  // Corps : contexte du mois, cinglant
+  const bodies: Record<HumorLevel, string[]> = {
+    safe: [
+      `La nouvelle année commence à peine et Noël revient déjà pointer le bout de son nez. ${days} jours pour anticiper vos achats et éviter la panique de décembre !`,
+      `Février file vite. ${days} jours pour peaufiner votre liste de cadeaux avant que les rayons soient dévalisés.`,
+      `Le printemps arrive et Noël se rapproche doucement. ${days} jours pour commencer à économiser.`,
+      `Joyeux poisson ! Noël n'est pas une blague : encore ${days} jours avant le réveillon.`,
+      `Le mois de mai ouvre la saison des beaux jours. ${days} jours pour préparer Noël sereinement.`,
+      `L'été pointe le bout de son nez, et Noël aussi (dans ${days} jours). Profitez du soleil d'abord.`,
+      `À mi-chemin entre deux Noëls. ${days} jours exactement vous séparent de la fête.`,
+      `Bonne détente estivale. Noël arrive dans ${days} jours — autant le planifier depuis la plage.`,
+      `La rentrée est là, et Noël dans ${days} jours. Le temps file !`,
+      `Décos de Noël en rayon dès maintenant… et pour cause : plus que ${days} jours.`,
+      `Novembre, mois de la Toussaint et des premières décos lumineuses. Noël dans ${days} jours.`,
+      `Le compte à rebours final est lancé : ${days} jours et Noël est là !`,
+    ],
+    spicy: [
+      `Le champagne du réveillon n'est pas encore digéré et ta liste de cadeaux pour Noël prochain te regarde déjà. ${days} jours. Commence à mettre des sous de côté — spoiler : tu le feras pas.`,
+      `${days} jours pour trouver un cadeau original. Tu finiras comme chaque année par une bougie et un livre qu'on te conseille depuis ton historique Amazon. On ne change pas.`,
+      `${days} jours. Le temps de voir pousser les jonquilles, de faire semblant de faire du sport en avril et de procrastiner sur les cadeaux jusqu'en décembre. Le cycle est immuable.`,
+      `Noël dans ${days} jours. Autant de temps pour oublier complètement cet avertissement et paniquer en décembre devant des rayons vides. Bonne chance.`,
+      `Encore ${days} jours avant l'hémorragie bancaire traditionnelle. L'économie de marché se porte bien grâce à toi, chaque année, sans faute.`,
+      `${days} jours de soleil avant le blizzard budgétaire. Les vendeurs de marché de Noël frottent déjà leurs mains. Toi, profite du barbecue.`,
+      `${days} jours. Tu es exactement à mi-parcours entre deux éditions du même calvaire festif. Statistiquement, tu n'as toujours pas changé. Félicitations.`,
+      `${days} jours depuis ta chaise longue. Tes neveux ont déjà leur liste prête depuis mars. Ta liste à toi : inexistante. On se retrouve en décembre comme d'habitude.`,
+      `Rentrée et Noël dans ${days} jours. La mauvaise nouvelle c'est que les décos envahissent déjà les Leclerc. La pire : tu n'as rien économisé cet été.`,
+      `Octobre, le mois où les supermarchés mélangent citrouilles et boules de Noël. Plus que ${days} jours. Commencez à flipper correctement.`,
+      `${days} jours. Tu n'as rien préparé. Tu savais pourtant depuis janvier. Même chose l'an prochain.`,
+      `Plus que ${days} jours. Les colis Amazon se télescopent, les files de caisse s'allongent et ton compte tremble. Le grand soir approche.`,
+    ],
+    vulgar: [
+      `Noël dans ${days} jours. Ta gueule de bois du 1er janvier est à peine dissipée que le prochain carnage financier est déjà programmé. Magnifique système, non ?`,
+      `${days} putains de jours avant que tu achètes des cadeaux de merde à des gens qui en feront autant pour toi. L'humanité dans toute sa splendeur consumériste.`,
+      `${days} jours avant le rituel annuel de la ruine organisée. Le printemps arrive, les oiseaux chantent, et ta thune va bientôt morfler. Profite.`,
+      `Dans ${days} jours, tu ouvriras un cadeau emballé à la va-vite et tu feras semblant d'être ravi. On se pratique dès maintenant ? Parfait.`,
+      `${days} jours. Le mois de mai, c'est beau, ça sent la liberté. Décembre, ça sent la dinde trop sèche et les dettes. Savourez la différence.`,
+      `Il fait chaud, tu glandes. Dans ${days} jours tu seras à genoux devant un rayon Fnac bondé. Profite du barbecue, connard (avec affection).`,
+      `Mi-parcours de la vie en direction du Noël prochain. ${days} jours. Tu es toujours aussi impréparé qu'au premier janvier. C'est respectable dans sa constance.`,
+      `${days} jours. Tu prends des coups de soleil pendant que tes gosses écrivent leur liste au Père Noël avec un budget délirant. Belle vie.`,
+      `La rentrée et ses emmerdes habituelles. Bonne nouvelle : dans seulement ${days} jours, Noël rajoutera une couche. Y'a des traditions qu'on respecte.`,
+      `Halloween dans quelques semaines, Noël dans ${days} jours. En France on arrive même plus à profiter d'une fête à la fois. Bien joué la société.`,
+      `${days} jours. T'as rien préparé, rien économisé, et tu le sais très bien. Même chose l'an dernier. Le cercle vicieux est fermé et toi tu souris bêtement.`,
+      `${days} jours avant que les fêtes te fracassent le porte-monnaie une fois de plus. Décembre est là, et avec lui l'avalanche habituelle de conneries festives.`,
+    ],
+  };
+
+  const t = titles[humorLevel] ?? titles.spicy;
+  const b = bodies[humorLevel] ?? bodies.spicy;
+
+  return { title: t[month], body: b[month] };
+}
+
 export function getMorningBriefContent(humorLevel: HumorLevel, birthDate: string, weatherCode: number): { title: string, body: string } | null {
   const sign = getZodiacSign(birthDate);
   if (sign === 'Inconnu') return null;
