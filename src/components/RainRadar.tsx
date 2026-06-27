@@ -57,7 +57,9 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
 
         const map = L.map(containerRef.current, {
           center: [latitude, longitude],
-          zoom: 8,
+          zoom: 7,
+          minZoom: 4,
+          maxZoom: 10,
           zoomControl: false,
           scrollWheelZoom: false,
           attributionControl: false,
@@ -66,13 +68,13 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
 
         // Dark CartoDB base layer
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-          maxZoom: 18,
+          maxZoom: 12,
           subdomains: 'abcd',
         }).addTo(map);
 
         // Labels layer on top
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-          maxZoom: 18,
+          maxZoom: 12,
           subdomains: 'abcd',
           pane: 'shadowPane',
         }).addTo(map);
@@ -104,8 +106,8 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
         const initIdx = Math.max(0, lastPastIdx);
 
         const radarLayer = L.tileLayer(
-          `https://tilecache.rainviewer.com${allFrames[initIdx].path}/512/{z}/{x}/{y}/6/1_1.png`,
-          { opacity: 0.75, maxZoom: 18, tileSize: 256 }
+          `https://tilecache.rainviewer.com${allFrames[initIdx].path}/256/{z}/{x}/{y}/6/1_1.png`,
+          { opacity: 0.75, maxZoom: 12, tileSize: 256 }
         ).addTo(map);
         layerRef.current = radarLayer;
 
@@ -135,7 +137,7 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
       map.removeLayer(layerRef.current);
     }
     layerRef.current = L.tileLayer(
-      `https://tilecache.rainviewer.com${frame.path}/512/{z}/{x}/{y}/6/1_1.png`,
+      `https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/6/1_1.png`,
       { opacity: 0.75, maxZoom: 18, tileSize: 256 }
     ).addTo(map);
   }, [frames]);
