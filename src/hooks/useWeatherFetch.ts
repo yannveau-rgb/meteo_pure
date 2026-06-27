@@ -51,5 +51,5 @@ export function useWeatherFetch(commune: Commune, onBackgroundRefresh?: () => vo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commune]);
 
-  return { weather, setWeather, loading, errorMsg, prevWeatherRef };
+  return { weather, setWeather, loading, errorMsg, setErrorMsg, prevWeatherRef };
 }

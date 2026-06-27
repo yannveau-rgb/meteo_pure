@@ -1,7 +1,7 @@
 {
   "name": "Météo Pure",
   "short_name": "Météo Pure",
-  "description": "Une superbe application météo épurée et interactive avec recherche de communes de France et système d'alertes déjantées.",
+  "description": "Application météo française avec alertes push, briefings IA et vigilances Météo-France.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a1128",
@@ -9,16 +9,34 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "72x72 96x96 128x128 144x144 192x192 384x384 512x512",
-      "type": "image/svg+xml",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon.svg",
-      "sizes": "72x72 96x96 128x128 144x144 192x192 384x384 512x512",
-      "type": "image/svg+xml",
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }

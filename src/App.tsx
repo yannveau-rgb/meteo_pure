@@ -90,7 +90,9 @@ const LazyFallback = () => (
 
 export default function App() {
   // Navigation & Screen tab state
-  const [activeTab, setActiveTab ] = useState<'meteo' | 'cartes' | 'alertes' | 'reglages'>('meteo');
+  const [activeTab, setActiveTab] = useState<'meteo' | 'cartes' | 'alertes' | 'reglages'>('meteo');
+
+  const isAdmin = typeof window !== 'undefined' && !!localStorage.getItem('adminToken');
 
   // Current commune + welcome prompt (localStorage-synced)
   const { currentCommune, setCurrentCommune, showWelcomePrompt, setShowWelcomePrompt } = useCurrentCommune();
@@ -98,7 +100,7 @@ export default function App() {
   // City search with debounce
   const {
     searchQuery, setSearchQuery,
-    searchResults,
+    searchResults, setSearchResults,
     isSearching,
     showSearchList, setShowSearchList,
   } = useCitySearch();
@@ -129,7 +131,7 @@ export default function App() {
   const [testingCron, setTestingCron] = useState<boolean>(false);
 
   // Weather data (fetch + 10-min refresh)
-  const { weather, setWeather, loading, errorMsg, prevWeatherRef } = useWeatherFetch(currentCommune, () => {
+  const { weather, setWeather, loading, errorMsg, setErrorMsg, prevWeatherRef } = useWeatherFetch(currentCommune, () => {
     if (notifSettings.systemEnabled) {
       checkAndFireFullMoonNotification(notifSettings.humorLevel);
     }
@@ -401,7 +403,7 @@ export default function App() {
       {/* Container Principal (Mobile-First responsive frame) */}
       <div 
         id="applet-main-frame"
-        className="relative w-full max-w-md min-h-screen sm:min-h-[880px] sm:max-h-[920px] sm:rounded-[40px] shadow-2xl overflow-hidden bg-white/5 backdrop-blur-[45px] border border-white/20 flex flex-col justify-between pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-6 px-6 sm:p-6"
+        className="relative w-full max-w-md min-h-screen sm:min-h-[880px] sm:max-h-[920px] sm:rounded-[40px] shadow-2xl overflow-hidden bg-white/5 backdrop-blur-[45px] border border-white/20 flex flex-col justify-between pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] px-6 sm:p-6"
       >
         
         {/* MOON PHASES MODAL */}
@@ -420,11 +422,11 @@ export default function App() {
               >
                 <div className="flex justify-between items-center w-full mb-6 relative">
                   <h2 className="text-xl font-bold text-white tracking-wide">Cycles Lunaires</h2>
-                  <button onClick={() => setShowMoonModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition-colors">
+                  <button onClick={() => setShowMoonModal(false)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400/60">
                     &times;
                   </button>
                 </div>
-                
+
                 <div className="flex flex-col gap-3 w-full">
                   {getNext7DaysMoonPhases().map((moon, index) => (
                     <div key={index} className="flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-colors">
@@ -467,7 +469,7 @@ export default function App() {
                 </div>
                 <div className="flex justify-between items-center w-full mb-6 z-10 relative">
                   <h2 className="text-lg font-bold text-white tracking-wide">Brief Matinal</h2>
-                  <button onClick={() => setShowMorningBriefModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition-colors">
+                  <button onClick={() => setShowMorningBriefModal(false)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400/60">
                     &times;
                   </button>
                 </div>
@@ -619,9 +621,9 @@ export default function App() {
                   "{activeToast.message}"
                 </p>
                 
-                <div className="flex justify-between items-center text-[7px] text-white/45 font-extrabold pl-0.5 mt-1 uppercase select-none tracking-widest">
+                <div className="flex justify-between items-center text-[9px] text-white/50 font-extrabold pl-0.5 mt-1 uppercase select-none tracking-widest">
                   <span>Météo à {currentCommune.nom}</span>
-                  <span className="bg-white/15 px-1.5 py-0.5 rounded-full text-[6px] text-white/90">
+                  <span className="bg-white/15 px-1.5 py-0.5 rounded-full text-[8px] text-white/90">
                     {activeToast.intensity === 'heavy' ? 'Averse forte' :
                      activeToast.intensity === 'moderate' ? 'Pluie soutenue' : 
                      activeToast.intensity === 'thunderstorm' ? 'Orage électrique !' : 
@@ -707,11 +709,12 @@ export default function App() {
             </div>
 
             {/* Geolocation Pin button */}
-            <button 
+            <button
               id="geolocation-trigger-btn"
               onClick={handleGeolocation}
               disabled={geoLocating}
-              className={`p-2.5 rounded-full bg-white/25 backdrop-blur-md border border-white/45 shadow-sm active:scale-95 transition-transform ${geoLocating ? 'animate-bounce text-sky-200' : 'text-white hover:bg-white/35'}`}
+              aria-label="Me géolocaliser"
+              className={`p-2.5 rounded-full bg-white/25 backdrop-blur-md border border-white/45 shadow-sm active:scale-95 transition-transform focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${geoLocating ? 'animate-bounce text-sky-200' : 'text-white hover:bg-white/35'}`}
               title="Me géolocaliser en France"
             >
               {geoLocating ? (
@@ -724,7 +727,7 @@ export default function App() {
 
           {/* Quick Favorite Cities Chips */}
           {favorites.length > 0 && (
-            <div className="flex gap-1.5 items-center mt-2.5 overflow-x-auto no-scrollbar py-1 select-none shrink-0" style={{ webkitOverflowScrolling: 'touch' }}>
+            <div className="flex gap-1.5 items-center mt-2.5 overflow-x-auto no-scrollbar py-1 select-none shrink-0" style={{ WebkitOverflowScrolling: 'touch' }}>
               <Star className="w-3.5 h-3.5 text-amber-300 fill-amber-300 shrink-0" />
               <div className="flex gap-1.5 items-center">
                 {favorites.map((fav) => (
@@ -747,10 +750,11 @@ export default function App() {
                         e.stopPropagation();
                         setFavorites(favorites.filter(f => f.code !== fav.code));
                       }}
-                      className="text-white/40 hover:text-rose-300 hover:scale-110 transition-transform cursor-pointer focus:outline-none"
+                      aria-label={`Retirer ${fav.nom} des favoris`}
+                      className="text-white/40 hover:text-rose-300 hover:scale-110 transition-transform cursor-pointer focus:outline-none p-1 -m-0.5"
                       title="Retirer des favoris"
                     >
-                      <X className="w-2.5 h-2.5" />
+                      <X className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
@@ -796,7 +800,8 @@ export default function App() {
                         </h1>
                         <button
                           onClick={() => toggleFavorite(currentCommune)}
-                          className="p-1 px-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 active:scale-95 transition-all text-white cursor-pointer shadow-sm shrink-0 flex items-center justify-center mt-1"
+                          aria-label={favorites.some(fav => fav.code === currentCommune.code) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                          className="p-1 px-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 active:scale-95 transition-all text-white cursor-pointer shadow-sm shrink-0 flex items-center justify-center mt-1 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
                           title={favorites.some(fav => fav.code === currentCommune.code) ? "Retirer des favoris" : "Ajouter aux favoris"}
                         >
                           <Star
@@ -810,7 +815,8 @@ export default function App() {
                         <button
                           onClick={() => todayShare.openShare('today-weather-widget')}
                           data-html2canvas-ignore="true"
-                          className="p-1 px-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 active:scale-95 transition-all text-white cursor-pointer shadow-sm shrink-0 flex items-center justify-center mt-1"
+                          aria-label="Partager la météo du jour"
+                          className="p-1 px-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 active:scale-95 transition-all text-white cursor-pointer shadow-sm shrink-0 flex items-center justify-center mt-1 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
                           title="Partager la météo du jour"
                         >
                           <Share2 className="w-4 h-4 text-sky-200" />
@@ -948,9 +954,9 @@ export default function App() {
 
                           {/* Control buttons & metadata line */}
                           <div className="flex justify-between items-center w-full relative z-10 border-t border-white/5 pt-2">
-                            <span className="text-[8px] font-bold text-white/30 uppercase tracking-widest flex items-center gap-1">
+                            <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1">
                               <span className="w-1 h-1 bg-amber-400 rounded-full animate-ping" />
-                              Météo Roast • Spicy
+                              Météo Roast
                             </span>
                             <button
                               id="regenerate-roast-btn"
@@ -958,7 +964,8 @@ export default function App() {
                                 const isNight = isNightTime(weather.sunrise, weather.sunset);
                                 setCurrentRoast(generateWeatherRoast(weather, isNight));
                               }}
-                              className="text-[9px] uppercase tracking-widest font-bold text-white/50 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-full px-3 py-1 transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                              aria-label="Générer un nouveau roast"
+                              className="text-[10px] uppercase tracking-widest font-bold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-full px-3 py-1.5 transition-all cursor-pointer flex items-center gap-1 active:scale-95 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
                               title="Générer un autre roast humoristique pour ce temps"
                             >
                               🎲 Nouveau Roast
@@ -1209,7 +1216,10 @@ export default function App() {
                             setNotifSettings(updated);
                             saveNotificationSettings(updated);
                           }}
-                          className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden ${
+                          role="switch"
+                          aria-checked={notifSettings.systemEnabled}
+                          aria-label="Notifications en arrière-plan"
+                          className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
                             notifSettings.systemEnabled ? 'bg-sky-500' : 'bg-white/10 border border-white/10'
                           }`}
                           type="button"
@@ -1310,7 +1320,10 @@ export default function App() {
                           setNotifSettings(updated);
                           saveNotificationSettings(updated);
                         }}
-                        className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden ${
+                        role="switch"
+                        aria-checked={notifSettings.rainNotificationsEnabled !== false}
+                        aria-label="Notifications pluie"
+                        className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
                           notifSettings.rainNotificationsEnabled !== false ? 'bg-sky-500' : 'bg-white/10 border border-white/10'
                         }`}
                         type="button"
@@ -1342,7 +1355,10 @@ export default function App() {
                           setNotifSettings(updated);
                           saveNotificationSettings(updated);
                         }}
-                        className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden ${
+                        role="switch"
+                        aria-checked={notifSettings.stormNotificationsEnabled !== false}
+                        aria-label="Notifications orages"
+                        className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
                           notifSettings.stormNotificationsEnabled !== false ? 'bg-amber-500' : 'bg-white/10 border border-white/10'
                         }`}
                         type="button"
@@ -1374,7 +1390,10 @@ export default function App() {
                           setNotifSettings(updated);
                           saveNotificationSettings(updated);
                         }}
-                        className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden ${
+                        role="switch"
+                        aria-checked={notifSettings.alertNotificationsEnabled !== false}
+                        aria-label="Notifications vigilance"
+                        className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
                           notifSettings.alertNotificationsEnabled !== false ? 'bg-rose-500' : 'bg-white/10 border border-white/10'
                         }`}
                         type="button"
@@ -1387,7 +1406,8 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Section de Test des Notifications */}
+                {/* Section de Test des Notifications — admin only */}
+                {isAdmin && (
                 <div className="glass-premium rounded-3xl p-5 shadow-lg space-y-4 overflow-hidden relative">
                   <div className="flex items-center gap-1.5 pb-2 border-b border-white/10 z-10 relative">
                     <Sparkles className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
@@ -1471,7 +1491,7 @@ export default function App() {
                         ) : (
                           <CloudRain className="w-4 h-4 text-amber-400" />
                         )}
-                        Tester le Web Push (Serveur Cloud Run)
+                        Tester le Web Push (Serveur Cloud)
                       </span>
                       <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-md font-mono font-bold">
                         CLOUD
@@ -1532,6 +1552,7 @@ export default function App() {
                     </button>
                   </div>
                 </div>
+                )}
 
                 {/* Guide d'installation de la PWA mobile */}
                 <Suspense fallback={<LazyFallback />}>
@@ -1560,11 +1581,13 @@ export default function App() {
           className="relative z-10 mt-6 bg-white/15 backdrop-blur-md border border-white/20 rounded-full p-1.5 flex justify-around items-center shadow-lg"
         >
           {/* TAB 1: Météo */}
-          <button 
+          <button
             onClick={() => setActiveTab('meteo')}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 ${
-              activeTab === 'meteo' 
-                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105' 
+            aria-label="Météo"
+            aria-current={activeTab === 'meteo' ? 'page' : undefined}
+            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
+              activeTab === 'meteo'
+                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
                 : 'text-white/60 hover:text-white/90 font-medium'
             }`}
           >
@@ -1573,24 +1596,28 @@ export default function App() {
           </button>
 
           {/* TAB 2: Comparer */}
-          <button 
+          <button
             onClick={() => setActiveTab('cartes')}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 ${
-              activeTab === 'cartes' 
-                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105' 
+            aria-label="Comparer les villes"
+            aria-current={activeTab === 'cartes' ? 'page' : undefined}
+            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
+              activeTab === 'cartes'
+                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
                 : 'text-white/60 hover:text-white/90 font-medium'
             }`}
           >
-            <ArrowRightLeft className="w-5 h-5 text-sky-400 rotate-45" />
+            <ArrowRightLeft className={`w-5 h-5 rotate-45 ${activeTab === 'cartes' ? 'text-sky-400' : ''}`} />
             <span className="text-[9px]">Comparer</span>
           </button>
 
           {/* TAB 3: Alertes */}
-          <button 
+          <button
             onClick={() => setActiveTab('alertes')}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 ${
-              activeTab === 'alertes' 
-                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105' 
+            aria-label="Alertes et vigilance"
+            aria-current={activeTab === 'alertes' ? 'page' : undefined}
+            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
+              activeTab === 'alertes'
+                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
                 : 'text-white/60 hover:text-white/90 font-medium'
             }`}
           >
@@ -1604,11 +1631,13 @@ export default function App() {
           </button>
 
           {/* TAB 4: Réglages */}
-          <button 
+          <button
             onClick={() => setActiveTab('reglages')}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 ${
-              activeTab === 'reglages' 
-                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105' 
+            aria-label="Réglages"
+            aria-current={activeTab === 'reglages' ? 'page' : undefined}
+            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
+              activeTab === 'reglages'
+                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
                 : 'text-white/60 hover:text-white/90 font-medium'
             }`}
           >

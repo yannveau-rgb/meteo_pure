@@ -1,11 +1,12 @@
 // Météo Pure Service Worker - Offline cache + Web Push
-const CACHE_NAME = 'meteo-pure-v5';
+const CACHE_NAME = 'meteo-pure-v6';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
   '/icon.svg',
-  '/notification_badge.svg'
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -69,7 +70,6 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  // Group by category so a new alert replaces the previous one instead of stacking
   const tagMap = {
     morning_brief: 'meteo-pure-brief',
     alert_red: 'meteo-pure-vigilance',
@@ -89,12 +89,13 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.message,
-    icon: '/icon.svg',
-    badge: '/notification_badge.svg',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
     vibrate: isHighPriority ? [200, 100, 200, 100, 200] : [100, 50, 100],
     tag,
     renotify: true,
     requireInteraction: isHighPriority,
+    silent: false,
     data: {
       url: self.location.origin,
       intensity: data.intensity,
