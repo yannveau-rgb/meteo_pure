@@ -1,0 +1,23 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { generateAiMorningBrief } from './_lib/gemini';
+import { rateLimit } from './_lib/rateLimit';
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!(await rateLimit(req, res, 'morning-brief', 10))) return;
+
+  const { birthDate, weatherCode, humorLevel, cityName } = req.body || {};
+  if (!birthDate) return res.status(400).json({ error: 'birthDate is required' });
+
+  try {
+    const brief = await generateAiMorningBrief(
+      birthDate,
+      Number(weatherCode) || 0,
+      humorLevel || 'spicy',
+      cityName || 'Inconnu'
+    );
+    res.json(brief);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
