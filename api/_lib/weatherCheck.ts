@@ -52,7 +52,7 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
                 message: brief.body,
                 intensity: 'morning_brief',
                 city: sub.commune.nom
-              }));
+              }), { urgency: 'high', TTL: 3600 });
               sub.lastBriefDate = dateStrParis;
               sent++;
             } catch (err: any) {
@@ -81,7 +81,7 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
               message: christmasMsg.body,
               intensity: 'alert_orange',
               city: sub.commune.nom
-            }));
+            }), { urgency: 'high', TTL: 3600 });
             sub.lastChristmasDate = dateStrParis2;
             sent++;
           } catch (err: any) {
@@ -120,7 +120,7 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
             message: msg.message,
             intensity: transitionType,
             city: sub.commune.nom
-          }));
+          }), { urgency: 'high', TTL: 3600 });
           sent++;
         } catch (err: any) {
           console.error('[PUSH] alert failed:', sub.id, err.statusCode);

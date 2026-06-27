@@ -797,7 +797,7 @@ export async function syncPushSubscription(
           humorLevel,
           birthDate,
           currentConditions: weather ? {
-            temperature: weather.current.temperature_2m,
+            temperature: weather.current.temperature,
             precipitation: weather.current.precipitation,
             weatherCode: weather.current.weatherCode
           } : null

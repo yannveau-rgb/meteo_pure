@@ -19,6 +19,10 @@ export interface CurrentWeather {
   feelsLike: number;
   humidity: number;
   windSpeed: number;
+  windDirection?: number;   // degrees 0-360
+  cloudCover?: number;      // %
+  pressure?: number;        // hPa
+  visibility?: number;      // metres
   weatherCode: number;
   weatherDesc: string;
   iconName: string;
@@ -33,6 +37,7 @@ export interface HourlyForecastItem {
   iconName: string;
   precipitationProbability: number;
   precipitation: number;
+  windSpeed?: number;       // km/h
 }
 
 export interface DailyForecastItem {
@@ -42,6 +47,10 @@ export interface DailyForecastItem {
   weatherCode: number;
   iconName: string;
   uvIndex: number;
+  precipitationSum?: number;  // mm
+  precipProbMax?: number;     // %
+  windMax?: number;           // km/h
+  windGusts?: number;         // km/h
   hourly?: HourlyForecastItem[];
 }
 

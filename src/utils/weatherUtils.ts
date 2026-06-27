@@ -253,42 +253,90 @@ export function getWeatherUI(code: number, isNight = false): WeatherUI {
 }
 
 /**
- * Deterministically generates "Pluie dans l'heure" forecast sequence
- * using latitude/longitude and precipitation prediction.
+ * Converts real Open-Meteo minutely_15 data into the RainInTheHour format.
+ * Uses actual precipitation measurements (mm per 15-min interval).
  */
-export function generateRainInTheHour(precipitationProb: number, tomorrowPrecipitation: number): RainInTheHour[] {
-  const times = [0, 10, 20, 30, 40, 50];
-  
+export function parseRealMinutelyRain(minutely15: {
+  time: string[];
+  precipitation: number[];
+  weather_code?: number[];
+} | null): RainInTheHour[] | null {
+  if (!minutely15 || !minutely15.time || !minutely15.precipitation) return null;
+
+  try {
+    // Find current 15-min slot in Paris time
+    const parisFormatter = new Intl.DateTimeFormat('fr-CA', {
+      timeZone: 'Europe/Paris',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    });
+    const parts = parisFormatter.formatToParts(new Date());
+    const tMap: Record<string, string> = {};
+    parts.forEach(p => { tMap[p.type] = p.value; });
+
+    let hour = parseInt(tMap.hour, 10);
+    if (hour === 24) hour = 0;
+    const rawMinute = parseInt(tMap.minute, 10);
+    const slotMinute = Math.floor(rawMinute / 15) * 15;
+
+    const slotPrefix = `${tMap.year}-${tMap.month}-${tMap.day}T${hour.toString().padStart(2, '0')}:${slotMinute.toString().padStart(2, '0')}`;
+    const slotIdx = minutely15.time.findIndex(t => t.startsWith(slotPrefix));
+    if (slotIdx === -1) return null;
+
+    // Take next 4 slots (= next hour at 0, 15, 30, 45 minutes)
+    const minuteOffsets = [0, 15, 30, 45];
+    return minuteOffsets.map((offset, i) => {
+      const idx = slotIdx + i;
+      const precip = idx < minutely15.precipitation.length ? (minutely15.precipitation[idx] ?? 0) : 0;
+
+      let intensity: 'none' | 'light' | 'moderate' | 'heavy' = 'none';
+      let percentage = 5;
+
+      if (precip >= 2) {
+        intensity = 'heavy';
+        percentage = Math.min(100, 80 + precip * 5);
+      } else if (precip >= 0.5) {
+        intensity = 'moderate';
+        percentage = 50 + precip * 15;
+      } else if (precip > 0.01) {
+        intensity = 'light';
+        percentage = 20 + precip * 60;
+      }
+
+      return { minutes: offset, intensity, percentage: Math.round(percentage) };
+    });
+  } catch (e) {
+    console.error('parseRealMinutelyRain error:', e);
+    return null;
+  }
+}
+
+/**
+ * Fallback rain-in-the-hour estimate based on precipitation probability only.
+ * Used when minutely_15 data is unavailable.
+ */
+export function generateRainInTheHour(precipitationProb: number, _unused: number): RainInTheHour[] {
+  const times = [0, 15, 30, 45];
+
   if (precipitationProb < 10) {
-    // Completely dry
-    return times.map(m => ({ minutes: m, intensity: 'none', percentage: 10 }));
+    return times.map(m => ({ minutes: m, intensity: 'none' as const, percentage: 5 }));
   }
 
-  // Create sequence of weather intensity
-  // Seed-based sequence for realistic distribution
   return times.map((m, index) => {
-    // Mix probability and minute to fluctuate
-    const indexFactor = Math.sin((index + 1) * 1.5) * 40 + precipitationProb;
-    
-    let intensity: 'none' | 'light' | 'moderate' | 'heavy' = 'none';
-    let percentage = 10;
+    const factor = precipitationProb + Math.sin((index + 1) * 1.5) * 20;
 
-    if (indexFactor > 80) {
-      intensity = 'heavy';
-      percentage = 80 + (index % 3) * 10;
-    } else if (indexFactor > 50) {
-      intensity = 'moderate';
-      percentage = 45 + (index % 4) * 10;
-    } else if (indexFactor > 20) {
-      intensity = 'light';
-      percentage = 20 + (index % 5) * 5;
+    let intensity: 'none' | 'light' | 'moderate' | 'heavy' = 'none';
+    let percentage = 5;
+
+    if (factor > 80) {
+      intensity = 'heavy'; percentage = 80;
+    } else if (factor > 55) {
+      intensity = 'moderate'; percentage = 55;
+    } else if (factor > 25) {
+      intensity = 'light'; percentage = 30;
     }
 
-    return {
-      minutes: m,
-      intensity,
-      percentage
-    };
+    return { minutes: m, intensity, percentage };
   });
 }
 

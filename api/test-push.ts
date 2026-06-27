@@ -38,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         message: msg.message || msg.body || 'Test',
         intensity: type,
         city: sub.commune.nom
-      }));
+      }), { urgency: 'high', TTL: 3600 });
       successCount++;
     } catch (err: any) {
       failCount++;

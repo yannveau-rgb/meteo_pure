@@ -9,7 +9,21 @@ interface WeatherStatsProps {
   dailyData?: DailyForecastItem[];
 }
 
+function getWindDir(deg?: number): string {
+  if (deg === undefined) return '';
+  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+  return dirs[Math.round(deg / 45) % 8];
+}
+
 export default function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }: WeatherStatsProps) {
+  const uvRisk = (() => {
+    if (uvIndex <= 2) return { label: 'Faible', color: 'text-green-300 bg-green-500/20 border-green-500/30' };
+    if (uvIndex <= 5) return { label: 'Modéré', color: 'text-amber-300 bg-amber-500/20 border-amber-500/30' };
+    if (uvIndex <= 7) return { label: 'Élevé', color: 'text-orange-300 bg-orange-500/20 border-orange-500/30' };
+    if (uvIndex <= 10) return { label: 'Très élevé', color: 'text-red-300 bg-red-500/20 border-red-500/30' };
+    return { label: 'Extrême', color: 'text-fuchsia-300 bg-fuchsia-500/20 border-fuchsia-500/30' };
+  })();
+
   // Calculate relative indicator representation
   const windPercentage = Math.min(95, Math.max(5, (current.windSpeed / 50) * 100));
   
@@ -80,16 +94,34 @@ export default function WeatherStats({ current, uvIndex = 3, hourlyData = [], da
         </div>
       </div>
 
-      {/* Grid for minor parameters (UV & Humidity) formatted beautifully in white glass theme */}
+      {/* Grid for minor parameters */}
       <div className="flex justify-between items-center text-[11px] font-semibold text-white/70 pt-0.5">
         <div className="flex items-center gap-1.5">
           <span>Index UV: {uvIndex}</span>
-          <span className="text-[9px] bg-white/15 px-1.5 py-0.5 rounded-full text-white/80">Modéré</span>
+          <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${uvRisk.color}`}>{uvRisk.label}</span>
         </div>
-        <div>
-          <span>Précip. directes: {current.precipitation.toFixed(1)} mm</span>
+        <div className="flex items-center gap-2">
+          {current.windDirection !== undefined && (
+            <span className="text-white/50">{getWindDir(current.windDirection)}</span>
+          )}
+          <span>Précip: {current.precipitation.toFixed(1)} mm</span>
         </div>
       </div>
+
+      {/* Extra precision fields */}
+      {(current.pressure !== undefined || current.visibility !== undefined || current.cloudCover !== undefined) && (
+        <div className="flex justify-between items-center text-[10px] text-white/50 pt-0.5">
+          {current.pressure !== undefined && (
+            <span>{Math.round(current.pressure)} hPa</span>
+          )}
+          {current.cloudCover !== undefined && (
+            <span>Nuages {current.cloudCover}%</span>
+          )}
+          {current.visibility !== undefined && (
+            <span>Visib. {current.visibility >= 1000 ? `${(current.visibility / 1000).toFixed(1)} km` : `${current.visibility} m`}</span>
+          )}
+        </div>
+      )}
 
       {/* Exquisite inline SVG Sparkline to show the temperature curve for the next 6 hours */}
       {spark && (

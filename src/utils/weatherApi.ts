@@ -1,5 +1,5 @@
 import { Commune, WeatherData, CurrentWeather, HourlyForecastItem, DailyForecastItem } from '../types';
-import { generateRainInTheHour, calculateVigilance, getWeatherUI } from './weatherUtils';
+import { generateRainInTheHour, parseRealMinutelyRain, calculateVigilance, getWeatherUI } from './weatherUtils';
 
 /**
  * Search French communes by name via the official geo.api.gouv.fr.
@@ -41,8 +41,17 @@ export async function getCommuneByCoords(lat: number, lon: number): Promise<Comm
  */
 export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
   const [longitude, latitude] = commune.centre.coordinates;
-  const urlMeteoFrance = `https://api.open-meteo.com/v1/meteofrance?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability,precipitation,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset&timezone=Europe/Paris`;
-  const urlStandard = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&hourly=temperature_2m,precipitation_probability,precipitation,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset&timezone=Europe/Paris`;
+
+  // Primary: Météo-France AROME model (1.3 km resolution over France — highest precision available)
+  const currentVars = 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,surface_pressure,visibility';
+  const hourlyVars  = 'temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m';
+  const dailyVars   = 'weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max';
+  const minuteVars  = 'precipitation,weather_code';
+
+  const urlMeteoFrance = `https://api.open-meteo.com/v1/meteofrance?latitude=${latitude}&longitude=${longitude}&current=${currentVars}&hourly=${hourlyVars}&daily=${dailyVars}&minutely_15=${minuteVars}&forecast_days=10&timezone=Europe/Paris`;
+
+  // Secondary: ECMWF IFS (0.25° global) used for blending and fallback
+  const urlStandard = `https://api.open-meteo.com/v1/ecmwf?latitude=${latitude}&longitude=${longitude}&current=${currentVars}&hourly=${hourlyVars}&daily=${dailyVars}&minutely_15=${minuteVars}&forecast_days=10&timezone=Europe/Paris`;
 
   let data: any = null;
   let fallbackData: any = null;
@@ -161,7 +170,8 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
     }
     
     if (startIdx === 0) {
-      startIdx = Math.max(0, new Date().getHours());
+      // Fallback: use Paris hour to avoid offset with API data (always Europe/Paris)
+      startIdx = Math.max(0, localHour);
     }
 
     // Map current parameters (safe fallback handling & intelligent multi-model blending)
@@ -242,18 +252,20 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
     }
 
     const ui = getWeatherUI(currentCode);
-    
-    let displayTemp = rawCurrentMF.temperature_2m ?? rawCurrentStd.temperature_2m ?? 15;
+
+    // Always display the real measured temperature — never substitute feels-like
+    const displayTemp = rawCurrentMF.temperature_2m ?? rawCurrentStd.temperature_2m ?? 15;
     const apparent = rawCurrentMF.apparent_temperature ?? rawCurrentStd.apparent_temperature ?? displayTemp;
-    if (apparent > displayTemp && displayTemp > 20) {
-        displayTemp = apparent;
-    }
 
     const current: CurrentWeather = {
       temperature: displayTemp,
       feelsLike: apparent,
       humidity: rawCurrentMF.relative_humidity_2m ?? rawCurrentStd.relative_humidity_2m ?? 50,
       windSpeed: rawCurrentMF.wind_speed_10m ?? rawCurrentStd.wind_speed_10m ?? 0,
+      windDirection: rawCurrentMF.wind_direction_10m ?? rawCurrentStd.wind_direction_10m,
+      cloudCover: rawCurrentMF.cloud_cover ?? rawCurrentStd.cloud_cover,
+      pressure: rawCurrentMF.surface_pressure ?? rawCurrentStd.surface_pressure,
+      visibility: rawCurrentMF.visibility ?? rawCurrentStd.visibility,
       weatherCode: currentCode,
       weatherDesc: ui.label,
       iconName: currentCode.toString(),
@@ -267,6 +279,7 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
     const hourlyCodes = data.hourly?.weather_code || [];
     const hourlyProb = data.hourly?.precipitation_probability || [];
     const hourlyPrecip = data.hourly?.precipitation || [];
+    const hourlyWind = data.hourly?.wind_speed_10m || [];
 
     for (let j = 0; j < 12; j++) {
       const idx = startIdx + j;
@@ -310,7 +323,8 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
           weatherCode: code,
           iconName: code.toString(),
           precipitationProbability: hourlyProb[idx] ?? 0,
-          precipitation: hourlyPrecip[idx] ?? 0
+          precipitation: hourlyPrecip[idx] ?? 0,
+          windSpeed: hourlyWind[idx] ?? undefined
         });
       } else {
         hourly.push({
@@ -332,6 +346,10 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
     const dailyMax = data.daily?.temperature_2m_max || [];
     const dailyMin = data.daily?.temperature_2m_min || [];
     const dailyUv = data.daily?.uv_index_max || [];
+    const dailyPrecipSum = data.daily?.precipitation_sum || [];
+    const dailyPrecipProbMax = data.daily?.precipitation_probability_max || [];
+    const dailyWindMax = data.daily?.wind_speed_10m_max || [];
+    const dailyWindGusts = data.daily?.wind_gusts_10m_max || [];
 
     for (let k = 0; k < 7; k++) {
       const dayName = daysArr[(currentDayIdx + k) % 7];
@@ -490,14 +508,25 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
         weatherCode: representativeCode,
         iconName: representativeCode.toString(),
         uvIndex: dailyUv[k] ? Math.round(dailyUv[k] ?? 3) : 3,
+        precipitationSum: dailyPrecipSum[k] ?? undefined,
+        precipProbMax: dailyPrecipProbMax[k] ?? undefined,
+        windMax: dailyWindMax[k] ?? undefined,
+        windGusts: dailyWindGusts[k] ?? undefined,
         hourly: dailyHourly
       });
     }
 
-    // Use current hours probability to model realistic hourly precipitation timeline
+    // Use real minutely_15 data for precise rain-in-the-hour nowcast; fall back to probability model
+    const minutely15 = data.minutely_15 ?? null;
+    const realRain = minutely15
+      ? parseRealMinutelyRain({
+          time: minutely15.time ?? [],
+          precipitation: minutely15.precipitation ?? [],
+          weather_code: minutely15.weather_code ?? [],
+        })
+      : null;
     const prob = hourly.length > 0 ? hourly[0].precipitationProbability : 0;
-    const tomorrowPrecip = daily.length > 1 ? daily[1].tempMax - daily[1].tempMin : 0;
-    const rainInTheHour = generateRainInTheHour(prob, tomorrowPrecip);
+    const rainInTheHour = realRain ?? generateRainInTheHour(prob, 0);
 
     // Dynamic Vigilance Status calculation
     const vigilance = calculateVigilance(
