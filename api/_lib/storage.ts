@@ -4,7 +4,18 @@ let redis: Redis | null = null;
 
 export function getRedis(): Redis {
   if (!redis) {
-    redis = Redis.fromEnv();
+    const url =
+      process.env.UPSTASH_REDIS_REST_URL ||
+      process.env.UPSTASH_REDIS_REST_KV_REST_API_URL ||
+      process.env.KV_REST_API_URL;
+    const token =
+      process.env.UPSTASH_REDIS_REST_TOKEN ||
+      process.env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN ||
+      process.env.KV_REST_API_TOKEN;
+    if (!url || !token) {
+      throw new Error('Upstash Redis credentials missing (UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN or KV_REST_API_* variants).');
+    }
+    redis = new Redis({ url, token });
   }
   return redis;
 }
