@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   MapPin, 
   Search, 
@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Commune, WeatherData } from './types';
-import { fetchWeatherData, searchFrenchCommunes, getCommuneByCoords } from './utils/weatherApi';
+import { getCommuneByCoords } from './utils/weatherApi';
 import { getWeatherUI, getMoonPhase, getNext7DaysMoonPhases, calculateCurrentUv, isNightTime, isHourNight } from './utils/weatherUtils';
 import { generateWeatherRoast } from './utils/roastService';
 import { getSaintDuJour } from './utils/ephemeris';
@@ -47,7 +47,6 @@ import {
   fireSystemNotification,
   checkAndFireFullMoonNotification,
   checkAndFireMorningBrief,
-  getMorningBriefContent,
   isSpamProtected,
   updateLastAlertTime,
   syncPushSubscription,
@@ -61,6 +60,10 @@ import {
 import { useFavorites } from './hooks/useFavorites';
 import { usePwaInstall } from './hooks/usePwaInstall';
 import { useFrenchClock } from './hooks/useFrenchClock';
+import { useCurrentCommune } from './hooks/useCurrentCommune';
+import { useCitySearch } from './hooks/useCitySearch';
+import { useWeatherFetch } from './hooks/useWeatherFetch';
+import { useMorningBrief } from './hooks/useMorningBrief';
 
 // Modular child components
 import RainForecast from './components/RainForecast';
@@ -75,47 +78,20 @@ import ClimateComparison from './components/ClimateComparison';
 import TiltCard from './components/TiltCard';
 import PwaInstallWizard from './components/PwaInstallWizard';
 
-const DEFAULT_COMMUNE: Commune = {
-  nom: 'Paris',
-  code: '75056',
-  codesPostaux: ['75001'],
-  centre: {
-    type: 'Point',
-    coordinates: [2.3522, 48.8566]
-  },
-  codeDepartement: '75'
-};
-
 export default function App() {
   // Navigation & Screen tab state
   const [activeTab, setActiveTab ] = useState<'meteo' | 'cartes' | 'alertes' | 'reglages'>('meteo');
-  
-  // Weather & Commune data state
-  const [showWelcomePrompt, setShowWelcomePrompt] = useState<boolean>(() => {
-    return !localStorage.getItem('meteo_pure_last_commune');
-  });
 
-  const [currentCommune, setCurrentCommune] = useState<Commune>(() => {
-    try {
-      const saved = localStorage.getItem('meteo_pure_last_commune');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error("Error loading last commune from localStorage", e);
-    }
-    return DEFAULT_COMMUNE;
-  });
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const prevWeatherRef = useRef<{ wasRaining: boolean; wasStorming: boolean; vigilanceLevel: string; wasHot: boolean } | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Current commune + welcome prompt (localStorage-synced)
+  const { currentCommune, setCurrentCommune, showWelcomePrompt, setShowWelcomePrompt } = useCurrentCommune();
 
-  // Search autocomplete states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Commune[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showSearchList, setShowSearchList] = useState(false);
+  // City search with debounce
+  const {
+    searchQuery, setSearchQuery,
+    searchResults,
+    isSearching,
+    showSearchList, setShowSearchList,
+  } = useCitySearch();
 
   // Geolocation active indicators
   const [geoLocating, setGeoLocating] = useState(false);
@@ -142,10 +118,25 @@ export default function App() {
   const [testingPush, setTestingPush] = useState<boolean>(false);
   const [testingCron, setTestingCron] = useState<boolean>(false);
 
-  const [showMoonModal, setShowMoonModal] = useState<boolean>(false);
-  const [showMorningBriefModal, setShowMorningBriefModal] = useState<boolean>(false);
-  const [aiBrief, setAiBrief] = useState<{ title: string; body: string } | null>(null);
-  const [loadingBrief, setLoadingBrief] = useState<boolean>(false);
+  // Weather data (fetch + 10-min refresh)
+  const { weather, setWeather, loading, errorMsg, prevWeatherRef } = useWeatherFetch(currentCommune, () => {
+    if (notifSettings.systemEnabled) {
+      checkAndFireFullMoonNotification(notifSettings.humorLevel);
+    }
+  });
+
+  // Reset selected forecast day whenever commune changes
+  useEffect(() => { setSelectedDayIndex(0); }, [currentCommune]);
+
+  // Moon / Morning Brief modals + AI call
+  const {
+    showMoonModal, setShowMoonModal,
+    showMorningBriefModal, setShowMorningBriefModal,
+    aiBrief,
+    loadingBrief,
+    openMorningBrief,
+  } = useMorningBrief();
+
   const [currentRoast, setCurrentRoast] = useState<string>('');
 
   // Favorites bookmarked cities (synced with localStorage)
@@ -178,105 +169,13 @@ export default function App() {
     );
   }, [notifSettings.systemEnabled, currentCommune, notifSettings.humorLevel, weather, notifSettings.birthDate]);
 
-  // Debouncing Search inputs
-  useEffect(() => {
-    if (searchQuery.trim().length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    const delayDebounce = setTimeout(async () => {
-      setIsSearching(true);
-      try {
-        const results = await searchFrenchCommunes(searchQuery);
-        setSearchResults(results);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 400);
-
-    return () => clearTimeout(delayDebounce);
-  }, [searchQuery]);
-
-  // Save currentCommune to localStorage when it changes
-  useEffect(() => {
-    if (currentCommune) {
-      try {
-        localStorage.setItem('meteo_pure_last_commune', JSON.stringify(currentCommune));
-      } catch (e) {
-        console.error("Error saving commune to localStorage", e);
-      }
-    }
-  }, [currentCommune]);
-
-  // Load weather when commune changes and refresh every 10 minutes to remain accurate
-  useEffect(() => {
-    setSelectedDayIndex(0);
-    prevWeatherRef.current = null;
-    async function loadWeather(showSkeleton = true) {
-      if (showSkeleton) setLoading(true);
-      setErrorMsg(null);
-      try {
-        const data = await fetchWeatherData(currentCommune);
-        setWeather(data);
-      } catch (err) {
-        console.error(err);
-        if (showSkeleton) {
-          setErrorMsg("Impossible de charger les données météo. Veuillez réessayer.");
-        }
-      } finally {
-        if (showSkeleton) setLoading(false);
-      }
-    }
-    loadWeather(true);
-
-    // Set up background refresh every 10 minutes
-    const refreshInterval = setInterval(() => {
-      console.log("Mise à jour automatique des données météo en arrière-plan...");
-      loadWeather(false);
-      if (notifSettings.systemEnabled) {
-        checkAndFireFullMoonNotification(notifSettings.humorLevel);
-      }
-    }, 10 * 60 * 1000);
-
-    return () => clearInterval(refreshInterval);
-  }, [currentCommune]);
-
-  const handleOpenMorningBrief = async () => {
-    setShowMorningBriefModal(true);
-    if (!notifSettings.birthDate) {
-      setAiBrief(null);
-      return;
-    }
-    setLoadingBrief(true);
-    setAiBrief(null);
-    try {
-      const res = await fetch('/api/morning-brief', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          birthDate: notifSettings.birthDate,
-          weatherCode: weather?.current.weatherCode || 0,
-          humorLevel: notifSettings.humorLevel,
-          cityName: currentCommune?.nom || 'Inconnu'
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAiBrief({ title: data.title, body: data.body });
-      } else {
-        const brief = getMorningBriefContent(notifSettings.humorLevel, notifSettings.birthDate || '', weather?.current.weatherCode || 0);
-        setAiBrief(brief);
-      }
-    } catch (err) {
-      const brief = getMorningBriefContent(notifSettings.humorLevel, notifSettings.birthDate || '', weather?.current.weatherCode || 0);
-      setAiBrief(brief);
-    } finally {
-      setLoadingBrief(false);
-    }
-  };
+  const handleOpenMorningBrief = () =>
+    openMorningBrief(
+      notifSettings.birthDate || '',
+      weather?.current.weatherCode || 0,
+      notifSettings.humorLevel,
+      currentCommune?.nom || 'Inconnu'
+    );
 
   // Master controller for sending hilarious customized rain/storm notifications
   const triggerFunnyNotification = (intensity: NotificationIntensity, bypassSpam = false) => {
