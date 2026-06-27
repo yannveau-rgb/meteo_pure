@@ -38,20 +38,29 @@ export default function HourlyForecast({ hourlyData, humidity, dayName = "Aujour
           const WeatherIcon = weatherUI.icon;
 
           return (
-            <div 
-              key={index} 
-              className="flex flex-col items-center justify-between h-24 min-w-[54px] py-1.5 rounded-2xl bg-white/10 border border-white/15 shadow-sm transition-all hover:bg-white/20"
+            <div
+              key={index}
+              className={`relative flex flex-col items-center justify-between h-24 min-w-[54px] py-1.5 rounded-2xl border shadow-sm transition-all hover:bg-white/20 ${
+                hour.stormRisk
+                  ? 'bg-amber-500/15 border-amber-400/40'
+                  : 'bg-white/10 border-white/15'
+              }`}
             >
+              {/* Storm risk badge */}
+              {hour.stormRisk && (
+                <span className="absolute -top-1.5 -right-1 text-[11px] animate-pulse" title="Risque orageux">⚡</span>
+              )}
+
               {/* Hour time */}
               <span className="text-[9px] text-white/50 font-bold">
                 {hour.time}
               </span>
-              
+
               {/* Climate Icon inside slot */}
               <div>
                 <WeatherIcon className={`w-5 h-5 ${weatherUI.colorClass}`} />
               </div>
-              
+
               {/* Hour Temp */}
               <span className="text-[11px] text-white font-bold">
                 {Math.round(hour.temp)}°

@@ -44,9 +44,9 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
 
   // Primary: Météo-France AROME model (1.3 km resolution over France — highest precision available)
   const currentVars = 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,surface_pressure,visibility';
-  const hourlyVars  = 'temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m';
+  const hourlyVars  = 'temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cape';
   const dailyVars   = 'weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max';
-  const minuteVars  = 'precipitation,weather_code';
+  const minuteVars  = 'precipitation,weather_code,lightning_potential';
 
   const urlMeteoFrance = `https://api.open-meteo.com/v1/meteofrance?latitude=${latitude}&longitude=${longitude}&current=${currentVars}&hourly=${hourlyVars}&daily=${dailyVars}&minutely_15=${minuteVars}&forecast_days=10&timezone=Europe/Paris`;
 
@@ -273,6 +273,17 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
       time: rawCurrentMF.time ?? rawCurrentStd.time ?? ''
     };
 
+    // Build per-hour max lightning_potential from minutely_15 (4 slots per hour)
+    const lightningByHour = new Map<string, number>();
+    const m15 = data.minutely_15;
+    if (m15?.lightning_potential && m15.time) {
+      for (let i = 0; i < m15.time.length; i++) {
+        const hKey = (m15.time[i] as string).substring(0, 13); // "YYYY-MM-DDTHH"
+        const lp = (m15.lightning_potential[i] ?? 0) as number;
+        if (lp > (lightningByHour.get(hKey) ?? 0)) lightningByHour.set(hKey, lp);
+      }
+    }
+
     // Map Hourly forecasts (next 12 hours)
     const hourly: HourlyForecastItem[] = [];
     const hourlyTemps = data.hourly?.temperature_2m || [];
@@ -280,6 +291,7 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
     const hourlyProb = data.hourly?.precipitation_probability || [];
     const hourlyPrecip = data.hourly?.precipitation || [];
     const hourlyWind = data.hourly?.wind_speed_10m || [];
+    const hourlyCape = data.hourly?.cape || [];
 
     for (let j = 0; j < 12; j++) {
       const idx = startIdx + j;
@@ -317,6 +329,12 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
           }
         }
         
+        const hourKey = hourlyTimes[idx]?.substring(0, 13) ?? '';
+        const lpMax = lightningByHour.get(hourKey) ?? 0;
+        const capeVal = (hourlyCape[idx] ?? 0) as number;
+        // stormRisk: elevated instability but model hasn't coded it as active storm yet
+        const stormRisk = (lpMax > 5 || capeVal > 300) && code < 95;
+
         hourly.push({
           time: hourLabel,
           temp: hourlyTemps[idx] ?? 15,
@@ -324,7 +342,8 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
           iconName: code.toString(),
           precipitationProbability: hourlyProb[idx] ?? 0,
           precipitation: hourlyPrecip[idx] ?? 0,
-          windSpeed: hourlyWind[idx] ?? undefined
+          windSpeed: hourlyWind[idx] ?? undefined,
+          stormRisk
         });
       } else {
         hourly.push({

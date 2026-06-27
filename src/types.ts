@@ -38,6 +38,7 @@ export interface HourlyForecastItem {
   precipitationProbability: number;
   precipitation: number;
   windSpeed?: number;       // km/h
+  stormRisk?: boolean;      // true when lightning potential or CAPE elevated but code not yet 95+
 }
 
 export interface DailyForecastItem {
