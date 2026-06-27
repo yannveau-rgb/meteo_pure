@@ -1,5 +1,5 @@
-// Météo Pure Service Worker - High-Performance Offline Caching
-const CACHE_NAME = 'meteo-pure-v4';
+// Météo Pure Service Worker - Offline cache + Web Push
+const CACHE_NAME = 'meteo-pure-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -10,91 +10,95 @@ const ASSETS_TO_CACHE = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => {
-      return self.skipWaiting();
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    }).then(() => {
-      return self.clients.claim();
-    })
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((key) => key !== CACHE_NAME ? caches.delete(key) : null))
+    ).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Avoid caching foreign APIs to prevent stale weather data,
-  // but cache static client files for lightning-fast speeds.
+  // Never intercept /api/* calls — they must always hit the server
   const url = new URL(event.request.url);
+  if (url.pathname.startsWith('/api/')) return;
+
   const isStaticAsset = url.origin === self.location.origin;
 
   if (isStaticAsset) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         if (cachedResponse) {
-          // Serve from cache but fetch fresh in background to update
           fetch(event.request).then((networkResponse) => {
             if (networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, networkResponse);
-              });
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
             }
-          }).catch(() => {/* Ignore network runtime error during background sync */});
+          }).catch(() => {});
           return cachedResponse;
         }
-
         return fetch(event.request).then((networkResponse) => {
           if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
             return networkResponse;
           }
           const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
           return networkResponse;
         });
       })
     );
   } else {
-    // For external weather APIs, prioritize online requests with offline fallback if cache has it.
     event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match(event.request);
-      })
+      fetch(event.request).catch(() => caches.match(event.request))
     );
   }
 });
 
 // BACKGROUND WEB PUSH NOTIFICATION RECEIVER
 self.addEventListener('push', (event) => {
-  let data = { title: 'Météo Pure', message: 'Mise à jour météo disponible.' };
+  let data = { title: 'Météo Pure', message: 'Mise à jour météo disponible.', intensity: 'moderate', city: '' };
   if (event.data) {
     try {
-      data = event.data.json();
+      data = { ...data, ...event.data.json() };
     } catch (e) {
-      data = { title: 'Météo Pure', message: event.data.text() };
+      data = { ...data, message: event.data.text() };
     }
   }
+
+  // Group by category so a new alert replaces the previous one instead of stacking
+  const tagMap = {
+    morning_brief: 'meteo-pure-brief',
+    alert_red: 'meteo-pure-vigilance',
+    alert_orange: 'meteo-pure-vigilance',
+    alert_yellow: 'meteo-pure-vigilance',
+    thunderstorm: 'meteo-pure-storm',
+    end_storm: 'meteo-pure-storm',
+    heatwave: 'meteo-pure-heat',
+    light: 'meteo-pure-rain',
+    moderate: 'meteo-pure-rain',
+    heavy: 'meteo-pure-rain',
+    end_rain: 'meteo-pure-rain'
+  };
+  const tag = tagMap[data.intensity] || 'meteo-pure';
+
+  const isHighPriority = ['alert_red', 'alert_orange', 'thunderstorm', 'heatwave'].includes(data.intensity);
 
   const options = {
     body: data.message,
     icon: '/icon.svg',
     badge: '/notification_badge.svg',
-    vibrate: [100, 50, 100],
+    vibrate: isHighPriority ? [200, 100, 200, 100, 200] : [100, 50, 100],
+    tag,
+    renotify: true,
+    requireInteraction: isHighPriority,
     data: {
-      url: self.location.origin
+      url: self.location.origin,
+      intensity: data.intensity,
+      city: data.city
     }
   };
 
@@ -106,15 +110,21 @@ self.addEventListener('push', (event) => {
 // NOTIFICATION CLICK HANDLER
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || self.location.origin;
+
   event.waitUntil(
-    self.clients.matchAll({ type: 'window' }).then((clientList) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus an existing tab if any window of this app is already open
       for (const client of clientList) {
-        if (client.url === '/' && 'focus' in client) {
-          return client.focus();
-        }
+        try {
+          const clientOrigin = new URL(client.url).origin;
+          if (clientOrigin === self.location.origin && 'focus' in client) {
+            return client.focus();
+          }
+        } catch {}
       }
       if (self.clients.openWindow) {
-        return self.clients.openWindow('/');
+        return self.clients.openWindow(targetUrl);
       }
     })
   );
