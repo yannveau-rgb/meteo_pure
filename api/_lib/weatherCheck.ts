@@ -15,17 +15,18 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
   for (const sub of subs) {
     try {
       const [longitude, latitude] = sub.commune.centre.coordinates;
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,precipitation,weather_code,wind_speed_10m&timezone=Europe/Paris`;
+      // Use Météo-France AROME model (1.3 km) for server-side alerts with full parameters
+      const url = `https://api.open-meteo.com/v1/meteofrance?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,cloud_cover&timezone=Europe/Paris`;
       const response = await fetch(url);
       if (!response.ok) continue;
       const weather: any = await response.json();
       if (!weather?.current) continue;
 
       const currentTemp = weather.current.temperature_2m;
-      const currentWind = weather.current.wind_speed_10m || 0;
+      const currentWind = Math.max(weather.current.wind_speed_10m || 0, weather.current.wind_gusts_10m || 0);
       const isRainingNow = weather.current.precipitation > 0;
       const isStormingNow = [95, 96, 99].includes(weather.current.weather_code);
-      const isHotNow = currentTemp >= 30;
+      const isHotNow = (weather.current.apparent_temperature ?? currentTemp) >= 30;
 
       const vigilanceStatus = calculateVigilance(
         currentTemp,

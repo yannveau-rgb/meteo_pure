@@ -50,8 +50,8 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
 
   const urlMeteoFrance = `https://api.open-meteo.com/v1/meteofrance?latitude=${latitude}&longitude=${longitude}&current=${currentVars}&hourly=${hourlyVars}&daily=${dailyVars}&minutely_15=${minuteVars}&forecast_days=10&timezone=Europe/Paris`;
 
-  // Secondary: ECMWF IFS (0.25° global) used for blending and fallback
-  const urlStandard = `https://api.open-meteo.com/v1/ecmwf?latitude=${latitude}&longitude=${longitude}&current=${currentVars}&hourly=${hourlyVars}&daily=${dailyVars}&minutely_15=${minuteVars}&forecast_days=10&timezone=Europe/Paris`;
+  // Secondary: standard endpoint (GFS/ECMWF blend) — supports minutely_15 unlike /v1/ecmwf
+  const urlStandard = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=${currentVars}&hourly=${hourlyVars}&daily=${dailyVars}&minutely_15=${minuteVars}&forecast_days=10&timezone=Europe/Paris`;
 
   let data: any = null;
   let fallbackData: any = null;
