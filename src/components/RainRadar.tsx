@@ -66,17 +66,11 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
         });
         mapRef.current = map;
 
-        // Dark CartoDB base layer
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+        // Light grey base — radar colors (blue/green/yellow/red) are much more readable on light
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
           maxZoom: 12,
           subdomains: 'abcd',
-        }).addTo(map);
-
-        // Labels layer on top
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-          maxZoom: 12,
-          subdomains: 'abcd',
-          pane: 'shadowPane',
+          attribution: '© CartoDB',
         }).addTo(map);
 
         // City marker
@@ -107,7 +101,7 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
 
         const radarLayer = L.tileLayer(
           `https://tilecache.rainviewer.com${allFrames[initIdx].path}/256/{z}/{x}/{y}/6/1_1.png`,
-          { opacity: 0.75, maxZoom: 12, tileSize: 256 }
+          { opacity: 0.8, maxZoom: 12, tileSize: 256 }
         ).addTo(map);
         layerRef.current = radarLayer;
 
