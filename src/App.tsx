@@ -64,6 +64,7 @@ import { useCurrentCommune } from './hooks/useCurrentCommune';
 import { useCitySearch } from './hooks/useCitySearch';
 import { useWeatherFetch } from './hooks/useWeatherFetch';
 import { useMorningBrief } from './hooks/useMorningBrief';
+import { useShareImage } from './hooks/useShareImage';
 
 // Modular child components
 import RainForecast from './components/RainForecast';
@@ -79,6 +80,7 @@ import TiltCard from './components/TiltCard';
 const CityComparison = lazy(() => import('./components/CityComparison'));
 const AlertsView = lazy(() => import('./components/AlertsView'));
 const PwaInstallWizard = lazy(() => import('./components/PwaInstallWizard'));
+const SharePreviewModal = lazy(() => import('./components/SharePreviewModal'));
 
 const LazyFallback = () => (
   <div className="flex items-center justify-center py-16">
@@ -149,6 +151,9 @@ export default function App() {
 
   // Favorites bookmarked cities (synced with localStorage)
   const { favorites, setFavorites, toggleFavorite } = useFavorites();
+
+  // Hero card sharing (today-weather-widget -> PNG)
+  const todayShare = useShareImage();
 
   useEffect(() => {
     if (weather) {
@@ -794,13 +799,21 @@ export default function App() {
                           className="p-1 px-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 active:scale-95 transition-all text-white cursor-pointer shadow-sm shrink-0 flex items-center justify-center mt-1"
                           title={favorites.some(fav => fav.code === currentCommune.code) ? "Retirer des favoris" : "Ajouter aux favoris"}
                         >
-                          <Star 
+                          <Star
                             className={`w-4 h-4 ${
-                              favorites.some(fav => fav.code === currentCommune.code) 
-                                ? 'text-amber-400 fill-amber-400' 
+                              favorites.some(fav => fav.code === currentCommune.code)
+                                ? 'text-amber-400 fill-amber-400'
                                 : 'text-white/70 hover:text-white'
-                            }`} 
+                            }`}
                           />
+                        </button>
+                        <button
+                          onClick={() => todayShare.openShare('today-weather-widget')}
+                          data-html2canvas-ignore="true"
+                          className="p-1 px-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 active:scale-95 transition-all text-white cursor-pointer shadow-sm shrink-0 flex items-center justify-center mt-1"
+                          title="Partager la météo du jour"
+                        >
+                          <Share2 className="w-4 h-4 text-sky-200" />
                         </button>
                       </div>
                       <p className="text-[14px] text-white/80 font-normal mt-0.5 flex flex-wrap items-center gap-2" id="current-date">
@@ -1605,6 +1618,20 @@ export default function App() {
         </nav>
 
       </div>
+
+      {/* Share today's weather as PNG */}
+      <Suspense fallback={null}>
+        <SharePreviewModal
+          isOpen={todayShare.isModalOpen}
+          onClose={todayShare.close}
+          imageSrc={todayShare.imageSrc}
+          isGenerating={todayShare.isGenerating}
+          title={`Météo à ${currentCommune.nom}`}
+          copyStatus={todayShare.copyStatus}
+          onCopy={todayShare.copy}
+          onDownload={() => todayShare.download(`Meteo_${currentCommune.nom.replace(/\s+/g, '_')}_${Date.now()}.png`)}
+        />
+      </Suspense>
     </div>
   );
 }
