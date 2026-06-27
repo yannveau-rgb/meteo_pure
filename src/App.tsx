@@ -1586,9 +1586,13 @@ export default function App() {
                         if (testingPush) return;
                         setTestingPush(true);
                         try {
+                          const adminToken = localStorage.getItem('adminToken') || '';
                           const res = await fetch('/api/test-push', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'X-Admin-Token': adminToken
+                            },
                             body: JSON.stringify({
                               intensity: 'moderate',
                               humorLevel: notifSettings.humorLevel
@@ -1643,7 +1647,10 @@ export default function App() {
                         if (testingCron) return;
                         setTestingCron(true);
                         try {
-                          const res = await fetch('/api/cron/check-weather');
+                          const adminToken = localStorage.getItem('adminToken') || '';
+                          const res = await fetch('/api/cron/check-weather', {
+                            headers: { 'X-Admin-Token': adminToken }
+                          });
                           const data = await res.json();
                           if (res.ok) {
                             setActiveToast({

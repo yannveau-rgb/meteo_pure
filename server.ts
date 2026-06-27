@@ -19,8 +19,9 @@ if (fs.existsSync(VAPID_FILE)) {
 }
 
 // Configure WebPush
+const VAPID_CONTACT = process.env.VAPID_CONTACT || 'mailto:contact@example.com';
 webPush.setVapidDetails(
-  'mailto:Yann.Veau@gmail.com',
+  VAPID_CONTACT,
   vapidKeys.publicKey,
   vapidKeys.privateKey
 );
@@ -121,7 +122,7 @@ Règles impératives :
 4. Reste unique et original à chaque génération (ne commence pas toujours par les mêmes phrases).`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -162,6 +163,37 @@ async function startServer() {
   const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
+
+  // Auth middleware for sensitive endpoints (cron, test-push)
+  // Provide ADMIN_TOKEN via env; reject mismatched/missing tokens.
+  const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+  function requireAdminToken(req: express.Request, res: express.Response, next: express.NextFunction) {
+    if (!ADMIN_TOKEN) {
+      return res.status(503).json({ error: 'ADMIN_TOKEN not configured on server' });
+    }
+    const provided = req.headers['x-admin-token'] || req.query.token;
+    if (provided !== ADMIN_TOKEN) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    next();
+  }
+
+  // Naive in-memory rate limiter (per-IP, sliding window) for Gemini-backed endpoints
+  const rateBuckets = new Map<string, number[]>();
+  function rateLimit(maxPerMinute: number) {
+    return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.ip || 'unknown';
+      const now = Date.now();
+      const windowMs = 60_000;
+      const arr = (rateBuckets.get(ip) || []).filter(t => now - t < windowMs);
+      if (arr.length >= maxPerMinute) {
+        return res.status(429).json({ error: 'Too many requests' });
+      }
+      arr.push(now);
+      rateBuckets.set(ip, arr);
+      next();
+    };
+  }
 
   // API Route: Get VAPID public key
   app.get('/api/vapid-public-key', (req, res) => {
@@ -223,7 +255,7 @@ async function startServer() {
   });
 
   // API Route: Generate a fresh morning brief using Gemini AI
-  app.post('/api/morning-brief', async (req, res) => {
+  app.post('/api/morning-brief', rateLimit(10), async (req, res) => {
     const { birthDate, weatherCode, humorLevel, cityName } = req.body;
     if (!birthDate) {
       return res.status(400).json({ error: "birthDate is required" });
@@ -243,7 +275,7 @@ async function startServer() {
   });
 
   // API Route: Trigger background weather checking manually (ideal for Cloud Scheduler cron tasks)
-  app.get('/api/cron/check-weather', async (req, res) => {
+  app.get('/api/cron/check-weather', requireAdminToken, async (req, res) => {
     console.log('[CRON] Manual or Cloud Scheduler trigger received.');
     try {
       await checkAllSubscriptions();
@@ -255,7 +287,7 @@ async function startServer() {
   });
 
   // API Route: Send a test Web Push notification to all active subscribers or a specific subscription endpoint
-  app.post('/api/test-push', async (req, res) => {
+  app.post('/api/test-push', requireAdminToken, async (req, res) => {
     const { intensity, humorLevel } = req.body;
     const level = humorLevel || 'spicy';
     const type = intensity || 'moderate';
