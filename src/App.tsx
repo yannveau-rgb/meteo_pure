@@ -57,6 +57,11 @@ import {
   NotificationIntensity
 } from './utils/notificationService';
 
+// Custom hooks
+import { useFavorites } from './hooks/useFavorites';
+import { usePwaInstall } from './hooks/usePwaInstall';
+import { useFrenchClock } from './hooks/useFrenchClock';
+
 // Modular child components
 import RainForecast from './components/RainForecast';
 import VigilanceCard from './components/VigilanceCard';
@@ -115,52 +120,14 @@ export default function App() {
   // Geolocation active indicators
   const [geoLocating, setGeoLocating] = useState(false);
 
-  // Current system date formatted beautifully in French
-  const [frenchDate, setFrenchDate] = useState('');
-
-  // Clock state to show current local time elegantly
-  const [currentTime, setCurrentTime] = useState('');
+  // Date + clock in French (updated every 10s)
+  const { frenchDate, currentTime } = useFrenchClock();
 
   // Traditional Feast Day lookup (saint du jour)
   const saintDuJour = getSaintDuJour();
 
-  // PWA Install Prompt state
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isAppInstalled, setIsAppInstalled] = useState<boolean>(false);
-
-  useEffect(() => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                        (window.navigator as any).standalone === true;
-    setIsAppInstalled(isStandalone);
-
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    const handleAppInstalled = () => {
-      setIsAppInstalled(true);
-      setDeferredPrompt(null);
-    };
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
-
-  const triggerPwaInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsAppInstalled(true);
-      setDeferredPrompt(null);
-    }
-  };
+  // PWA install prompt
+  const { deferredPrompt, isAppInstalled, triggerPwaInstall } = usePwaInstall();
 
   // Notification States
   const [notifSettings, setNotifSettings] = useState<NotificationSettings>(() => loadNotificationSettings());
@@ -181,26 +148,8 @@ export default function App() {
   const [loadingBrief, setLoadingBrief] = useState<boolean>(false);
   const [currentRoast, setCurrentRoast] = useState<string>('');
 
-  // Favorites bookmarked cities state load/save
-  const [favorites, setFavorites] = useState<Commune[]>(() => {
-    try {
-      const saved = localStorage.getItem('meteo_pure_favorites');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error("Error loading favorites from localStorage", e);
-    }
-    return [];
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('meteo_pure_favorites', JSON.stringify(favorites));
-    } catch (e) {
-      console.error("Error saving favorites to localStorage", e);
-    }
-  }, [favorites]);
+  // Favorites bookmarked cities (synced with localStorage)
+  const { favorites, setFavorites, toggleFavorite } = useFavorites();
 
   useEffect(() => {
     if (weather) {
@@ -228,15 +177,6 @@ export default function App() {
       notifSettings.birthDate
     );
   }, [notifSettings.systemEnabled, currentCommune, notifSettings.humorLevel, weather, notifSettings.birthDate]);
-
-  const toggleFavorite = (commune: Commune) => {
-    const isFav = favorites.some(fav => fav.code === commune.code);
-    if (isFav) {
-      setFavorites(favorites.filter(fav => fav.code !== commune.code));
-    } else {
-      setFavorites([...favorites, commune]);
-    }
-  };
 
   // Debouncing Search inputs
   useEffect(() => {
@@ -482,33 +422,6 @@ export default function App() {
       wasHot: isHotNow
     };
   }, [weather]);
-
-  // Keep system time and date running in French
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      // Date formatting: e.g. "Vendredi 19 Juin"
-      const dateOptions: Intl.DateTimeFormatOptions = { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long' 
-      };
-      const formattedDate = new Intl.DateTimeFormat('fr-FR', dateOptions).format(now);
-      // Capitalize first letter elegantly
-      setFrenchDate(formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1));
-
-      // Time formatting: "16:45"
-      const timeStr = now.toLocaleTimeString('fr-FR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-      setCurrentTime(timeStr);
-    };
-
-    updateTime();
-    const interval = setInterval(updateTime, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Handle Dynamic Geolocation Pin search
   const handleGeolocation = () => {
