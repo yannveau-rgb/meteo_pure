@@ -94,31 +94,42 @@ Règles :
 4. Le titre doit être percutant et court (max 5 mots + 1 emoji).
 5. Mentionne le jour de la semaine (${dayOfWeek}) pour ancrer le message.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        temperature: 1.4,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING, description: 'Un titre court (max 4-5 mots) incluant un emoji adapté' },
-            body: { type: Type.STRING, description: 'Le texte du brief combinant horoscope et météo. Maximum 80 mots.' }
-          },
-          required: ['title', 'body']
-        }
-      }
-    });
+    const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    let lastErr: any = null;
 
-    if (response.text) {
-      const data = JSON.parse(response.text.trim());
-      if (data.title && data.body) return { title: data.title, body: data.body, ai: true };
+    for (const model of models) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            temperature: 1.4,
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING, description: 'Un titre court (max 4-5 mots) incluant un emoji adapté' },
+                body: { type: Type.STRING, description: 'Le texte du brief combinant horoscope et météo. Maximum 80 mots.' }
+              },
+              required: ['title', 'body']
+            }
+          }
+        });
+
+        if (response.text) {
+          const data = JSON.parse(response.text.trim());
+          if (data.title && data.body) return { title: data.title, body: data.body, ai: true, model };
+        }
+      } catch (e: any) {
+        console.error(`[GEMINI] ${model} failed:`, e.message || e);
+        lastErr = e;
+      }
     }
-    throw new Error('Invalid Gemini response');
-  } catch (err) {
-    console.error('[GEMINI] Failed:', err);
+
+    throw lastErr || new Error('All Gemini models failed');
+  } catch (err: any) {
+    console.error('[GEMINI] All attempts failed:', err.message || err);
     const fallback = getMorningBriefContent(humorLevel as any, birthDate, weatherCode);
-    return fallback ? { ...fallback, ai: false } : { title: `🔮 Brief Matinal ${sign}`, body: `Météo mitigée aujourd'hui.`, ai: false };
+    return fallback ? { ...fallback, ai: false, error: String(err.message || err).slice(0, 200) } : { title: `🔮 Brief Matinal ${sign}`, body: `Météo mitigée aujourd'hui.`, ai: false };
   }
 }
