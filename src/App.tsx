@@ -35,7 +35,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Commune, WeatherData } from './types';
 import { getCommuneByCoords } from './utils/weatherApi';
 import { getWeatherUI, getMoonPhase, getNext7DaysMoonPhases, calculateCurrentUv, isNightTime, isHourNight } from './utils/weatherUtils';
-import { generateWeatherRoast } from './utils/roastService';
 import { getSaintDuJour } from './utils/ephemeris';
 import {
   loadNotificationSettings,
@@ -151,20 +150,11 @@ export default function App() {
     openMorningBrief,
   } = useMorningBrief();
 
-  const [currentRoast, setCurrentRoast] = useState<string>('');
-
   // Favorites bookmarked cities (synced with localStorage)
   const { favorites, setFavorites, toggleFavorite } = useFavorites();
 
   // Hero card sharing (today-weather-widget -> PNG)
   const todayShare = useShareImage();
-
-  useEffect(() => {
-    if (weather) {
-      const isNight = isNightTime(weather.sunrise, weather.sunset);
-      setCurrentRoast(generateWeatherRoast(weather, isNight));
-    }
-  }, [weather]);
 
   useEffect(() => {
     if (notifSettings.systemEnabled) {
@@ -932,59 +922,6 @@ export default function App() {
                           </div>
                         );
                       })()}
-
-                      {/* Météo Roast Premium (L'arôme d'ironie météo de niveau Spicy) */}
-                      {currentRoast && (
-                        <div 
-                          id="meteo-roast-premium-panel" 
-                          className="w-full bg-white/5 border border-white/10 rounded-3xl p-4 flex flex-col items-center gap-2.5 select-none relative overflow-hidden backdrop-blur-md shadow-lg"
-                        >
-                          {/* Accentuated dynamic premium background glows matching hot/cold or mild conditions */}
-                          <div className={`absolute -inset-10 bg-gradient-to-r ${
-                            Math.round(weather.current.temperature) >= 30 
-                              ? 'from-amber-600/10 to-rose-500/15' 
-                              : Math.round(weather.current.temperature) < 10 
-                              ? 'from-sky-500/10 to-indigo-600/15'
-                              : 'from-sky-400/10 to-amber-400/10'
-                          } blur-xl pointer-events-none opacity-40`} />
-                          
-                          {/* Center Quote Display with fade animation */}
-                          <div className="flex flex-col items-center text-center relative z-10 w-full px-2">
-                            <AnimatePresence mode="wait">
-                              <motion.p
-                                key={currentRoast}
-                                initial={{ opacity: 0, y: 4 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -4 }}
-                                transition={{ duration: 0.2 }}
-                                className="text-[11.5px] sm:text-xs font-light italic leading-relaxed text-white/75 px-1 tracking-wide"
-                              >
-                                “ {currentRoast} ”
-                              </motion.p>
-                            </AnimatePresence>
-                          </div>
-
-                          {/* Control buttons & metadata line */}
-                          <div className="flex justify-between items-center w-full relative z-10 border-t border-white/5 pt-2">
-                            <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1">
-                              <span className="w-1 h-1 bg-amber-400 rounded-full animate-ping" />
-                              Météo Roast
-                            </span>
-                            <button
-                              id="regenerate-roast-btn"
-                              onClick={() => {
-                                const isNight = isNightTime(weather.sunrise, weather.sunset);
-                                setCurrentRoast(generateWeatherRoast(weather, isNight));
-                              }}
-                              aria-label="Générer un nouveau roast"
-                              className="text-[10px] uppercase tracking-widest font-bold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-full px-3 py-1.5 transition-all cursor-pointer flex items-center gap-1 active:scale-95 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
-                              title="Générer un autre roast humoristique pour ce temps"
-                            >
-                              🎲 Nouveau Roast
-                            </button>
-                          </div>
-                        </div>
-                      )}
 
                       {/* 2. Immediate alerts & short-term: Rain Grid & Vigilance side by side in glass panels */}
                       <div className="grid grid-cols-2 gap-4">
