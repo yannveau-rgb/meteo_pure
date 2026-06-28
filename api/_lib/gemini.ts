@@ -94,9 +94,10 @@ Règles :
 4. Le titre doit être percutant et court (max 5 mots + 1 emoji).
 5. Mentionne le jour de la semaine (${dayOfWeek}) pour ancrer le message.`;
 
-    const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    const models = ['gemini-2.5-flash', 'gemini-2.0-flash-001', 'gemini-2.0-flash-lite'];
     let lastErr: any = null;
 
+    // Attempt 1: structured output with responseSchema
     for (const model of models) {
       try {
         const response = await ai.models.generateContent({
@@ -121,7 +122,29 @@ Règles :
           if (data.title && data.body) return { title: data.title, body: data.body, ai: true, model };
         }
       } catch (e: any) {
-        console.error(`[GEMINI] ${model} failed:`, e.message || e);
+        console.error(`[GEMINI] ${model} structured failed:`, e.message || e);
+        lastErr = e;
+      }
+    }
+
+    // Attempt 2: plain text with JSON parsing (no responseSchema, wider model compat)
+    for (const model of models) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: prompt + '\n\nRéponds UNIQUEMENT avec un JSON valide au format: {"title": "...", "body": "..."}',
+          config: { temperature: 1.4 }
+        });
+
+        if (response.text) {
+          const jsonMatch = response.text.match(/\{[\s\S]*"title"[\s\S]*"body"[\s\S]*\}/);
+          if (jsonMatch) {
+            const data = JSON.parse(jsonMatch[0]);
+            if (data.title && data.body) return { title: data.title, body: data.body, ai: true, model };
+          }
+        }
+      } catch (e: any) {
+        console.error(`[GEMINI] ${model} plain failed:`, e.message || e);
         lastErr = e;
       }
     }
