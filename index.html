@@ -21,6 +21,11 @@
         navigator.serviceWorker.register('/sw.js')
           .then(function(reg) {
             console.log('SW registered:', reg.scope);
+            // Keep SW alive on Android via Periodic Background Sync (if available)
+            if ('periodicSync' in reg) {
+              reg.periodicSync.register('push-keepalive', { minInterval: 12 * 60 * 60 * 1000 })
+                .catch(function() {});
+            }
           })
           .catch(function(err) {
             console.error('SW registration failed:', err);

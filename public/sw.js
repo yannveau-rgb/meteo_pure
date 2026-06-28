@@ -1,5 +1,5 @@
 // Météo Pure Service Worker - Offline cache + Web Push
-const CACHE_NAME = 'meteo-pure-v6';
+const CACHE_NAME = 'meteo-pure-v7';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -105,6 +105,35 @@ self.addEventListener('push', (event) => {
 
   event.waitUntil(
     self.registration.showNotification(data.title, options)
+  );
+});
+
+// AUTO-RESUBSCRIBE when browser rotates the push subscription (common on iOS)
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    fetch('/api/vapid-public-key')
+      .then(r => r.json())
+      .then(({ publicKey }) => {
+        const raw = atob(publicKey.replace(/-/g, '+').replace(/_/g, '/'));
+        const key = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) key[i] = raw.charCodeAt(i);
+        return self.registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: key
+        });
+      })
+      .then(newSub => {
+        return fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subscription: newSub,
+            commune: { nom: 'Auto-renew', centre: { type: 'Point', coordinates: [0, 0] }, code: '00000', codesPostaux: ['00000'], codeDepartement: '00' },
+            humorLevel: 'spicy'
+          })
+        });
+      })
+      .catch(err => console.error('[SW] pushsubscriptionchange re-sub failed:', err))
   );
 });
 

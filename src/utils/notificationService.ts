@@ -912,3 +912,43 @@ export async function syncPushSubscription(
   }
   return false;
 }
+
+/**
+ * Silent background re-sync: call on every app load when notifs are enabled.
+ * Re-sends the existing push subscription to the server so the endpoint stays fresh.
+ * If the subscription was rotated by the browser, creates a new one.
+ */
+export async function refreshPushSubscription(
+  commune: any,
+  humorLevel: HumorLevel,
+  birthDate?: string
+): Promise<void> {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (Notification.permission !== 'granted') return;
+
+    const reg = await navigator.serviceWorker.ready;
+    if (!reg) return;
+
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const keyRes = await fetch('/api/vapid-public-key');
+      if (!keyRes.ok) return;
+      const { publicKey } = await keyRes.json();
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
+    }
+
+    if (sub) {
+      await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub, commune, humorLevel, birthDate })
+      });
+    }
+  } catch (e) {
+    console.warn('[PUSH] silent refresh failed:', e);
+  }
+}

@@ -50,6 +50,7 @@ import {
   isSpamProtected,
   updateLastAlertTime,
   syncPushSubscription,
+  refreshPushSubscription,
   HumorLevel,
   NotificationLog,
   NotificationSettings,
@@ -337,6 +338,16 @@ export default function App() {
       wasHot: isHotNow
     };
   }, [weather]);
+
+  // Silently refresh push subscription on every app load to keep endpoint fresh
+  useEffect(() => {
+    if (!weather || !currentCommune || !notifSettings.enabled) return;
+    refreshPushSubscription(
+      currentCommune,
+      notifSettings.humorLevel,
+      notifSettings.birthDate
+    );
+  }, [weather?.city]);
 
   // Handle Dynamic Geolocation Pin search
   const handleGeolocation = () => {
