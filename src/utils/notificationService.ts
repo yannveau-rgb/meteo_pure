@@ -705,52 +705,249 @@ export function getMonthlyChristmasCountdown(now: Date, humorLevel: HumorLevel):
 export function getMorningBriefContent(humorLevel: HumorLevel, birthDate: string, weatherCode: number): { title: string, body: string } | null {
   const sign = getZodiacSign(birthDate);
   if (sign === 'Inconnu') return null;
-  
+
   const isRaining = [51, 53, 55, 61, 63, 65, 80, 81, 82].includes(weatherCode);
   const isStorming = [95, 96, 99].includes(weatherCode);
-  const isCloudy = [2, 3, 45, 48].includes(weatherCode);
   const isSunny = [0, 1].includes(weatherCode);
+  const weatherType = isStorming ? 'storm' : isRaining ? 'rain' : isSunny ? 'sun' : 'cloud';
 
-  let title = `🔮 Brief Matinal ${sign}`;
-  let weatherContext = '';
-  
-  if (humorLevel === 'safe') {
-    weatherContext = isSunny ? "Il fait beau." : isRaining ? "Il pleut aujourd'hui." : isStorming ? "Le temps est orageux." : "Temps incertain aujourd'hui.";
-  } else if (humorLevel === 'spicy') {
-    weatherContext = isSunny ? "Un soleil insolent t'attend pour mettre en lumière tes défauts." : 
-                     isRaining ? "Il pleut, idéal pour cacher tes larmes existentielles." : 
-                     isStorming ? "Orage prévu. Évite d'être l'antenne paratonnerre de ton bureau." : 
-                     "Grisaille en approche, comme ton moral moyen.";
-  } else {
-    weatherContext = isSunny ? "Un putain de grand soleil sa mère. Sors de ta grotte !" : 
-                     isRaining ? "Temps de merde, il pisse dehors. Restes couché." : 
-                     isStorming ? "Bordel ça pète ! Fais pas le con avec un bout de fer !" : 
-                     "Ciel grisâtre, morne et chiant. Un mardi quoi.";
-  }
+  const dayOfMonth = new Date().getDate();
+  const dayOfWeek = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'][new Date().getDay()];
 
-  const signMessages: Record<string, string[]> = {
-    'Bélier': ["Fonce, un obstacle t'attend.", "Calme tes nerfs, personne te supporte au réveil.", "Tes cornes vont heurter un mur d'incompétence aujourd'hui."],
-    'Taureau': ["Lâche ce croissant. Pense à ton body summer qui commence...", "Têtu comme tu es, tu n'écouteras pas l'alerte météo de toute façon.", "Reste couché, rien ne mérite ton effort."],
-    'Gémeaux': ["Ta double personnalité va devoir se mettre d'accord sur qui sort la poubelle.", "Parle moins fort, tout le monde n'est pas réveillé.", "Mentir sur l'heure de ton arrivée au bureau est un art. Perfectionne-le."],
-    'Cancer': ["Ne pleure pas, ce n'est que mardi.", "Ta carapace ne te protègera pas de ton boss.", "Sensible à tout, même au taux d'humidité. Courage l'éponge."],
-    'Lion': ["Oui, tu es génial. Non, personne n'a le temps de l'admettre à 8h.", "Crinière impeccable ce matin... ou pas.", "Baisse d'un ton ta majesté, on a pas eu notre café."],
-    'Vierge': ["Arrête de tout ranger, le chaos est la vraie nature de l'univers.", "Ton plan parfait pour aujourd'hui va s'effondrer à 8h30.", "Un poil maniaque ce matin ? Relâche la pression."],
-    'Balance': ["Ne choisis rien ajourd'hui, tu vas prendre la mauvaise décision.", "Ton équilibre est aussi précaire que ta santé mentale.", "Arrête d'hésiter et habille-toi, tu vas être en retard."],
-    'Scorpion': ["Non, se venger dès le matin n'est pas productif.", "Garde ton venin pour la réunion de 14h.", "Intense ? Ouais, surtout ton odeur si tu as zappé la douche."],
-    'Sagittaire': ["Ton optimisme nous donne envie de vomir.", "Range ton arc, personne ne vise les étoiles un lundi pareil.", "Partir loin ? Oui, commence par fuir ce mail toxique."],
-    'Capricorne': ["Le travail c'est la santé. Enfin, pour toi c'est plutôt une fuite.", "Stricte, chiant, efficace. La routine quoi.", "Ton tableau Excel est prêt pour ruiner une carrière."],
-    'Verseau': ["Personne ne comprend tes idées de génie. Et si c'était juste con ?", "Trop original ce matin. Change de pull.", "Ton besoin d'indépendance te conduira à la machine à café solo."],
-    'Poissons': ["Redescends sur Terre, l'aquarium a besoin d'être nettoyé.", "Tes intuitions sont nulles, regarde la météo au lieu de deviner.", "Nage au milieu des galères, c'est ton élément apres tout."]
+  const weatherPhrases: Record<string, Record<string, string[]>> = {
+    safe: {
+      sun: ["Belle journée ensoleillée en perspective.", "Le soleil brille, profitez-en.", "Journée lumineuse et agréable."],
+      rain: ["La pluie arrose votre journée.", "Pensez au parapluie aujourd'hui.", "Journée humide mais cosy."],
+      storm: ["Attention aux orages aujourd'hui.", "Journée électrique en perspective.", "Temps agité, restez prudent."],
+      cloud: ["Ciel couvert mais doux.", "Les nuages veillent sur vous.", "Journée grise mais tranquille."]
+    },
+    spicy: {
+      sun: [
+        "Le soleil tape comme ton boss un lundi : sans pitié.",
+        "Grand beau temps, dommage que ta vie soit pas aussi radieuse.",
+        "Soleil éclatant. Ta motivation, elle, reste au point mort.",
+        "Le ciel est bleu, ton découvert aussi.",
+        "Temps magnifique. L'ironie c'est que t'es coincé à l'intérieur.",
+        "Le soleil fait des heures sup. Toi non."
+      ],
+      rain: [
+        "Il pleut des cordes, comme tes espoirs de productivité.",
+        "Temps idéal pour rester au lit et réfléchir à tes choix de vie.",
+        "Averse prévue. Comme ta motivation : par intermittence.",
+        "La pluie lave tout sauf ta conscience.",
+        "Crachin mélancolique. Ton humeur matche parfaitement.",
+        "Dehors il flotte, dedans tu coules. Belle symétrie."
+      ],
+      storm: [
+        "Orage imminent. Évite de lever le doigt en réunion.",
+        "Le ciel gronde plus fort que ton estomac vide.",
+        "Tempête dehors, chaos dedans. Tu gères comme d'habitude : mal.",
+        "Tonnerre et éclairs. Ta journée sera à la hauteur.",
+        "Orage prévu. Autant d'énergie que t'en auras jamais.",
+        "Le ciel fait une crise. Toi aussi, bientôt."
+      ],
+      cloud: [
+        "Grisaille permanente, comme ton feed LinkedIn.",
+        "Ciel bas et moral assorti. La routine quoi.",
+        "Nuages lourds. Comme tes paupières ce matin.",
+        "Temps maussade. Comme ta playlist du lundi.",
+        "Le ciel hésite entre rien et pas grand-chose. Toi aussi.",
+        "Couverture nuageuse complète. Comme ton planning : opaque."
+      ]
+    },
+    vulgar: {
+      sun: [
+        "Putain de soleil de malade. Sors de ta tanière.",
+        "Grand beau bordel. Même le ciel se moque de ta journée de merde.",
+        "Soleil qui défonce. Ta crème solaire va prendre cher.",
+        "Un temps de ouf, dommage que ta gueule soit pas raccord.",
+        "Le soleil tape. Comme la réalité ce matin.",
+        "Il fait beau à crever. Littéralement si t'as pas d'eau."
+      ],
+      rain: [
+        "Il pisse dehors. Reste couché, y'a rien à sauver.",
+        "Temps de merde intégral. Parfait pour une journée de merde.",
+        "Flotte à mort. Comme tes ambitions : noyées.",
+        "Il pleut comme vache qui pisse. Poétique.",
+        "Déluge. Le ciel chiale plus fort que toi hier soir.",
+        "Averse de fou. Même ton chat veut pas sortir."
+      ],
+      storm: [
+        "Bordel ça pète dehors ! Fais pas le con avec un parapluie.",
+        "Orage de dingue. Comme ta vie : bruyant et destructeur.",
+        "Ça foudroie de partout. Reste chez toi, sérieux.",
+        "Tempête de ouf. Le ciel est en PLS complet.",
+        "Éclairs, tonnerre, le bordel. Au moins c'est pas chiant.",
+        "Ça défouraille dans le ciel. Spectacle gratuit, profite."
+      ],
+      cloud: [
+        "Ciel grisâtre, morne et chiant. Un classique.",
+        "Gris partout. Comme ton avenir professionnel.",
+        "Plafond bas de merde. Ta journée sera à l'image.",
+        "Nuages de déprime. Le ciel fait la gueule, toi aussi.",
+        "Temps pourri sans conviction. Même la pluie a la flemme.",
+        "Gris béton. L'architecte de ta journée était bourré."
+      ]
+    }
   };
 
-  const msgs = signMessages[sign] || ["L'univers t'ignore aujourd'hui."];
-  const astroMsg = msgs[Math.floor(Math.random() * msgs.length)];
-  
+  const signPhrases: Record<string, string[]> = {
+    'Bélier': [
+      "Fonce tête baissée, comme d'hab. Ça passera. Ou pas.",
+      "Ta patience a la durée de vie d'un Snap. Respire.",
+      "Aujourd'hui tu vas vouloir tout casser. Limite-toi au plafond de verre.",
+      "Tes cornes sont chargées. Épargne tes collègues.",
+      "L'impulsivité, c'est ton cardio du matin.",
+      "Tu vas foncer dans un mur. Au moins ce sera avec panache.",
+      "Énergie de guerrier, stratégie de hamster dans une roue.",
+      "Ta diplomatie ce matin : inexistante. Bravo.",
+      "Tu démarres au quart de tour. Les freins, c'est pour les autres."
+    ],
+    'Taureau': [
+      "Têtu comme une enclume. Pas un compliment.",
+      "Lâche ce croissant. Ton body summer n'est plus qu'un souvenir.",
+      "Aujourd'hui : routine, confort, déni. Le triptyque parfait.",
+      "Tu vas résister au changement. Comme hier. Et avant-hier.",
+      "Ta zone de confort est un bunker anti-progrès.",
+      "Obstination légendaire. Tu confonds ça avec du caractère.",
+      "Rien ne te fera bouger. Même pas cette notification.",
+      "Journée contemplative. C'est joli pour dire 'j'ai rien foutu'.",
+      "Tu vas manger trois fois trop. Sans regret. Respect."
+    ],
+    'Gémeaux': [
+      "Tes deux personnalités vont pas être d'accord aujourd'hui.",
+      "Tu vas parler pour dix. Écouter pour zéro.",
+      "Indécision chronique : tu hésites même sur ta tenue.",
+      "Mensonge du jour : 'J'arrive dans 5 minutes'.",
+      "Un bavard introverti un jour, un timide survolté le lendemain.",
+      "Ta double vie est épuisante. Pour les autres.",
+      "Tu changeras d'avis six fois avant midi. Record personnel en vue.",
+      "Papillonner c'est ton sport. Les résultats, moins.",
+      "Tu vas lancer trois projets et en finir zéro. La constance."
+    ],
+    'Cancer': [
+      "Sensible à la température, à l'humidité, au regard du boulanger.",
+      "Ne pleure pas. Enfin si, mais discrètement.",
+      "Ta carapace protège un cœur de guimauve fondante.",
+      "Aujourd'hui tu vas prendre tout personnellement. Comme d'hab.",
+      "Éponge émotionnelle du bureau. Essore-toi.",
+      "Tu vas te vexer pour un truc anodin. Le grand classique.",
+      "Nostalgie matinale : tu regrettes déjà hier.",
+      "Ton intuition dit danger. Ton intuition dit toujours danger.",
+      "Tu vas nourrir tout le monde et oublier de manger."
+    ],
+    'Lion': [
+      "Oui tu es formidable. Non, 8h c'est trop tôt pour le rappeler.",
+      "Ta majesté va devoir attendre son café avant de régner.",
+      "Crinière en bataille ce matin. Le trône attendra.",
+      "Tu vas prendre toute la place en réunion. Comme d'habitude.",
+      "Ego surdimensionné dans un open space sous-dimensionné.",
+      "Le monde ne tourne pas autour de toi. Mais chut.",
+      "Tu brilles. Malheureusement c'est la sueur.",
+      "Besoin de compliments pour démarrer. Voilà : t'es okay.",
+      "Roi de la savane, esclave de ton réveil."
+    ],
+    'Vierge': [
+      "Tout ranger, tout trier, tout optimiser. Personne n'a demandé.",
+      "Ton perfectionnisme va encore ralentir tout le monde.",
+      "Plan de journée en 47 étapes. Rien ne va se passer comme prévu.",
+      "Critique constructive ou destructrice ? On penche pour la deux.",
+      "Le chaos autour de toi te rend physiquement malade.",
+      "Tu vas corriger les fautes d'orthographe de tout le monde. Mentalement.",
+      "Un poil maniaque ? Non, complètement maniaque.",
+      "L'imprévu te donne de l'urticaire. Bonne journée.",
+      "Tu as déjà fait ta to-do list à 6h. Bravo (et aide-toi)."
+    ],
+    'Balance': [
+      "Choisis un truc. N'importe quoi. Mais choisis.",
+      "Ton indécision est un art. Un art chiant.",
+      "Équilibre précaire entre productivité et procrastination.",
+      "Tu vas peser le pour et le contre pendant 3 heures pour un sandwich.",
+      "Diplomate-né. Traduction : tu n'oses pas dire non.",
+      "Hésiter entre le café et le thé : 20 minutes de perdues.",
+      "Ton sens de la justice va te jouer des tours.",
+      "Tu vas plaire à tout le monde et t'oublier toi-même.",
+      "Harmonie recherchée, chaos obtenu. Le paradoxe Balance."
+    ],
+    'Scorpion': [
+      "Garde ton venin pour après le déjeuner au moins.",
+      "Intense dès le réveil. Tes voisins de pallier compatissent.",
+      "Non, un regard noir n'est pas un bonjour.",
+      "Mystérieux ? Non, renfermé. Y'a une nuance.",
+      "Tu vas stalker quelqu'un sur les réseaux. On le sait.",
+      "Ta rancune a une meilleure mémoire que toi.",
+      "Passion ou obsession ? La frontière est floue chez toi.",
+      "Se venger est ton hobby. Aujourd'hui c'est jour de pratique.",
+      "Profondeur émotionnelle : un gouffre sans fond."
+    ],
+    'Sagittaire': [
+      "Ton optimisme irrationnel va encore frapper.",
+      "Envie de voyager ? Commence par aller au bureau.",
+      "Philosophe du matin : des grandes idées, zéro exécution.",
+      "Ta franchise va blesser au moins trois personnes avant midi.",
+      "Liberté chérie. Traduction : allergie aux responsabilités.",
+      "Tu vas promettre monts et merveilles. Livrer des collines.",
+      "Aventurier du quotidien : tu prends un autre chemin pour aller bosser.",
+      "Ton enthousiasme fatigue les introvertis autour de toi.",
+      "Grand discours ce matin. Application : la semaine prochaine. Peut-être."
+    ],
+    'Capricorne': [
+      "Bosseur acharné ou robot ? La frontière s'estompe.",
+      "Ton ambition dépasse tes heures de sommeil.",
+      "Austère, efficace, pas drôle. Le profil LinkedIn parfait.",
+      "Le plaisir c'est pour les faibles. Tu travailles, toi.",
+      "Ton tableau Excel est prêt à détruire des vies.",
+      "Discipline de fer, personnalité de granit. Fun zéro.",
+      "Tu planifies tes vacances comme une opération militaire.",
+      "Le travail c'est la vie. Ta vie sociale, elle, est morte.",
+      "Objectifs atteints. Bonheur ? Pas dans le KPI."
+    ],
+    'Verseau': [
+      "Idées de génie ou conneries monumentales ? Pile ou face.",
+      "Original comme un hipster qui dit 'je suis pas hipster'.",
+      "Ton besoin d'indépendance fatigue même ta wifi.",
+      "Rebelle dans l'âme, conformiste en pyjama.",
+      "Tu vas proposer une idée révolutionnaire. Personne n'écoutera.",
+      "Excentrique du matin : tu mets tes chaussettes dépareillées.",
+      "Détaché des conventions. Attaché à ton téléphone.",
+      "Humanitaire de canapé. Tu likes des pétitions en mangeant.",
+      "Trop en avance sur ton temps. Ou juste à côté de la plaque."
+    ],
+    'Poissons': [
+      "Tes pieds touchent rarement le sol. Aujourd'hui non plus.",
+      "Intuition de médium, pragmatisme de méduse.",
+      "Tu vas rêvasser la moitié de la matinée. L'autre moitié aussi.",
+      "Empathie débordante : tu pleures devant une pub.",
+      "Ton monde imaginaire est plus intéressant que la réalité. C'est un problème.",
+      "Nager à contre-courant, c'est pas de la natation, c'est du masochisme.",
+      "Tes émotions changent comme la marée. Toutes les six heures.",
+      "Artiste incompris ou incompétent ? Le mystère reste entier.",
+      "Tu vas absorber l'humeur de tout le bureau. Éponge humaine."
+    ]
+  };
+
+  const weatherPool = weatherPhrases[humorLevel]?.[weatherType] || weatherPhrases.spicy[weatherType];
+  const signPool = signPhrases[sign] || ["L'univers t'ignore aujourd'hui. C'est mérité."];
+
+  const wIdx = dayOfMonth % weatherPool.length;
+  const sIdx = (dayOfMonth * 7 + sign.length) % signPool.length;
+
+  const weatherLine = weatherPool[wIdx];
+  const signLine = signPool[sIdx];
+
+  const titles = [
+    `🔮 ${dayOfWeek} ${sign}`,
+    `☕ ${sign} — ${dayOfWeek}`,
+    `⚡ Brief ${sign}`,
+    `🌀 ${dayOfWeek} pour ${sign}`,
+  ];
+  const title = titles[dayOfMonth % titles.length];
+
   let body = '';
   if (humorLevel === 'safe') {
-    body = `Bonjour ${sign} ! ${weatherContext} Astuce du jour : Soyez positif.`;
+    body = `Bonjour ${sign} ! ${weatherLine} ${signLine}`;
   } else {
-    body = `${weatherContext} Côté horoscope : ${astroMsg}`;
+    body = `${weatherLine} ${signLine}`;
   }
 
   return { title, body };

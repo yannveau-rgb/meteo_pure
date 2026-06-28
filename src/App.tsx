@@ -488,9 +488,11 @@ export default function App() {
                     <>
                       <h3 className="font-bold text-sky-400 text-sm mb-2 uppercase tracking-widest flex items-center gap-2">
                         {aiBrief.title}
-                        <span className="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.5 rounded font-mono font-bold tracking-normal uppercase">
-                          IA active
-                        </span>
+                        {aiBrief.ai !== false && (
+                          <span className="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.5 rounded font-mono font-bold tracking-normal uppercase">
+                            IA active
+                          </span>
+                        )}
                       </h3>
                       <p className="leading-relaxed text-sm italic">{aiBrief.body}</p>
                     </>

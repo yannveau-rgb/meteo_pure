@@ -4,7 +4,7 @@ import { getMorningBriefContent, HumorLevel } from '../utils/notificationService
 export function useMorningBrief() {
   const [showMoonModal, setShowMoonModal] = useState<boolean>(false);
   const [showMorningBriefModal, setShowMorningBriefModal] = useState<boolean>(false);
-  const [aiBrief, setAiBrief] = useState<{ title: string; body: string } | null>(null);
+  const [aiBrief, setAiBrief] = useState<{ title: string; body: string; ai?: boolean } | null>(null);
   const [loadingBrief, setLoadingBrief] = useState<boolean>(false);
 
   async function openMorningBrief(birthDate: string, weatherCode: number, humorLevel: HumorLevel, cityName: string) {
@@ -24,7 +24,7 @@ export function useMorningBrief() {
       });
       if (res.ok) {
         const data = await res.json();
-        setAiBrief({ title: data.title, body: data.body });
+        setAiBrief({ title: data.title, body: data.body, ai: data.ai !== false });
       } else {
         setAiBrief(fallback());
       }

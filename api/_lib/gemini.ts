@@ -113,12 +113,12 @@ Règles :
 
     if (response.text) {
       const data = JSON.parse(response.text.trim());
-      if (data.title && data.body) return { title: data.title, body: data.body };
+      if (data.title && data.body) return { title: data.title, body: data.body, ai: true };
     }
     throw new Error('Invalid Gemini response');
   } catch (err) {
     console.error('[GEMINI] Failed:', err);
     const fallback = getMorningBriefContent(humorLevel as any, birthDate, weatherCode);
-    return fallback || { title: `🔮 Brief Matinal ${sign}`, body: `Météo mitigée aujourd'hui.` };
+    return fallback ? { ...fallback, ai: false } : { title: `🔮 Brief Matinal ${sign}`, body: `Météo mitigée aujourd'hui.`, ai: false };
   }
 }
