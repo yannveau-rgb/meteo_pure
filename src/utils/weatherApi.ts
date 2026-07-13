@@ -50,16 +50,55 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
 
   const urlMeteoFrance = `https://api.open-meteo.com/v1/meteofrance?latitude=${latitude}&longitude=${longitude}&current=${currentVars}&hourly=${hourlyVars}&daily=${dailyVars}&minutely_15=${minuteVars}&forecast_days=10&timezone=Europe/Paris`;
 
-  // Secondary: standard endpoint (GFS/ECMWF blend) — supports minutely_15 unlike /v1/ecmwf
+  // Secondary: standard endpoint (GFS/ECMWF-open-data/ICON "best_match" blend) — supports minutely_15 unlike /v1/ecmwf
   const urlStandard = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=${currentVars}&hourly=${hourlyVars}&daily=${dailyVars}&minutely_15=${minuteVars}&forecast_days=10&timezone=Europe/Paris`;
+
+  // Tertiary: ECMWF IFS — AROME covers only ~2 days and ARPEGE ~4 days (both return
+  // null beyond that in the /v1/meteofrance response), so days 5-10 currently fell
+  // back to the generic "best_match" blend above. ECMWF has stronger medium-range
+  // skill than that generic blend, so it's used specifically to fill that gap.
+  // No `current`/`minutely_15` needed — ECMWF is never used for today's precision.
+  const urlEcmwf = `https://api.open-meteo.com/v1/ecmwf?latitude=${latitude}&longitude=${longitude}&hourly=${hourlyVars}&daily=${dailyVars}&forecast_days=10&timezone=Europe/Paris`;
 
   let data: any = null;
   let fallbackData: any = null;
+  let ecmwfData: any = null;
+
+  // 3-way coalesce: prefer AROME/ARPEGE, then ECMWF (for the medium-range gap),
+  // then the generic blend as last resort.
+  function mergeSeries(primary: any, secondary: any, tertiary: any) {
+    for (const source of [secondary, tertiary]) {
+      if (!source) continue;
+      for (const key of Object.keys(source)) {
+        const srcArr = source[key];
+        if (!Array.isArray(srcArr)) continue;
+        const curArr = primary[key];
+        if (!curArr || !Array.isArray(curArr)) {
+          primary[key] = [...srcArr];
+          continue;
+        }
+        const maxLength = Math.max(curArr.length, srcArr.length);
+        const merged: any[] = [];
+        for (let i = 0; i < maxLength; i++) {
+          const curVal = curArr[i];
+          if (i < curArr.length && curVal !== null && curVal !== undefined) {
+            merged.push(curVal);
+          } else if (i < srcArr.length && srcArr[i] !== null && srcArr[i] !== undefined) {
+            merged.push(srcArr[i]);
+          } else {
+            merged.push(i < curArr.length ? curArr[i] : null);
+          }
+        }
+        primary[key] = merged;
+      }
+    }
+  }
 
   try {
-    const [resMF, resStd] = await Promise.allSettled([
+    const [resMF, resStd, resEcmwf] = await Promise.allSettled([
       fetch(urlMeteoFrance).then(r => { if (!r.ok) throw new Error(`MeteoFrance status ${r.status}`); return r.json(); }),
-      fetch(urlStandard).then(r => { if (!r.ok) throw new Error(`Standard API status ${r.status}`); return r.json(); })
+      fetch(urlStandard).then(r => { if (!r.ok) throw new Error(`Standard API status ${r.status}`); return r.json(); }),
+      fetch(urlEcmwf).then(r => { if (!r.ok) throw new Error(`ECMWF status ${r.status}`); return r.json(); })
     ]);
 
     if (resMF.status === 'fulfilled') {
@@ -69,67 +108,20 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
       fallbackData = resStd.value;
       if (!data) data = fallbackData; // If MeteoFrance failed completely
     }
+    if (resEcmwf.status === 'fulfilled') {
+      ecmwfData = resEcmwf.value;
+    }
 
     if (!data) {
       throw new Error('Échec de la connexion à l\'API météo. Veuillez vérifier votre connexion ou réessayer.');
     }
 
-    // Blend missing (null, undefined, or truncated) future data from standard API into MeteoFrance data
-    if (fallbackData && data !== fallbackData) {
-      // Merge daily data
-      if (fallbackData.daily) {
-        if (!data.daily) data.daily = {};
-        for (const key of Object.keys(fallbackData.daily)) {
-          const fallbackArr = fallbackData.daily[key];
-          if (Array.isArray(fallbackArr)) {
-            const currentArr = data.daily[key];
-            if (!currentArr || !Array.isArray(currentArr)) {
-              data.daily[key] = [...fallbackArr];
-            } else {
-              const merged: any[] = [];
-              const maxLength = Math.max(currentArr.length, fallbackArr.length);
-              for (let i = 0; i < maxLength; i++) {
-                const curVal = currentArr[i];
-                if (i < currentArr.length && curVal !== null && curVal !== undefined) {
-                  merged.push(curVal);
-                } else if (i < fallbackArr.length) {
-                  merged.push(fallbackArr[i]);
-                } else {
-                  merged.push(null);
-                }
-              }
-              data.daily[key] = merged;
-            }
-          }
-        }
-      }
-      // Merge hourly data
-      if (fallbackData.hourly) {
-        if (!data.hourly) data.hourly = {};
-        for (const key of Object.keys(fallbackData.hourly)) {
-          const fallbackArr = fallbackData.hourly[key];
-          if (Array.isArray(fallbackArr)) {
-            const currentArr = data.hourly[key];
-            if (!currentArr || !Array.isArray(currentArr)) {
-              data.hourly[key] = [...fallbackArr];
-            } else {
-              const merged: any[] = [];
-              const maxLength = Math.max(currentArr.length, fallbackArr.length);
-              for (let i = 0; i < maxLength; i++) {
-                const curVal = currentArr[i];
-                if (i < currentArr.length && curVal !== null && curVal !== undefined) {
-                  merged.push(curVal);
-                } else if (i < fallbackArr.length) {
-                  merged.push(fallbackArr[i]);
-                } else {
-                  merged.push(null);
-                }
-              }
-              data.hourly[key] = merged;
-            }
-          }
-        }
-      }
+    // Blend missing (null, undefined, or truncated) future data into MeteoFrance data
+    if (data !== fallbackData) {
+      if (!data.daily) data.daily = {};
+      mergeSeries(data.daily, ecmwfData?.daily, fallbackData?.daily);
+      if (!data.hourly) data.hourly = {};
+      mergeSeries(data.hourly, ecmwfData?.hourly, fallbackData?.hourly);
     }
   } catch (error) {
     console.error('API Error:', error);
