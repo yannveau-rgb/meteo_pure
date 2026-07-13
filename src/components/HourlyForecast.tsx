@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { HourlyForecastItem } from '../types';
 import { getWeatherUI, isHourNight } from '../utils/weatherUtils';
 
@@ -38,9 +39,13 @@ export default function HourlyForecast({ hourlyData, humidity, dayName = "Aujour
           const WeatherIcon = weatherUI.icon;
 
           return (
-            <div
+            <motion.div
               key={index}
-              className={`relative flex flex-col items-center justify-between h-24 min-w-[54px] py-1.5 rounded-2xl border shadow-sm transition-all hover:bg-white/20 ${
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: Math.min(index * 0.035, 0.5), ease: 'easeOut' }}
+              whileTap={{ scale: 0.93 }}
+              className={`relative flex flex-col items-center justify-between h-24 min-w-[54px] py-1.5 rounded-2xl border shadow-sm transition-colors hover:bg-white/20 ${
                 hour.stormRisk
                   ? 'bg-amber-500/15 border-amber-400/40'
                   : 'bg-white/10 border-white/15'
@@ -65,7 +70,7 @@ export default function HourlyForecast({ hourlyData, humidity, dayName = "Aujour
               <span className="text-[11px] text-white font-bold">
                 {Math.round(hour.temp)}°
               </span>
-            </div>
+            </motion.div>
           );
         })}
       </div>

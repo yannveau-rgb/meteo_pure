@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { DailyForecastItem } from '../types';
 import { getWeatherUI } from '../utils/weatherUtils';
 import { Calendar, Share2, Check } from 'lucide-react';
@@ -109,12 +110,16 @@ export default function DailyForecast({ dailyData, cityName, selectedDayIndex, o
           const barWidth = Math.max(8, maxRightPercentage - minLeftPercentage);
 
           return (
-            <div 
-              key={index} 
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.4), ease: 'easeOut' }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => onSelectDay(index)}
-              className={`flex items-center justify-between text-xs font-semibold cursor-pointer p-2 rounded-2xl transition-all duration-200 hover:bg-white/10 active:scale-[0.98] ${
-                selectedDayIndex === index 
-                  ? 'bg-white/15 border-l-4 border-sky-400 pl-3 pr-2 shadow-sm scale-[1.01]' 
+              className={`flex items-center justify-between text-xs font-semibold cursor-pointer p-2 rounded-2xl transition-colors duration-200 hover:bg-white/10 ${
+                selectedDayIndex === index
+                  ? 'bg-white/15 border-l-4 border-sky-400 pl-3 pr-2 shadow-sm'
                   : 'border-l-4 border-transparent pl-3 pr-2 hover:border-l-white/20'
               }`}
               title="Cliquez pour afficher la météo heure par heure de ce jour"
@@ -149,7 +154,7 @@ export default function DailyForecast({ dailyData, cityName, selectedDayIndex, o
               <span className="w-8 text-right text-white font-bold">
                 {Math.round(day.tempMax)}°
               </span>
-            </div>
+            </motion.div>
           );
         })}
       </div>

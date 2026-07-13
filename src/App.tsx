@@ -883,14 +883,21 @@ export default function App() {
                                 </>
                               )}
 
-                              <span 
-                                className={`text-[96px] font-extralight tracking-tighter leading-none drop-shadow-sm transition-all duration-300 ${
-                                  isBurning ? 'burning-temp' : isFreezing ? 'freezing-temp' : 'text-white'
-                                }`} 
-                                id="main-temp"
-                              >
-                                {temp}
-                              </span>
+                              <AnimatePresence mode="popLayout">
+                                <motion.span
+                                  key={temp}
+                                  initial={{ opacity: 0, y: 8 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, y: -8 }}
+                                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                                  className={`text-[96px] font-extralight tracking-tighter leading-none drop-shadow-sm inline-block ${
+                                    isBurning ? 'burning-temp' : isFreezing ? 'freezing-temp' : 'text-white'
+                                  }`}
+                                  id="main-temp"
+                                >
+                                  {temp}
+                                </motion.span>
+                              </AnimatePresence>
                               <span className={`text-4xl font-light mt-1 ml-1 transition-all duration-300 ${
                                 isBurning ? 'text-amber-400 font-normal drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : isFreezing ? 'text-sky-300 font-normal drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]' : 'text-white/80'
                               }`}>
