@@ -14,6 +14,7 @@ import {
   HelpCircle,
   Clock,
   Volume2,
+  VolumeX,
   User,
   Settings,
   Trash2,
@@ -64,6 +65,7 @@ import { useCurrentCommune } from './hooks/useCurrentCommune';
 import { useCitySearch } from './hooks/useCitySearch';
 import { useWeatherFetch } from './hooks/useWeatherFetch';
 import { useMorningBrief } from './hooks/useMorningBrief';
+import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { useShareImage } from './hooks/useShareImage';
 
 // Modular child components
@@ -149,6 +151,15 @@ export default function App() {
     loadingBrief,
     openMorningBrief,
   } = useMorningBrief();
+
+  // Audio playback of the morning brief (text-to-speech)
+  const briefSpeech = useSpeechSynthesis();
+
+  // Stop any ongoing speech when the brief modal closes
+  useEffect(() => {
+    if (!showMorningBriefModal) briefSpeech.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showMorningBriefModal]);
 
   // Favorites bookmarked cities (synced with localStorage)
   const { favorites, setFavorites, toggleFavorite } = useFavorites();
@@ -481,19 +492,41 @@ export default function App() {
                     <div className="flex flex-col items-center justify-center py-8 gap-3">
                       <Loader2 className="w-8 h-8 animate-spin text-sky-400" />
                       <p className="text-xs text-white/70 animate-pulse text-center">
-                        Gemini interroge les constellations et la météo de {currentCommune?.nom || "ta ville"}...
+                        L'IA interroge les constellations et la météo de {currentCommune?.nom || "ta ville"}...
                       </p>
                     </div>
                   ) : aiBrief ? (
                     <>
-                      <h3 className="font-bold text-sky-400 text-sm mb-2 uppercase tracking-widest flex items-center gap-2">
-                        {aiBrief.title}
-                        {aiBrief.ai !== false && (
-                          <span className="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.5 rounded font-mono font-bold tracking-normal uppercase">
-                            IA active
-                          </span>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <h3 className="font-bold text-sky-400 text-sm uppercase tracking-widest flex items-center gap-2">
+                          {aiBrief.title}
+                          {aiBrief.ai !== false && (
+                            <span className="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.5 rounded font-mono font-bold tracking-normal uppercase">
+                              IA active
+                            </span>
+                          )}
+                        </h3>
+                        {briefSpeech.isSupported && (
+                          <button
+                            onClick={() => {
+                              if (briefSpeech.isSpeaking) {
+                                briefSpeech.stop();
+                              } else {
+                                briefSpeech.speak(`${aiBrief.title}. ${aiBrief.body}`);
+                              }
+                            }}
+                            aria-label={briefSpeech.isSpeaking ? "Arrêter la lecture" : "Écouter le brief"}
+                            title={briefSpeech.isSpeaking ? "Arrêter la lecture" : "Écouter le brief"}
+                            className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full border transition-all active:scale-95 ${
+                              briefSpeech.isSpeaking
+                                ? 'bg-sky-500/25 border-sky-400/50 text-sky-300 animate-pulse'
+                                : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20'
+                            }`}
+                          >
+                            {briefSpeech.isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                          </button>
                         )}
-                      </h3>
+                      </div>
                       <p className="leading-relaxed text-sm italic">{aiBrief.body}</p>
                     </>
                   ) : !notifSettings.birthDate ? (
