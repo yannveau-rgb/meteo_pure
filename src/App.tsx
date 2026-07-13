@@ -74,7 +74,7 @@ import HourlyForecast from './components/HourlyForecast';
 import DailyForecast from './components/DailyForecast';
 import AmbientWeatherBackground from './components/AmbientWeatherBackground';
 import ClimateComparison from './components/ClimateComparison';
-import RainRadar from './components/RainRadar';
+const RainRadar = lazy(() => import('./components/RainRadar'));
 import TiltCard from './components/TiltCard';
 
 // Lazy-loaded: only fetched when their tab/modal is opened
@@ -331,7 +331,7 @@ export default function App() {
 
   // Silently refresh push subscription on every app load to keep endpoint fresh
   useEffect(() => {
-    if (!weather || !currentCommune || !notifSettings.enabled) return;
+    if (!weather || !currentCommune || !notifSettings.systemEnabled) return;
     refreshPushSubscription(
       currentCommune,
       notifSettings.humorLevel,
@@ -1038,11 +1038,17 @@ export default function App() {
 
                   {/* Radar pluie & orages — RainViewer, historique + nowcast 30 min */}
                   {weather && (
-                    <RainRadar
-                      latitude={weather.latitude}
-                      longitude={weather.longitude}
-                      cityName={weather.city}
-                    />
+                    <Suspense fallback={
+                      <div className="glass-premium rounded-3xl h-[300px] flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-sky-400" />
+                      </div>
+                    }>
+                      <RainRadar
+                        latitude={weather.latitude}
+                        longitude={weather.longitude}
+                        cityName={weather.city}
+                      />
+                    </Suspense>
                   )}
                 </div>
               </motion.div>

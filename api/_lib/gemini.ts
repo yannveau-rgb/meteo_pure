@@ -35,10 +35,10 @@ export async function generateAiMorningBrief(
     toneInstruction = "Ton familier, argotique, piquant, direct et théâtral. Expressions françaises fleuries.";
   }
 
-  const today = new Date();
-  const dayOfWeek = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][today.getUTCDay()];
-  const dayOfMonth = today.getUTCDate();
-  const monthName = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][today.getUTCMonth()];
+  const parisNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+  const dayOfWeek = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][parisNow.getDay()];
+  const dayOfMonth = parisNow.getDate();
+  const monthName = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'][parisNow.getMonth()];
   const seed = Math.floor(Math.random() * 99999);
 
   const angles = [
@@ -107,9 +107,12 @@ Réponds UNIQUEMENT avec un JSON valide : {"title": "...", "body": "..."}`;
       const content = data.choices?.[0]?.message?.content;
       if (content) {
         const parsed = JSON.parse(content);
-        if (parsed.title && parsed.body) {
-          return { title: parsed.title, body: parsed.body, ai: true, model };
+        const title = typeof parsed.title === 'string' ? parsed.title.trim() : '';
+        const body = typeof parsed.body === 'string' ? parsed.body.trim() : '';
+        if (title.length >= 3 && body.length >= 10) {
+          return { title, body, ai: true, model };
         }
+        console.error(`[MISTRAL] ${model} returned invalid content:`, content.slice(0, 200));
       }
     } catch (e: any) {
       console.error(`[MISTRAL] ${model} failed:`, e.message || e);

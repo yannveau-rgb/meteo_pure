@@ -1,5 +1,6 @@
 // Météo Pure Service Worker - Offline cache + Web Push
-const CACHE_NAME = 'meteo-pure-v7';
+const CACHE_NAME = 'meteo-pure-v8';
+const META_CACHE_NAME = 'meteo-pure-meta';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -19,7 +20,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.map((key) => key !== CACHE_NAME ? caches.delete(key) : null))
+      Promise.all(keys.map((key) => (key !== CACHE_NAME && key !== META_CACHE_NAME) ? caches.delete(key) : null))
     ).then(() => self.clients.claim())
   );
 });
@@ -111,25 +112,35 @@ self.addEventListener('push', (event) => {
 // AUTO-RESUBSCRIBE when browser rotates the push subscription (common on iOS)
 self.addEventListener('pushsubscriptionchange', (event) => {
   event.waitUntil(
-    fetch('/api/vapid-public-key')
-      .then(r => r.json())
-      .then(({ publicKey }) => {
+    Promise.all([
+      fetch('/api/vapid-public-key').then(r => r.json()),
+      caches.open(META_CACHE_NAME)
+        .then(cache => cache.match('/meta/subscription-info'))
+        .then(res => res ? res.json() : null)
+        .catch(() => null)
+    ])
+      .then(([{ publicKey }, meta]) => {
         const raw = atob(publicKey.replace(/-/g, '+').replace(/_/g, '/'));
         const key = new Uint8Array(raw.length);
         for (let i = 0; i < raw.length; i++) key[i] = raw.charCodeAt(i);
         return self.registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: key
-        });
+        }).then(newSub => ({ newSub, meta }));
       })
-      .then(newSub => {
+      .then(({ newSub, meta }) => {
+        if (!meta || !meta.commune) {
+          console.warn('[SW] pushsubscriptionchange: no persisted commune found, skipping re-subscribe to avoid a broken [0,0] location');
+          return;
+        }
         return fetch('/api/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             subscription: newSub,
-            commune: { nom: 'Auto-renew', centre: { type: 'Point', coordinates: [0, 0] }, code: '00000', codesPostaux: ['00000'], codeDepartement: '00' },
-            humorLevel: 'spicy'
+            commune: meta.commune,
+            humorLevel: meta.humorLevel || 'spicy',
+            birthDate: meta.birthDate || ''
           })
         });
       })

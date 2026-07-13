@@ -7,7 +7,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const cronSecret = process.env.CRON_SECRET;
   const adminToken = process.env.ADMIN_TOKEN;
   const authHeader = req.headers['authorization'] || '';
-  const adminHeader = (req.headers['x-admin-token'] as string) || (req.query.token as string);
+  const adminHeader = req.headers['x-admin-token'] as string;
 
   const cronOK = cronSecret && authHeader === `Bearer ${cronSecret}`;
   const adminOK = adminToken && adminHeader === adminToken;

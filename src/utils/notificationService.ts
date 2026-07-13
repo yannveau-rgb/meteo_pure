@@ -1102,12 +1102,28 @@ export async function syncPushSubscription(
           } : null
         })
       });
+      await persistSubscriptionMeta(commune, humorLevel, birthDate);
       return true;
     }
   } catch (err) {
     console.error('Error syncing Push subscription with server:', err);
   }
   return false;
+}
+
+/**
+ * Persist commune/humorLevel/birthDate in Cache Storage so the Service Worker
+ * can re-read them from `pushsubscriptionchange` (SW has no access to localStorage).
+ */
+async function persistSubscriptionMeta(commune: any, humorLevel: HumorLevel, birthDate?: string): Promise<void> {
+  try {
+    if (!('caches' in window)) return;
+    const cache = await caches.open('meteo-pure-meta');
+    const body = JSON.stringify({ commune, humorLevel, birthDate: birthDate || '' });
+    await cache.put('/meta/subscription-info', new Response(body, { headers: { 'Content-Type': 'application/json' } }));
+  } catch {
+    // Non-critical: worst case pushsubscriptionchange falls back to a placeholder commune
+  }
 }
 
 /**
@@ -1144,6 +1160,7 @@ export async function refreshPushSubscription(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subscription: sub, commune, humorLevel, birthDate })
       });
+      await persistSubscriptionMeta(commune, humorLevel, birthDate);
     }
   } catch (e) {
     console.warn('[PUSH] silent refresh failed:', e);

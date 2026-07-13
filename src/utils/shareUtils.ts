@@ -1,5 +1,3 @@
-import html2canvas from 'html2canvas';
-
 /**
  * Helper to parse of inner components of oklch(...) and oklab(...)
  */
@@ -257,6 +255,7 @@ export async function generateElementDataUrl(elementId: string): Promise<string>
   document.body.appendChild(tempContainer);
 
   const runCapture = async (scale: number, safeMode: boolean) => {
+    const { default: html2canvas } = await import('html2canvas');
     return await html2canvas(clonedElement, {
       scale: scale,
       useCORS: true,
