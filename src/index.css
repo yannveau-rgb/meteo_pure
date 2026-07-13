@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    background: linear-gradient(135deg, #0a1128 0%, #102a43 40%, #1e3a8a 75%, #020617 100%);
+    background: linear-gradient(135deg, #123a5e 0%, #1e5a8a 45%, #3a86b8 75%, #0d2e4a 100%);
     min-height: 100vh;
     overflow-x: hidden;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "SF Pro", Helvetica, Arial, sans-serif;

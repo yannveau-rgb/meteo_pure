@@ -400,7 +400,7 @@ export default function App() {
   const ActiveWeatherIcon = weatherStyle.icon;
 
   return (
-    <div className={`min-h-screen w-full flex justify-center items-center p-0 sm:p-6 text-white antialiased overflow-x-hidden bg-gradient-to-br ${isNightTimeNow ? 'from-[#020617] via-[#0b1329] to-[#111827]' : 'from-[#081430] via-[#0f244a] to-[#020617]'}`}>
+    <div className={`min-h-screen w-full flex justify-center items-center p-0 sm:p-6 text-white antialiased overflow-x-hidden bg-gradient-to-br ${isNightTimeNow ? 'from-[#0a1f38] via-[#123a5e] to-[#081b2e]' : 'from-[#123a5e] via-[#2a72a8] to-[#0d2e4a]'}`}>
       
       {/* Container Principal (Mobile-First responsive frame) */}
       <div 

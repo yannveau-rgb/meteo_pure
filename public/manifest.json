@@ -4,8 +4,8 @@
   "description": "Application météo française avec alertes push, briefings IA et vigilances Météo-France.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a1128",
-  "theme_color": "#0a1128",
+  "background_color": "#123a5e",
+  "theme_color": "#123a5e",
   "orientation": "portrait-primary",
   "icons": [
     {
