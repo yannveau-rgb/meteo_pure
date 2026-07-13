@@ -69,7 +69,7 @@ import { useShareImage } from './hooks/useShareImage';
 // Modular child components
 import RainForecast from './components/RainForecast';
 import VigilanceCard from './components/VigilanceCard';
-import WeatherStats from './components/WeatherStats';
+const WeatherStats = lazy(() => import('./components/WeatherStats'));
 import HourlyForecast from './components/HourlyForecast';
 import DailyForecast from './components/DailyForecast';
 import AmbientWeatherBackground from './components/AmbientWeatherBackground';
@@ -1013,14 +1013,20 @@ export default function App() {
 
                       {/* 6. Wind and Feels like metrics slider indicator bar */}
                       <TiltCard>
-                        <WeatherStats 
-                          current={weather.current} 
-                          uvIndex={selectedDayIndex === 0 
-                            ? calculateCurrentUv(weather.daily[0]?.uvIndex, weather.sunrise, weather.sunset)
-                            : weather.daily[selectedDayIndex]?.uvIndex} 
-                          hourlyData={selectedDayIndex === 0 ? weather.hourly : (weather.daily[selectedDayIndex]?.hourly || [])}
-                          dailyData={weather.daily}
-                        />
+                        <Suspense fallback={
+                          <div className="glass-premium rounded-3xl p-5 h-40 flex items-center justify-center">
+                            <Loader2 className="w-5 h-5 animate-spin text-sky-400" />
+                          </div>
+                        }>
+                          <WeatherStats
+                            current={weather.current}
+                            uvIndex={selectedDayIndex === 0
+                              ? calculateCurrentUv(weather.daily[0]?.uvIndex, weather.sunrise, weather.sunset)
+                              : weather.daily[selectedDayIndex]?.uvIndex}
+                            hourlyData={selectedDayIndex === 0 ? weather.hourly : (weather.daily[selectedDayIndex]?.hourly || [])}
+                            dailyData={weather.daily}
+                          />
+                        </Suspense>
                       </TiltCard>
                     </>
                   ) : (

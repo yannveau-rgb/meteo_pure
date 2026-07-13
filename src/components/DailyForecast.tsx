@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { motion } from 'motion/react';
 import { DailyForecastItem } from '../types';
 import { getWeatherUI } from '../utils/weatherUtils';
 import { Calendar, Share2, Check } from 'lucide-react';
 import { generateElementDataUrl, copyDataUrlToClipboard, downloadDataUrl } from '../utils/shareUtils';
-import SharePreviewModal from './SharePreviewModal';
+
+const SharePreviewModal = lazy(() => import('./SharePreviewModal'));
 
 interface DailyForecastProps {
   dailyData: DailyForecastItem[];
@@ -164,6 +165,7 @@ export default function DailyForecast({ dailyData, cityName, selectedDayIndex, o
       </div>
     </div>
 
+    <Suspense fallback={null}>
     <SharePreviewModal
       isOpen={isModalOpen}
       onClose={() => setIsModalOpen(false)}
@@ -174,6 +176,7 @@ export default function DailyForecast({ dailyData, cityName, selectedDayIndex, o
       onCopy={handleCopy}
       onDownload={handleDownload}
     />
+    </Suspense>
     </>
   );
 }
