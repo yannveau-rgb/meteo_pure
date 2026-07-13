@@ -43,7 +43,7 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
   const [longitude, latitude] = commune.centre.coordinates;
 
   // Primary: Météo-France AROME model (1.3 km resolution over France — highest precision available)
-  const currentVars = 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,surface_pressure,visibility';
+  const currentVars = 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,surface_pressure,visibility';
   const hourlyVars  = 'temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cape';
   const dailyVars   = 'weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max';
   const minuteVars  = 'precipitation,weather_code,lightning_potential';
@@ -138,7 +138,6 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
 
   try {
     // Calculate start index first to align current time with hourly indices
-    const nowHour = new Date().getHours();
     const hourlyTimes = data.hourly?.time || [];
     
     // Formatter to accurately grab the current hour in Europe/Paris
@@ -262,6 +261,7 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
       feelsLike: apparent,
       humidity: rawCurrentMF.relative_humidity_2m ?? rawCurrentStd.relative_humidity_2m ?? 50,
       windSpeed: rawCurrentMF.wind_speed_10m ?? rawCurrentStd.wind_speed_10m ?? 0,
+      windGusts: rawCurrentMF.wind_gusts_10m ?? rawCurrentStd.wind_gusts_10m,
       windDirection: rawCurrentMF.wind_direction_10m ?? rawCurrentStd.wind_direction_10m,
       cloudCover: rawCurrentMF.cloud_cover ?? rawCurrentStd.cloud_cover,
       pressure: rawCurrentMF.surface_pressure ?? rawCurrentStd.surface_pressure,
@@ -297,7 +297,7 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
       const idx = startIdx + j;
       if (idx < hourlyTimes.length) {
         const timeStr = hourlyTimes[idx];
-        const hourLabel = timeStr ? timeStr.split('T')[1].substring(0, 5) : `${(nowHour + j) % 24}:00`;
+        const hourLabel = timeStr ? timeStr.split('T')[1].substring(0, 5) : `${(localHour + j) % 24}:00`;
         let code = hourlyCodes[idx] ?? 0;
         const fallbackCode = fallbackData?.hourly?.weather_code?.[idx] ?? 0;
 
@@ -347,7 +347,7 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
         });
       } else {
         hourly.push({
-          time: `${(nowHour + j) % 24}:00`,
+          time: `${(localHour + j) % 24}:00`,
           temp: 15,
           weatherCode: 0,
           iconName: '0',
@@ -360,7 +360,6 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
     // Map Daily forecasts (next 7 days)
     const daily: DailyForecastItem[] = [];
     const daysArr = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-    const currentDayIdx = new Date().getDay();
     const dailyCodes = data.daily?.weather_code || [];
     const dailyMax = data.daily?.temperature_2m_max || [];
     const dailyMin = data.daily?.temperature_2m_min || [];
@@ -371,12 +370,23 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
     const dailyWindGusts = data.daily?.wind_gusts_10m_max || [];
 
     for (let k = 0; k < 7; k++) {
-      const dayName = daysArr[(currentDayIdx + k) % 7];
       const apiDailyCode = dailyCodes[k] ?? 0;
-      
+
       // Grab 24 hours for this day (indices k*24 to k*24 + 23)
       const dailyHourly: HourlyForecastItem[] = [];
       const dayDateStr = data.daily?.time?.[k];
+
+      // Derive the weekday directly from the API's own date string (already
+      // anchored to Europe/Paris via the ?timezone= param) instead of the
+      // browser's local clock — avoids an off-by-one day when the device's
+      // timezone differs from Paris (e.g. checking French weather while abroad).
+      let dayName = '';
+      if (dayDateStr) {
+        const [y, m, d] = dayDateStr.split('-').map(Number);
+        const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+        dayName = daysArr[weekday];
+      }
+
       let startIdxDay = k * 24; // Fallback
       if (dayDateStr) {
         const foundIdx = hourlyTimes.findIndex((t: string) => t.startsWith(dayDateStr));
@@ -547,12 +557,15 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
     const prob = hourly.length > 0 ? hourly[0].precipitationProbability : 0;
     const rainInTheHour = realRain ?? generateRainInTheHour(prob, 0);
 
-    // Dynamic Vigilance Status calculation
+    // Dynamic Vigilance Status calculation — includes today's accumulated
+    // rain and current wind gusts for a more realistic risk assessment.
     const vigilance = calculateVigilance(
       current.temperature,
       current.windSpeed,
       current.weatherCode,
-      current.precipitation
+      current.precipitation,
+      daily[0]?.precipitationSum,
+      current.windGusts
     );
 
     // Extract sunrise & sunset times

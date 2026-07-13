@@ -345,11 +345,16 @@ export function generateRainInTheHour(precipitationProb: number, _unused: number
  * Includes French Météo-France standard alert names.
  */
 export function calculateVigilance(
-  temp: number, 
-  windSpeed: number, 
-  weatherCode: number, 
-  rainAmt: number
+  temp: number,
+  windSpeed: number,
+  weatherCode: number,
+  rainAmt: number,
+  dailyPrecipSum?: number,
+  windGusts?: number
 ): VigilanceStatus {
+  // Météo-France vigilance is driven by gusts, not sustained wind speed —
+  // use whichever is higher so a gusty-but-calm-average hour isn't underrated.
+  const effectiveWind = Math.max(windSpeed, windGusts ?? 0);
   const categories: VigilanceCategory[] = [
     {
       name: 'Orages',
@@ -380,11 +385,11 @@ export function calculateVigilance(
   // Logic to dynamically flag concerns
   
   // 1. Orages
-  if (weatherCode === 99 || (weatherCode === 96 && (rainAmt > 8 || windSpeed > 45))) {
+  if (weatherCode === 99 || (weatherCode === 96 && (rainAmt > 8 || effectiveWind > 45))) {
     categories[0].level = 'red';
     categories[0].description = 'Orages d\'une violence exceptionnelle avec chutes de grêle géante, pluies torrentielles et violentes rafales destructrices.';
     categories[0].advice = 'Restez à l\'abri dans un bâtiment en dur. Coupez les appareils électriques. Évitez les déplacements.';
-  } else if (weatherCode === 96 || (weatherCode === 95 && (rainAmt > 5 || windSpeed > 35))) {
+  } else if (weatherCode === 96 || (weatherCode === 95 && (rainAmt > 5 || effectiveWind > 35))) {
     categories[0].level = 'orange';
     categories[0].description = 'Orages violents prévus avec fortes rafales de vent et chutes de grêle fréquente.';
     categories[0].advice = 'Mettez à l\'abri les objets sensibles au vent. Évitez les déplacements ou soyez extrêmement prudent.';
@@ -394,31 +399,34 @@ export function calculateVigilance(
     categories[0].advice = 'Évitez d\'utiliser des téléphones fixes et de vous abriter sous les arbres.';
   }
 
-  // 2. Vent violent
-  if (windSpeed >= 70) {
+  // 2. Vent violent (basé sur les rafales, critère réel de Météo-France)
+  if (effectiveWind >= 70) {
     categories[1].level = 'red';
     categories[1].description = 'Tempête majeure avec risques de chutes d\'arbres massives et dégâts matériels importants.';
     categories[1].advice = 'Restez chez vous. Ne vous déplacez sous aucun prétexte. Restez vigilant face aux chutes d\'objets.';
-  } else if (windSpeed >= 50) {
+  } else if (effectiveWind >= 50) {
     categories[1].level = 'orange';
     categories[1].description = 'Rafales très fortes pouvant provoquer des perturbations locales importantes.';
     categories[1].advice = 'Limitez vos déplacements. Fixez solidement tous les objets extérieurs légers.';
-  } else if (windSpeed >= 30) {
+  } else if (effectiveWind >= 30) {
     categories[1].level = 'yellow';
     categories[1].description = 'Vent soutenu sensible, soyez attentif dans vos activités de plein air.';
     categories[1].advice = 'Prenez garde aux branches mortes, objets volants et échafaudages lors de vos sorties.';
   }
 
-  // 3. Pluie / Inondation
-  if (rainAmt >= 15 || (rainAmt >= 10 && weatherCode >= 95)) {
+  // 3. Pluie / Inondation — combine le taux horaire instantané ET le cumul
+  // journalier, car une pluie fine mais continue toute la journée présente un
+  // risque d'inondation réel que le seul débit horaire ne détecte jamais.
+  const dailySum = dailyPrecipSum ?? 0;
+  if (rainAmt >= 15 || (rainAmt >= 10 && weatherCode >= 95) || dailySum >= 100) {
     categories[2].level = 'red';
     categories[2].description = 'Cumuls de pluie exceptionnels provoquant des inondations majeures, coulées de boue et crues flash de cours d\'eau.';
     categories[2].advice = 'Ne vous déplacez pas. Réfugiez-vous en hauteur. Ne descendez sous aucun prétexte dans les sous-sols.';
-  } else if (rainAmt >= 8 || (rainAmt >= 5 && weatherCode >= 80)) {
+  } else if (rainAmt >= 8 || (rainAmt >= 5 && weatherCode >= 80) || dailySum >= 60) {
     categories[2].level = 'orange';
     categories[2].description = 'Cumuls de pluie très importants. Fortes crues de cours d\'eau locales possibles.';
     categories[2].advice = 'Ne vous engagez en aucun cas sur une route inondée, à pied ou en voiture. Surveillez les sous-sols.';
-  } else if (rainAmt >= 2.5) {
+  } else if (rainAmt >= 2.5 || dailySum >= 30) {
     categories[2].level = 'yellow';
     categories[2].description = 'Précipitations soutenues de nature à faire réagir certains ruisseaux et saturer les sols.';
     categories[2].advice = 'Soyez attentif à la proximité des zones inondables habituelles ou ruissellements.';

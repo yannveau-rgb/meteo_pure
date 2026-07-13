@@ -19,6 +19,7 @@ export interface CurrentWeather {
   feelsLike: number;
   humidity: number;
   windSpeed: number;
+  windGusts?: number;       // km/h
   windDirection?: number;   // degrees 0-360
   cloudCover?: number;      // %
   pressure?: number;        // hPa

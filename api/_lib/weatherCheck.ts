@@ -16,7 +16,7 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
     try {
       const [longitude, latitude] = sub.commune.centre.coordinates;
       // Use Météo-France AROME model (1.3 km) for server-side alerts with full parameters
-      const url = `https://api.open-meteo.com/v1/meteofrance?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,cloud_cover&timezone=Europe/Paris`;
+      const url = `https://api.open-meteo.com/v1/meteofrance?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,cloud_cover&daily=precipitation_sum&timezone=Europe/Paris`;
       const response = await fetch(url);
       if (!response.ok) continue;
       const weather: any = await response.json();
@@ -32,7 +32,8 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
         currentTemp,
         currentWind,
         weather.current.weather_code || 0,
-        weather.current.precipitation || 0
+        weather.current.precipitation || 0,
+        weather.daily?.precipitation_sum?.[0]
       );
       const currentVigilance = vigilanceStatus.globalLevel || 'green';
 
