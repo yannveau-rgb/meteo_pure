@@ -53,6 +53,9 @@ export interface DailyForecastItem {
   precipProbMax?: number;     // %
   windMax?: number;           // km/h
   windGusts?: number;         // km/h
+  humidity?: number;          // % average over daytime hours (7h-21h)
+  sunrise?: string;           // "06:12" — that day's actual sunrise, not today's
+  sunset?: string;            // "21:34" — that day's actual sunset, not today's
   hourly?: HourlyForecastItem[];
 }
 

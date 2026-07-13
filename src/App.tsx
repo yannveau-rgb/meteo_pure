@@ -952,12 +952,12 @@ export default function App() {
 
                       {/* 3. Hourly timeline progress rows */}
                       <TiltCard>
-                        <HourlyForecast 
-                          hourlyData={selectedDayIndex === 0 ? weather.hourly : (weather.daily[selectedDayIndex]?.hourly || [])} 
-                          humidity={selectedDayIndex === 0 ? weather.current.humidity : 55} 
+                        <HourlyForecast
+                          hourlyData={selectedDayIndex === 0 ? weather.hourly : (weather.daily[selectedDayIndex]?.hourly || [])}
+                          humidity={selectedDayIndex === 0 ? weather.current.humidity : (weather.daily[selectedDayIndex]?.humidity ?? weather.current.humidity)}
                           dayName={selectedDayIndex === 0 ? "Aujourd'hui" : (weather.daily[selectedDayIndex]?.date || "Sélectionné")}
-                          sunrise={weather.sunrise}
-                          sunset={weather.sunset}
+                          sunrise={selectedDayIndex === 0 ? weather.sunrise : (weather.daily[selectedDayIndex]?.sunrise ?? weather.sunrise)}
+                          sunset={selectedDayIndex === 0 ? weather.sunset : (weather.daily[selectedDayIndex]?.sunset ?? weather.sunset)}
                         />
                       </TiltCard>
 

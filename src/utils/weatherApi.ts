@@ -44,7 +44,7 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
 
   // Primary: Météo-France AROME model (1.3 km resolution over France — highest precision available)
   const currentVars = 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,surface_pressure,visibility';
-  const hourlyVars  = 'temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cape';
+  const hourlyVars  = 'temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cape';
   const dailyVars   = 'weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max';
   const minuteVars  = 'precipitation,weather_code,lightning_potential';
 
@@ -368,6 +368,9 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
     const dailyPrecipProbMax = data.daily?.precipitation_probability_max || [];
     const dailyWindMax = data.daily?.wind_speed_10m_max || [];
     const dailyWindGusts = data.daily?.wind_gusts_10m_max || [];
+    const dailySunrise = data.daily?.sunrise || [];
+    const dailySunset = data.daily?.sunset || [];
+    const hourlyHumidity = data.hourly?.relative_humidity_2m || [];
 
     for (let k = 0; k < 7; k++) {
       const apiDailyCode = dailyCodes[k] ?? 0;
@@ -438,6 +441,21 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
             precipitationProbability: hourlyProb[idx] ?? 0,
             precipitation: hourlyPrecip[idx] ?? 0
           });
+        }
+      }
+
+      // Average humidity over daytime hours (7h-21h) for this specific day —
+      // replaces what used to be a hardcoded 55% placeholder for any non-today day.
+      let dayAvgHumidity: number | undefined;
+      {
+        const daytimeHumidityVals: number[] = [];
+        for (let h = 7; h <= 21; h++) {
+          const idx = startIdxDay + h;
+          const val = hourlyHumidity[idx];
+          if (typeof val === 'number') daytimeHumidityVals.push(val);
+        }
+        if (daytimeHumidityVals.length > 0) {
+          dayAvgHumidity = Math.round(daytimeHumidityVals.reduce((a, b) => a + b, 0) / daytimeHumidityVals.length);
         }
       }
 
@@ -541,6 +559,9 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
         precipProbMax: dailyPrecipProbMax[k] ?? undefined,
         windMax: dailyWindMax[k] ?? undefined,
         windGusts: dailyWindGusts[k] ?? undefined,
+        humidity: dayAvgHumidity,
+        sunrise: dailySunrise[k] ? dailySunrise[k].split('T')[1]?.substring(0, 5) : undefined,
+        sunset: dailySunset[k] ? dailySunset[k].split('T')[1]?.substring(0, 5) : undefined,
         hourly: dailyHourly
       });
     }

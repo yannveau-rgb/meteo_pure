@@ -233,13 +233,6 @@
   z-index: 1;
 }
 
-/* WeatherMap's hover tooltips intentionally escape below their pin markers —
-   don't clip them. The sheen's own border-radius: inherit keeps its corners
-   tidy even without the parent clipping. */
-#weather-map-tab {
-  overflow: visible;
-}
-
 @keyframes glass-sheen {
   to {
     transform: translateX(120%);
