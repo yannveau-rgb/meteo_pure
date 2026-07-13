@@ -1,0 +1,27 @@
+name: Weather Check (frequent push trigger)
+
+# Vercel Hobby plan only allows a cron to run once a day, which is too
+# infrequent to catch weather transitions (rain starting, storm, vigilance
+# change) in near real-time for push notifications while the app is closed.
+# This workflow pings the same endpoint every 10 minutes instead, using
+# GitHub Actions' free scheduler (unlimited on public repos).
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  trigger-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /api/cron/check-weather
+        run: |
+          status=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://meteo-pure.vercel.app/api/cron/check-weather")
+          echo "HTTP status: $status"
+          cat /tmp/response.txt
+          if [ "$status" -ge 400 ]; then
+            echo "::error::check-weather endpoint returned $status"
+            exit 1
+          fi
