@@ -139,6 +139,32 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
       sub.prevVigilance = currentVigilance;
       sub.updatedAt = new Date().toISOString();
 
+      // Respect the per-category toggles the user set in Réglages — these used
+      // to only be enforced client-side, so the server pushed every category
+      // to everyone regardless of their preferences. This was a major source
+      // of "too many notifications" complaints once the cron started running
+      // reliably every 10 min.
+      if (shouldTrigger) {
+        const isAlertType = ['alert_yellow', 'alert_orange', 'alert_red', 'heatwave'].includes(transitionType);
+        const isStormType = ['thunderstorm', 'end_storm'].includes(transitionType);
+        const isRainType = ['moderate', 'light', 'heavy', 'end_rain'].includes(transitionType);
+        if (isAlertType && sub.alertNotificationsEnabled === false) shouldTrigger = false;
+        else if (isStormType && sub.stormNotificationsEnabled === false) shouldTrigger = false;
+        else if (isRainType && sub.rainNotificationsEnabled === false) shouldTrigger = false;
+      }
+
+      // Cooldown between routine pushes to the same person, so a borderline
+      // value flip-flopping across checks (e.g. precipitation hovering right
+      // at 0mm) can't fire a burst of alerts. Orange/red vigilance bypasses
+      // it — those are safety-relevant and should never be suppressed.
+      if (shouldTrigger && transitionType !== 'alert_orange' && transitionType !== 'alert_red') {
+        const cooldownMin = typeof sub.minMinutesBetweenAlerts === 'number' ? sub.minMinutesBetweenAlerts : 30;
+        if (sub.lastTransitionPushAt) {
+          const elapsedMin = (Date.now() - new Date(sub.lastTransitionPushAt).getTime()) / 60000;
+          if (elapsedMin < cooldownMin) shouldTrigger = false;
+        }
+      }
+
       if (shouldTrigger && transitionType) {
         const msg = getFunnyRainMessage(transitionType, sub.humorLevel as any);
         try {
@@ -148,6 +174,7 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
             intensity: transitionType,
             city: sub.commune.nom
           }), { urgency: 'high', TTL: 3600 });
+          sub.lastTransitionPushAt = new Date().toISOString();
           sent++;
         } catch (err: any) {
           console.error('[PUSH] alert failed:', sub.id, err.statusCode);

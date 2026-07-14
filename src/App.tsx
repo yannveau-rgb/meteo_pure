@@ -43,10 +43,8 @@ import {
   loadNotificationLogs,
   saveNotificationLogs,
   getFunnyRainMessage,
-  detectImminentRain,
   fireSystemNotification,
   checkAndFireFullMoonNotification,
-  checkAndFireMorningBrief,
   isSpamProtected,
   updateLastAlertTime,
   syncPushSubscription,
@@ -134,7 +132,7 @@ export default function App() {
   const [testingCron, setTestingCron] = useState<boolean>(false);
 
   // Weather data (fetch + 10-min refresh)
-  const { weather, setWeather, loading, errorMsg, setErrorMsg, prevWeatherRef } = useWeatherFetch(currentCommune, () => {
+  const { weather, setWeather, loading, errorMsg, setErrorMsg } = useWeatherFetch(currentCommune, () => {
     if (notifSettings.systemEnabled) {
       checkAndFireFullMoonNotification(notifSettings.humorLevel);
     }
@@ -168,13 +166,14 @@ export default function App() {
   const todayShare = useShareImage();
 
   useEffect(() => {
+    // Morning brief itself is no longer fired from the client — the server
+    // already sends an AI-generated one daily (6h-10h), and firing both
+    // caused users to receive it twice on days they opened the app in that
+    // window. Full moon stays client-side since the server doesn't track it.
     if (notifSettings.systemEnabled) {
       checkAndFireFullMoonNotification(notifSettings.humorLevel);
-      if (notifSettings.birthDate && weather) {
-        checkAndFireMorningBrief(notifSettings.humorLevel, notifSettings.birthDate, weather.current.weatherCode);
-      }
     }
-  }, [notifSettings.systemEnabled, notifSettings.humorLevel, notifSettings.birthDate, weather]);
+  }, [notifSettings.systemEnabled, notifSettings.humorLevel]);
 
   // Synchronize Background push subscription with server for unattended background notifications
   useEffect(() => {
@@ -183,9 +182,15 @@ export default function App() {
       currentCommune,
       notifSettings.humorLevel,
       weather,
-      notifSettings.birthDate
+      notifSettings.birthDate,
+      {
+        rainNotificationsEnabled: notifSettings.rainNotificationsEnabled,
+        stormNotificationsEnabled: notifSettings.stormNotificationsEnabled,
+        alertNotificationsEnabled: notifSettings.alertNotificationsEnabled,
+        minMinutesBetweenAlerts: notifSettings.minMinutesBetweenAlerts
+      }
     );
-  }, [notifSettings.systemEnabled, currentCommune, notifSettings.humorLevel, weather, notifSettings.birthDate]);
+  }, [notifSettings.systemEnabled, currentCommune, notifSettings.humorLevel, weather, notifSettings.birthDate, notifSettings.rainNotificationsEnabled, notifSettings.stormNotificationsEnabled, notifSettings.alertNotificationsEnabled, notifSettings.minMinutesBetweenAlerts]);
 
   const handleOpenMorningBrief = () =>
     openMorningBrief(
@@ -253,92 +258,14 @@ export default function App() {
     }
   };
 
-  // Automatically watch for imminent wet or stormy weather and meteorological transitions
-  useEffect(() => {
-    if (!weather) return;
-    
-    // Check present states
-    const isRainingNow = weather.current.precipitation > 0;
-    const isStormingNow = [95, 96, 99].includes(weather.current.weatherCode);
-    const currentVigilance = weather.vigilance.globalLevel;
-    const isHotNow = weather.current.temperature >= 30;
-
-    // Run transition checks
-    if (prevWeatherRef.current) {
-      const prev = prevWeatherRef.current;
-      
-      // 1. End of rain transition (was raining, now stopped)
-      if (prev.wasRaining && !isRainingNow) {
-        triggerFunnyNotification('end_rain', false);
-      }
-      
-      // 2. End of storm transition (was storming, now stopped)
-      if (prev.wasStorming && !isStormingNow) {
-        triggerFunnyNotification('end_storm', false);
-      }
-      
-      // Standard incoming weather warning check (Only if no transitions occurred to avoid spam)
-      const imminentThunderstorm = weather.hourly.slice(0, 2).some(item => [95, 96, 99].includes(item.weatherCode));
-      
-      if (imminentThunderstorm && !prev.wasStorming) {
-        triggerFunnyNotification('thunderstorm', false);
-      } else if (!imminentThunderstorm) {
-        const rainResult = detectImminentRain(weather.rainInTheHour);
-        if (rainResult && rainResult.shouldAlert && !prev.wasRaining) {
-          triggerFunnyNotification(rainResult.intensity, false);
-        }
-      }
-    }
-
-    // 3. Weather vigilance alert (independent of prev state because guarded by localStorage persistent key to capture alert when loaded)
-    if (currentVigilance !== 'green') {
-      const lastNotifiedStr = localStorage.getItem('meteo_pure_last_notified_vigilance');
-      let alreadyNotified = false;
-      if (lastNotifiedStr) {
-        try {
-          const parsed = JSON.parse(lastNotifiedStr);
-          if (parsed.city === currentCommune.nom && parsed.level === currentVigilance) {
-            alreadyNotified = true;
-          }
-        } catch (e) {}
-      }
-
-      if (!alreadyNotified) {
-        if (currentVigilance === 'yellow') triggerFunnyNotification('alert_yellow', false);
-        else if (currentVigilance === 'orange') triggerFunnyNotification('alert_orange', false);
-        else if (currentVigilance === 'red') triggerFunnyNotification('alert_red', false);
-
-        try {
-          localStorage.setItem('meteo_pure_last_notified_vigilance', JSON.stringify({
-            city: currentCommune.nom,
-            level: currentVigilance
-          }));
-        } catch (e) {}
-      }
-    } else {
-      // If vigilance level is back to green, reset the storage value to green for this city so a future warning gets captured
-      try {
-        const lastNotifiedStr = localStorage.getItem('meteo_pure_last_notified_vigilance');
-        if (lastNotifiedStr) {
-          const parsed = JSON.parse(lastNotifiedStr);
-          if (parsed.city === currentCommune.nom && parsed.level !== 'green') {
-            localStorage.setItem('meteo_pure_last_notified_vigilance', JSON.stringify({
-              city: currentCommune.nom,
-              level: 'green'
-            }));
-          }
-        }
-      } catch (e) {}
-    }
-
-    // Save current state for next transition check
-    prevWeatherRef.current = {
-      wasRaining: isRainingNow,
-      wasStorming: isStormingNow,
-      vigilanceLevel: currentVigilance,
-      wasHot: isHotNow
-    };
-  }, [weather]);
+  // NOTE: automatic client-side weather-transition notifications (rain/storm
+  // start-stop, vigilance level changes) used to be fired from here too, as a
+  // workaround while the server-side push cron was unreliable. Now that the
+  // server cron runs reliably (every 10 min via an external scheduler) and
+  // already sends these same alerts as real push notifications, keeping this
+  // client-side duplicate caused users to get the same alert twice whenever
+  // the app happened to be open. Removed — the server is now the single
+  // source of truth for rain/storm/vigilance/heatwave notifications.
 
   // Silently refresh push subscription on every app load to keep endpoint fresh
   useEffect(() => {
@@ -346,7 +273,13 @@ export default function App() {
     refreshPushSubscription(
       currentCommune,
       notifSettings.humorLevel,
-      notifSettings.birthDate
+      notifSettings.birthDate,
+      {
+        rainNotificationsEnabled: notifSettings.rainNotificationsEnabled,
+        stormNotificationsEnabled: notifSettings.stormNotificationsEnabled,
+        alertNotificationsEnabled: notifSettings.alertNotificationsEnabled,
+        minMinutesBetweenAlerts: notifSettings.minMinutesBetweenAlerts
+      }
     );
   }, [weather?.city]);
 

@@ -1045,7 +1045,8 @@ export async function syncPushSubscription(
   commune: any,
   humorLevel: HumorLevel,
   weather: any,
-  birthDate?: string
+  birthDate?: string,
+  prefs?: { rainNotificationsEnabled?: boolean; stormNotificationsEnabled?: boolean; alertNotificationsEnabled?: boolean; minMinutesBetweenAlerts?: number }
 ): Promise<boolean> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
     return false;
@@ -1095,6 +1096,10 @@ export async function syncPushSubscription(
           commune,
           humorLevel,
           birthDate,
+          rainNotificationsEnabled: prefs?.rainNotificationsEnabled,
+          stormNotificationsEnabled: prefs?.stormNotificationsEnabled,
+          alertNotificationsEnabled: prefs?.alertNotificationsEnabled,
+          minMinutesBetweenAlerts: prefs?.minMinutesBetweenAlerts,
           currentConditions: weather ? {
             temperature: weather.current.temperature,
             precipitation: weather.current.precipitation,
@@ -1134,7 +1139,8 @@ async function persistSubscriptionMeta(commune: any, humorLevel: HumorLevel, bir
 export async function refreshPushSubscription(
   commune: any,
   humorLevel: HumorLevel,
-  birthDate?: string
+  birthDate?: string,
+  prefs?: { rainNotificationsEnabled?: boolean; stormNotificationsEnabled?: boolean; alertNotificationsEnabled?: boolean; minMinutesBetweenAlerts?: number }
 ): Promise<void> {
   try {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -1158,7 +1164,16 @@ export async function refreshPushSubscription(
       await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription: sub, commune, humorLevel, birthDate })
+        body: JSON.stringify({
+          subscription: sub,
+          commune,
+          humorLevel,
+          birthDate,
+          rainNotificationsEnabled: prefs?.rainNotificationsEnabled,
+          stormNotificationsEnabled: prefs?.stormNotificationsEnabled,
+          alertNotificationsEnabled: prefs?.alertNotificationsEnabled,
+          minMinutesBetweenAlerts: prefs?.minMinutesBetweenAlerts
+        })
       });
       await persistSubscriptionMeta(commune, humorLevel, birthDate);
     }

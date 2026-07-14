@@ -34,7 +34,13 @@ export interface StoredSubscription {
   prevVigilance: string;
   lastBriefDate: string;
   lastChristmasDate: string;
+  lastMonthlyXmasDate?: string;
   updatedAt: string;
+  rainNotificationsEnabled?: boolean;
+  stormNotificationsEnabled?: boolean;
+  alertNotificationsEnabled?: boolean;
+  minMinutesBetweenAlerts?: number;
+  lastTransitionPushAt?: string;
 }
 
 export async function getSubscriptions(): Promise<StoredSubscription[]> {
