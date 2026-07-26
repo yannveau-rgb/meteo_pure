@@ -64,6 +64,7 @@ import { useCurrentCommune } from './hooks/useCurrentCommune';
 import { useCitySearch } from './hooks/useCitySearch';
 import { useWeatherFetch } from './hooks/useWeatherFetch';
 import { useMorningBrief } from './hooks/useMorningBrief';
+import { useAirQuality } from './hooks/useAirQuality';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { useShareImage } from './hooks/useShareImage';
 
@@ -73,6 +74,7 @@ import VigilanceCard from './components/VigilanceCard';
 const WeatherStats = lazy(() => import('./components/WeatherStats'));
 import HourlyForecast from './components/HourlyForecast';
 import OpportunityCard from './components/OpportunityCard';
+import AirQualityCard from './components/AirQualityCard';
 import DailyForecast from './components/DailyForecast';
 import AmbientWeatherBackground from './components/AmbientWeatherBackground';
 import ClimateComparison from './components/ClimateComparison';
@@ -157,6 +159,9 @@ export default function App() {
     loadingBrief,
     openMorningBrief,
   } = useMorningBrief();
+
+  // Air quality & pollen — supplementary, never blocks the forecast
+  const airQuality = useAirQuality(weather?.latitude, weather?.longitude);
 
   // Audio playback of the morning brief (text-to-speech)
   const briefSpeech = useSpeechSynthesis();
@@ -961,6 +966,15 @@ export default function App() {
                           sunset={selectedDayIndex === 0 ? weather.sunset : (weather.daily[selectedDayIndex]?.sunset ?? weather.sunset)}
                         />
                       </TiltCard>
+
+                      {/* 3c. Air quality & pollen (separate free CAMS-backed API).
+                          Guarded here as well as inside the card so a failed
+                          request doesn't leave an empty TiltCard taking up space. */}
+                      {airQuality && (
+                        <TiltCard>
+                          <AirQualityCard data={airQuality} />
+                        </TiltCard>
+                      )}
 
                       {/* 3b. Actionable read of the same hourly data */}
                       <TiltCard>

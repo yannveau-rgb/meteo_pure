@@ -54,6 +54,8 @@ export interface DailyForecastItem {
   windMax?: number;           // km/h
   windGusts?: number;         // km/h
   humidity?: number;          // % average over daytime hours (7h-21h)
+  confidence?: 'high' | 'medium' | 'low';  // multi-model agreement
+  modelSpread?: number;       // °C between the most and least warm model
   sunrise?: string;           // "06:12" — that day's actual sunrise, not today's
   sunset?: string;            // "21:34" — that day's actual sunset, not today's
   hourly?: HourlyForecastItem[];

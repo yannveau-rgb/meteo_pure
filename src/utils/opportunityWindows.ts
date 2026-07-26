@@ -14,6 +14,8 @@ export interface DryWindow {
   endHour: number;
   /** Duration in hours. */
   length: number;
+  /** True when the window falls after midnight relative to the list start. */
+  nextDay: boolean;
 }
 
 function hourOf(item: HourlyForecastItem): number {
@@ -51,42 +53,54 @@ export function findDryWindow(
   probCeiling: number = PROB_CEILING_OUTING
 ): DryWindow | null {
   const start = typeof fromHour === 'number' ? fromHour : -1;
-  const usable = hours.filter(h => {
-    const hr = hourOf(h);
-    return !isNaN(hr) && hr >= start && hr >= 6 && hr <= 22;
-  });
-  if (usable.length === 0) return null;
 
   let best: DryWindow | null = null;
   let runStart: number | null = null;
+  let runStartNextDay = false;
   let runLen = 0;
 
   const flush = (endHour: number) => {
     if (runStart !== null && runLen >= 2) {
       if (!best || runLen > best.length) {
-        best = { startHour: runStart, endHour, length: runLen };
+        best = { startHour: runStart, endHour, length: runLen, nextDay: runStartNextDay };
       }
     }
     runStart = null;
     runLen = 0;
   };
 
-  usable.forEach((item, idx) => {
+  // Out-of-range hours must BREAK the run rather than be filtered out.
+  // Filtering silently welded 22h onto the following 6h-10h across the night
+  // gap, producing nonsense windows like "22h → 10h · 5h sans pluie".
+  let prevHour: number | null = null;
+  let crossedMidnight = false;
+
+  hours.forEach((item, idx) => {
     const hr = hourOf(item);
-    if (isDry(item, probCeiling)) {
-      if (runStart === null) runStart = hr;
+    if (isNaN(hr)) { flush(prevHour ?? 0); return; }
+
+    if (prevHour !== null && hr < prevHour) crossedMidnight = true;
+
+    const usable = hr >= start && hr >= 6 && hr <= 22;
+    if (usable && isDry(item, probCeiling)) {
+      if (runStart === null) {
+        runStart = hr;
+        runStartNextDay = crossedMidnight;
+      }
       runLen++;
-      if (idx === usable.length - 1) flush(hr + 1);
+      if (idx === hours.length - 1) flush(hr + 1);
     } else {
       flush(hr);
     }
+    prevHour = hr;
   });
 
   return best;
 }
 
 export function formatDryWindow(w: DryWindow): string {
-  return `${w.startHour}h → ${w.endHour}h`;
+  const range = `${w.startHour}h → ${w.endHour}h`;
+  return w.nextDay ? `demain ${range}` : range;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { Commune, WeatherData, CurrentWeather, HourlyForecastItem, DailyForecastItem } from '../types';
 import { generateRainInTheHour, parseRealMinutelyRain, calculateVigilance, getWeatherUI } from './weatherUtils';
+import { assessConfidence } from './forecastConfidence';
 
 /**
  * Search French communes by name via the official geo.api.gouv.fr.
@@ -64,6 +65,11 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
   let fallbackData: any = null;
   let ecmwfData: any = null;
 
+  // Per-model daily maxima, captured pre-merge for the confidence indicator.
+  const modelDailyMax: { meteoFrance: any[]; ecmwf: any[]; blend: any[] } = {
+    meteoFrance: [], ecmwf: [], blend: [],
+  };
+
   // 3-way coalesce: prefer AROME/ARPEGE, then ECMWF (for the medium-range gap),
   // then the generic blend as last resort.
   function mergeSeries(primary: any, secondary: any, tertiary: any) {
@@ -124,6 +130,18 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       }
       throw new Error('Échec de la connexion à l\'API météo. Veuillez vérifier votre connexion ou réessayer.');
     }
+
+    // Snapshot Météo-France's own daily maxima before the merge overwrites
+    // them — model agreement can only be measured against un-blended values.
+    modelDailyMax.meteoFrance = Array.isArray(data.daily?.temperature_2m_max)
+      ? [...data.daily.temperature_2m_max]
+      : [];
+    modelDailyMax.ecmwf = Array.isArray(ecmwfData?.daily?.temperature_2m_max)
+      ? [...ecmwfData.daily.temperature_2m_max]
+      : [];
+    modelDailyMax.blend = Array.isArray(fallbackData?.daily?.temperature_2m_max)
+      ? [...fallbackData.daily.temperature_2m_max]
+      : [];
 
     // Blend missing (null, undefined, or truncated) future data into MeteoFrance data
     if (data !== fallbackData) {
@@ -461,6 +479,13 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
         }
       }
 
+      // How much do the three models disagree about this day's high?
+      const dayConfidence = assessConfidence([
+        modelDailyMax.meteoFrance[k],
+        modelDailyMax.ecmwf[k],
+        modelDailyMax.blend[k],
+      ]);
+
       // Compute a representative weather code for the day based on daily and hourly parameters
       let representativeCode = apiDailyCode;
       if (dailyHourly.length > 0) {
@@ -562,6 +587,8 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
         windMax: dailyWindMax[k] ?? undefined,
         windGusts: dailyWindGusts[k] ?? undefined,
         humidity: dayAvgHumidity,
+        confidence: dayConfidence?.level,
+        modelSpread: dayConfidence?.spread,
         sunrise: dailySunrise[k] ? dailySunrise[k].split('T')[1]?.substring(0, 5) : undefined,
         sunset: dailySunset[k] ? dailySunset[k].split('T')[1]?.substring(0, 5) : undefined,
         hourly: dailyHourly

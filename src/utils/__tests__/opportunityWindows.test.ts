@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findDryWindow, getLaundryVerdict } from '../opportunityWindows';
+import { findDryWindow, getLaundryVerdict, formatDryWindow } from '../opportunityWindows';
 import { HourlyForecastItem } from '../../types';
 
 const hour = (h: number, precip: number, prob: number): HourlyForecastItem => ({
@@ -65,6 +65,38 @@ describe('findDryWindow', () => {
   it('ignores night hours', () => {
     const hours = [hour(2, 0, 0), hour(3, 0, 0), hour(4, 0, 0)];
     expect(findDryWindow(hours)).toBeNull();
+  });
+
+  it('never welds hours together across the night gap', () => {
+    // Regression: filtering out-of-range hours instead of breaking on them
+    // stitched 22h onto the next morning, yielding "22h → 10h · 5h sans pluie"
+    // at 22:05 on a real evening.
+    const hours = [
+      hour(22, 0, 5), hour(23, 0, 5), hour(0, 0, 5), hour(1, 0, 5),
+      hour(6, 0, 5), hour(7, 0, 5), hour(8, 0, 5),
+    ];
+    const w = findDryWindow(hours);
+    expect(w).not.toBeNull();
+    expect(w!.startHour).toBe(6);
+    expect(w!.endHour).toBe(9);
+    expect(w!.length).toBe(3);
+  });
+
+  it('marks a post-midnight window as next-day', () => {
+    const hours = [
+      hour(21, 0, 5), hour(22, 0, 5), hour(23, 0, 5),
+      hour(7, 0, 5), hour(8, 0, 5), hour(9, 0, 5), hour(10, 0, 5),
+    ];
+    const w = findDryWindow(hours);
+    expect(w!.nextDay).toBe(true);
+    expect(formatDryWindow(w!)).toBe('demain 7h → 11h');
+  });
+
+  it('does not flag a same-day window as next-day', () => {
+    const hours = [hour(9, 0, 5), hour(10, 0, 5), hour(11, 0, 5)];
+    const w = findDryWindow(hours);
+    expect(w!.nextDay).toBe(false);
+    expect(formatDryWindow(w!)).toBe('9h → 12h');
   });
 });
 

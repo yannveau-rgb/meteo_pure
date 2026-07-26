@@ -2,6 +2,7 @@ import React, { useState, lazy, Suspense } from 'react';
 import { motion } from 'motion/react';
 import { DailyForecastItem } from '../types';
 import { getWeatherUI } from '../utils/weatherUtils';
+import { CONFIDENCE_LABELS } from '../utils/forecastConfidence';
 import { Calendar, Share2, Check } from 'lucide-react';
 import { generateElementDataUrl, copyDataUrlToClipboard, downloadDataUrl } from '../utils/shareUtils';
 
@@ -152,16 +153,36 @@ export default function DailyForecast({ dailyData, cityName, selectedDayIndex, o
               </div>
 
               {/* Max Temperature label */}
-              <span className="w-8 text-right text-white font-bold">
+              <span className="w-8 text-right text-white font-bold tabular-figures">
                 {Math.round(day.tempMax)}°
+              </span>
+
+              {/* Model-agreement dot. Only drawn when the three models actually
+                  disagree — a badge on every row would be noise, and silence
+                  correctly reads as "nothing to worry about". */}
+              <span className="w-3 flex justify-center">
+                {day.confidence && day.confidence !== 'high' && (
+                  <span
+                    title={`${CONFIDENCE_LABELS[day.confidence]} · écart ${day.modelSpread}°C entre modèles`}
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      day.confidence === 'low' ? 'bg-orange-400/80' : 'bg-white/30'
+                    }`}
+                  />
+                )}
               </span>
             </motion.div>
           );
         })}
       </div>
 
-      <div className="text-[10px] text-white/50 border-t border-white/10 pt-2 text-center font-semibold">
-        Modèles Météo-France à maille fine (AROME / ARPEGE)
+      <div className="text-[10px] text-white/50 border-t border-white/10 pt-2 text-center font-semibold space-y-1">
+        <p>Modèles Météo-France à maille fine (AROME / ARPEGE)</p>
+        {dailyData.some(d => d.confidence && d.confidence !== 'high') && (
+          <p className="flex items-center justify-center gap-1.5 text-white/35 font-medium normal-case">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-400/80" />
+            Les modèles divergent sur ces jours
+          </p>
+        )}
       </div>
     </div>
 
