@@ -93,6 +93,12 @@ const LazyFallback = () => (
 
 export default function App() {
   // Navigation & Screen tab state
+  // Plain state setter on purpose — the View Transitions API was evaluated
+  // here and rejected as redundant: the tab panels below already cross-fade
+  // through `AnimatePresence mode="wait"` with per-panel enter/exit
+  // transitions. Layering a root-level view transition on top would animate
+  // the same change twice, and would additionally need `flushSync` to commit
+  // synchronously, which fights the React.lazy tab chunks.
   const [activeTab, setActiveTab] = useState<'meteo' | 'cartes' | 'alertes' | 'reglages'>('meteo');
 
   const isAdmin = typeof window !== 'undefined' && !!localStorage.getItem('adminToken');
@@ -784,7 +790,10 @@ export default function App() {
                   <div className="pt-2 flex justify-between items-start text-white">
                     <div>
                       <div className="flex items-center gap-2.5 flex-wrap">
-                        <h1 className="text-[34px] font-semibold tracking-tight leading-tight" id="city-name">
+                        {/* Serif here is the one editorial note in an otherwise
+                            technical interface — it makes the place feel named
+                            rather than merely queried. */}
+                        <h1 className="font-display text-[38px] font-normal tracking-tight leading-none" id="city-name">
                           {currentCommune.nom}
                         </h1>
                         <button
