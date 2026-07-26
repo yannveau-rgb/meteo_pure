@@ -2,6 +2,7 @@ import webPush from 'web-push';
 import { calculateVigilance } from '../../src/utils/weatherUtils.js';
 import { getFunnyRainMessage, getSarcasticChristmasCountdownMessage, getMonthlyChristmasCountdown } from '../../src/utils/notificationService.js';
 import { generateAiMorningBrief } from './gemini.js';
+import { analyzeRainTiming, MorningAnchorInput } from '../../src/utils/morningAnchor.js';
 import { getSubscriptions, saveSubscriptions } from './storage.js';
 import { configureVapid } from './vapid.js';
 
@@ -16,7 +17,7 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
     try {
       const [longitude, latitude] = sub.commune.centre.coordinates;
       // Use Météo-France AROME model (1.3 km) for server-side alerts with full parameters
-      const url = `https://api.open-meteo.com/v1/meteofrance?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,cloud_cover&daily=precipitation_sum&timezone=Europe/Paris`;
+      const url = `https://api.open-meteo.com/v1/meteofrance?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,cloud_cover&hourly=precipitation,precipitation_probability&daily=precipitation_sum,temperature_2m_max,temperature_2m_min,uv_index_max,wind_gusts_10m_max&timezone=Europe/Paris`;
       const response = await fetch(url);
       if (!response.ok) continue;
       const weather: any = await response.json();
@@ -46,12 +47,38 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
 
         // Window 6-10 AM Paris so a once-daily Vercel Hobby cron still hits reliably
         if (parisHour >= 6 && parisHour <= 10 && sub.lastBriefDate !== dateStrParis) {
-          const brief = await generateAiMorningBrief(sub.birthDate, weather.current.weather_code || 0, sub.humorLevel, sub.commune.nom);
+          // Today's hours, used to say *when* rain starts rather than just "il pleuvra".
+          const todaysHours = (weather.hourly?.time || [])
+            .map((t: string, i: number) => ({
+              hour: parseInt(t.substring(11, 13), 10),
+              precip: weather.hourly?.precipitation?.[i] ?? 0,
+              precipProb: weather.hourly?.precipitation_probability?.[i] ?? 0,
+              isToday: t.startsWith(dateStrParis),
+            }))
+            .filter((h: any) => h.isToday);
+
+          const rainTiming = analyzeRainTiming(todaysHours);
+          const anchorInput: MorningAnchorInput = {
+            weatherCode: weather.current.weather_code || 0,
+            tempMax: weather.daily?.temperature_2m_max?.[0],
+            tempMin: weather.daily?.temperature_2m_min?.[0],
+            uvMax: weather.daily?.uv_index_max?.[0],
+            windGustsMax: weather.daily?.wind_gusts_10m_max?.[0],
+            precipSum: weather.daily?.precipitation_sum?.[0],
+            rainStartsAtHour: rainTiming.startsAtHour,
+            rainAllDay: rainTiming.allDay,
+          };
+
+          const brief = await generateAiMorningBrief(
+            sub.birthDate, weather.current.weather_code || 0, sub.humorLevel, sub.commune.nom, anchorInput
+          );
           if (brief) {
             try {
+              // Title carries the facts so it's readable on a locked screen
+              // without expanding the notification; the joke goes in the body.
               await webPush.sendNotification(sub.subscription, JSON.stringify({
-                title: brief.title,
-                message: brief.body,
+                title: brief.anchor,
+                message: brief.punchline,
                 intensity: 'morning_brief',
                 city: sub.commune.nom
               }), { urgency: 'high', TTL: 3600 });
@@ -126,11 +153,14 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
         shouldTrigger = true;
       }
       if (!shouldTrigger) {
+        // "end_rain" / "end_storm" deliberately no longer notify. Telling
+        // someone it stopped raining prompts no action — they can see out of a
+        // window — while mechanically doubling the notification count of every
+        // single rain episode. They remain tracked as state (below) so the
+        // *start* of the next episode is still detected correctly.
         if (isStormingNow && !sub.prevStorm) { transitionType = 'thunderstorm'; shouldTrigger = true; }
         else if (isRainingNow && !sub.prevRain && !isStormingNow) { transitionType = 'moderate'; shouldTrigger = true; }
         else if (isHotNow && !sub.prevHot) { transitionType = 'heatwave'; shouldTrigger = true; }
-        else if (!isRainingNow && sub.prevRain) { transitionType = 'end_rain'; shouldTrigger = true; }
-        else if (!isStormingNow && sub.prevStorm) { transitionType = 'end_storm'; shouldTrigger = true; }
       }
 
       sub.prevHot = isHotNow;
@@ -151,6 +181,18 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
         if (isAlertType && sub.alertNotificationsEnabled === false) shouldTrigger = false;
         else if (isStormType && sub.stormNotificationsEnabled === false) shouldTrigger = false;
         else if (isRainType && sub.rainNotificationsEnabled === false) shouldTrigger = false;
+      }
+
+      // Quiet hours: nothing routine wakes anyone between 22h and 7h Paris.
+      // Orange/red vigilance is exempt — a violent storm at 3am is precisely
+      // when a notification earns its keep.
+      const isSafetyCritical = transitionType === 'alert_orange' || transitionType === 'alert_red';
+      if (shouldTrigger && !isSafetyCritical) {
+        const hourNow = parseInt(
+          new Date().toLocaleTimeString('en-US', { timeZone: 'Europe/Paris', hour: '2-digit', hour12: false }),
+          10
+        );
+        if (hourNow >= 22 || hourNow < 7) shouldTrigger = false;
       }
 
       // Cooldown between routine pushes to the same person, so a borderline

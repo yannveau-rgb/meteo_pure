@@ -142,7 +142,7 @@ async function startServer() {
 
   // API Route: Generate a fresh morning brief using Gemini AI
   app.post('/api/morning-brief', rateLimit(10), async (req, res) => {
-    const { birthDate, weatherCode, humorLevel, cityName } = req.body;
+    const { birthDate, weatherCode, humorLevel, cityName, anchorInput } = req.body;
     if (!birthDate) {
       return res.status(400).json({ error: "birthDate is required" });
     }
@@ -151,7 +151,10 @@ async function startServer() {
         birthDate,
         Number(weatherCode) || 0,
         humorLevel || 'spicy',
-        cityName || 'Inconnu'
+        cityName || 'Inconnu',
+        anchorInput && typeof anchorInput === 'object'
+          ? { ...anchorInput, weatherCode: Number(weatherCode) || 0 }
+          : undefined
       );
       res.json(brief);
     } catch (err: any) {

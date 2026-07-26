@@ -943,12 +943,12 @@ export function getMorningBriefContent(humorLevel: HumorLevel, birthDate: string
   ];
   const title = titles[dayOfMonth % titles.length];
 
-  let body = '';
-  if (humorLevel === 'safe') {
-    body = `Bonjour ${sign} ! ${weatherLine} ${signLine}`;
-  } else {
-    body = `${weatherLine} ${signLine}`;
-  }
+  // The factual weather line now lives in the brief's "anchor" (see
+  // utils/morningAnchor.ts), so the body stays a single punchline. Repeating
+  // the weather here is what used to make the brief feel long and muddled.
+  const body = humorLevel === 'safe'
+    ? `${weatherLine} ${signLine}`
+    : signLine;
 
   return { title, body };
 }

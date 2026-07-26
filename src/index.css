@@ -244,6 +244,23 @@
     animation: none;
     display: none;
   }
+
+  /* Purely decorative loops are removed outright rather than slowed —
+     a shortened shimmer is still a shimmer for a motion-sensitive user. */
+  .ambient-rain,
+  .ambient-snow,
+  .ambient-storm-rain,
+  .spark-particle,
+  .frost-particle {
+    animation: none;
+    display: none;
+  }
+
+  /* Temperature text keeps its gradient fill, drops the shimmer/shiver. */
+  .burning-temp,
+  .freezing-temp {
+    animation: none;
+  }
 }
 
 /* Hide scrollbar completely */
@@ -346,6 +363,40 @@
 .lucide-cloud-fog path:not(:first-of-type),
 .lucide-cloud-fog line {
   stroke: #cbd5e1 !important; /* Slate fog lines */
+}
+
+/* Ambient weather particles — GPU-composited transforms.
+   These run continuously, so they stay off the main thread (CSS) rather than
+   being driven by Framer Motion. Duration/delay are injected per particle. */
+.ambient-rain,
+.ambient-snow,
+.ambient-storm-rain {
+  top: 0;
+  will-change: transform;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.ambient-rain { animation-name: ambient-rain-fall; }
+.ambient-snow { animation-name: ambient-snow-fall; opacity: 0; }
+.ambient-storm-rain { animation-name: ambient-storm-fall; }
+
+@keyframes ambient-rain-fall {
+  from { transform: translate3d(20px, -50px, 0); }
+  to   { transform: translate3d(-70px, 920px, 0); }
+}
+
+@keyframes ambient-snow-fall {
+  0%   { transform: translate3d(0, -20px, 0); opacity: 0; }
+  20%  { opacity: 0.7; }
+  35%  { transform: translate3d(15px, 300px, 0); }
+  70%  { transform: translate3d(-15px, 640px, 0); opacity: 0.7; }
+  100% { transform: translate3d(0, 920px, 0); opacity: 0; }
+}
+
+@keyframes ambient-storm-fall {
+  from { transform: translate3d(5px, -40px, 0); }
+  to   { transform: translate3d(-10px, 920px, 0); }
 }
 
 /* Custom Burning & Freezing Animations */

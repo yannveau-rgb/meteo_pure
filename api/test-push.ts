@@ -26,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let msg: any;
       if (type === 'morning_brief') {
         const brief = await generateAiMorningBrief(sub.birthDate || '1990-01-01', 61, level, sub.commune.nom);
-        if (brief) msg = { title: brief.title, message: brief.body };
+        if (brief) msg = { title: brief.anchor, message: brief.punchline };
       } else if (type === 'christmas') {
         const christmasMsg = getSarcasticChristmasCountdownMessage(new Date(), level);
         if (christmasMsg) msg = { title: christmasMsg.title, message: christmasMsg.body };

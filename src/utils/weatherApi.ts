@@ -39,7 +39,7 @@ export async function getCommuneByCoords(lat: number, lon: number): Promise<Comm
 /**
  * Fetch Weather Data for selected French commune via Open-Meteo using Météo-France high-resolution model.
  */
-export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
+export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): Promise<WeatherData> {
   const [longitude, latitude] = commune.centre.coordinates;
 
   // Primary: Météo-France AROME model (1.3 km resolution over France — highest precision available)
@@ -96,9 +96,9 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
 
   try {
     const [resMF, resStd, resEcmwf] = await Promise.allSettled([
-      fetch(urlMeteoFrance).then(r => { if (!r.ok) throw new Error(`MeteoFrance status ${r.status}`); return r.json(); }),
-      fetch(urlStandard).then(r => { if (!r.ok) throw new Error(`Standard API status ${r.status}`); return r.json(); }),
-      fetch(urlEcmwf).then(r => { if (!r.ok) throw new Error(`ECMWF status ${r.status}`); return r.json(); })
+      fetch(urlMeteoFrance, { signal }).then(r => { if (!r.ok) throw new Error(`MeteoFrance status ${r.status}`); return r.json(); }),
+      fetch(urlStandard, { signal }).then(r => { if (!r.ok) throw new Error(`Standard API status ${r.status}`); return r.json(); }),
+      fetch(urlEcmwf, { signal }).then(r => { if (!r.ok) throw new Error(`ECMWF status ${r.status}`); return r.json(); })
     ]);
 
     if (resMF.status === 'fulfilled') {
@@ -113,6 +113,15 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
     }
 
     if (!data) {
+      // A superseded request (city switched, component unmounted) is not a
+      // failure and must not surface as one — otherwise React StrictMode's
+      // double-mount in dev, or any fast city switch in production, logs a
+      // bogus "connexion échouée" and can flash an error state.
+      if (signal?.aborted) {
+        const abortErr = new Error('Requête météo annulée');
+        abortErr.name = 'AbortError';
+        throw abortErr;
+      }
       throw new Error('Échec de la connexion à l\'API météo. Veuillez vérifier votre connexion ou réessayer.');
     }
 
@@ -123,7 +132,8 @@ export async function fetchWeatherData(commune: Commune): Promise<WeatherData> {
       if (!data.hourly) data.hourly = {};
       mergeSeries(data.hourly, ecmwfData?.hourly, fallbackData?.hourly);
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.name === 'AbortError' || signal?.aborted) throw error;
     console.error('API Error:', error);
     throw new Error('Échec de la connexion à l\'API météo.');
   }

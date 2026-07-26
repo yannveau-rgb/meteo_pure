@@ -37,6 +37,7 @@ import { Commune, WeatherData } from './types';
 import { getCommuneByCoords } from './utils/weatherApi';
 import { getWeatherUI, getMoonPhase, getNext7DaysMoonPhases, calculateCurrentUv, isNightTime, isHourNight } from './utils/weatherUtils';
 import { getSaintDuJour } from './utils/ephemeris';
+import { formatCacheTime } from './utils/weatherCache';
 import {
   loadNotificationSettings,
   saveNotificationSettings,
@@ -71,6 +72,7 @@ import RainForecast from './components/RainForecast';
 import VigilanceCard from './components/VigilanceCard';
 const WeatherStats = lazy(() => import('./components/WeatherStats'));
 import HourlyForecast from './components/HourlyForecast';
+import OpportunityCard from './components/OpportunityCard';
 import DailyForecast from './components/DailyForecast';
 import AmbientWeatherBackground from './components/AmbientWeatherBackground';
 import ClimateComparison from './components/ClimateComparison';
@@ -132,7 +134,7 @@ export default function App() {
   const [testingCron, setTestingCron] = useState<boolean>(false);
 
   // Weather data (fetch + 10-min refresh)
-  const { weather, setWeather, loading, errorMsg, setErrorMsg } = useWeatherFetch(currentCommune, () => {
+  const { weather, setWeather, loading, errorMsg, setErrorMsg, staleSince } = useWeatherFetch(currentCommune, () => {
     if (notifSettings.systemEnabled) {
       checkAndFireFullMoonNotification(notifSettings.humorLevel);
     }
@@ -197,7 +199,8 @@ export default function App() {
       notifSettings.birthDate || '',
       weather?.current.weatherCode || 0,
       notifSettings.humorLevel,
-      currentCommune?.nom || 'Inconnu'
+      currentCommune?.nom || 'Inconnu',
+      weather
     );
 
   // Master controller for sending hilarious customized rain/storm notifications
@@ -430,12 +433,12 @@ export default function App() {
                     </div>
                   ) : aiBrief ? (
                     <>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <h3 className="font-bold text-sky-400 text-sm uppercase tracking-widest flex items-center gap-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-bold text-sky-400 text-[11px] uppercase tracking-[0.2em] flex items-center gap-2">
                           {aiBrief.title}
                           {aiBrief.ai !== false && (
                             <span className="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.5 rounded font-mono font-bold tracking-normal uppercase">
-                              IA active
+                              IA
                             </span>
                           )}
                         </h3>
@@ -445,7 +448,9 @@ export default function App() {
                               if (briefSpeech.isSpeaking) {
                                 briefSpeech.stop();
                               } else {
-                                briefSpeech.speak(`${aiBrief.title}. ${aiBrief.body}`);
+                                // Pause between the two layers so the spoken
+                                // version keeps the same fact-then-joke rhythm.
+                                briefSpeech.speak(`${aiBrief.anchor}. ${aiBrief.punchline}`);
                               }
                             }}
                             aria-label={briefSpeech.isSpeaking ? "Arrêter la lecture" : "Écouter le brief"}
@@ -460,7 +465,21 @@ export default function App() {
                           </button>
                         )}
                       </div>
-                      <p className="leading-relaxed text-sm italic">{aiBrief.body}</p>
+
+                      {/* Layer 1 — the facts. Readable at a glance, half-awake. */}
+                      <p className="text-[15px] font-medium text-white leading-snug">
+                        {aiBrief.anchor.split(' · ').map((seg, i, arr) => (
+                          <span key={i}>
+                            {seg}
+                            {i < arr.length - 1 && <span className="text-white/40 mx-1.5">·</span>}
+                          </span>
+                        ))}
+                      </p>
+
+                      {/* Layer 2 — the joke, visibly secondary. */}
+                      <p className="text-[13px] italic text-white/70 leading-relaxed border-l-2 border-sky-400/40 pl-3">
+                        {aiBrief.punchline}
+                      </p>
                     </>
                   ) : !notifSettings.birthDate ? (
                     <div className="flex flex-col items-center gap-4 text-center">
@@ -803,9 +822,16 @@ export default function App() {
                           </>
                         )}
                       </p>
-                      <p className="text-[12px] text-white/50 font-bold uppercase tracking-wider mt-1.5 flex items-center gap-1">
+                      <p className="text-[12px] text-white/50 font-bold uppercase tracking-wider mt-1.5 flex items-center gap-1.5 flex-wrap">
                         <Clock className="w-3.5 h-3.5 text-white/70" />
                         <span>{currentTime || '00:00'} CEST</span>
+                        {/* Never let cached data pass for live data — that would
+                            break the one promise this app is built on. */}
+                        {staleSince && (
+                          <span className="normal-case tracking-normal text-[10px] font-semibold text-amber-300/90 bg-amber-500/15 border border-amber-400/30 rounded-full px-2 py-0.5">
+                            Hors-ligne · relevé de {formatCacheTime(staleSince)}
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -924,6 +950,15 @@ export default function App() {
                           dayName={selectedDayIndex === 0 ? "Aujourd'hui" : (weather.daily[selectedDayIndex]?.date || "Sélectionné")}
                           sunrise={selectedDayIndex === 0 ? weather.sunrise : (weather.daily[selectedDayIndex]?.sunrise ?? weather.sunrise)}
                           sunset={selectedDayIndex === 0 ? weather.sunset : (weather.daily[selectedDayIndex]?.sunset ?? weather.sunset)}
+                        />
+                      </TiltCard>
+
+                      {/* 3b. Actionable read of the same hourly data */}
+                      <TiltCard>
+                        <OpportunityCard
+                          hourlyData={selectedDayIndex === 0 ? weather.hourly : (weather.daily[selectedDayIndex]?.hourly || [])}
+                          humidity={selectedDayIndex === 0 ? weather.current.humidity : weather.daily[selectedDayIndex]?.humidity}
+                          windSpeed={weather.current.windSpeed}
                         />
                       </TiltCard>
 
