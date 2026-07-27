@@ -967,15 +967,6 @@ export default function App() {
                         />
                       </TiltCard>
 
-                      {/* 3c. Air quality & pollen (separate free CAMS-backed API).
-                          Guarded here as well as inside the card so a failed
-                          request doesn't leave an empty TiltCard taking up space. */}
-                      {airQuality && (
-                        <TiltCard>
-                          <AirQualityCard data={airQuality} />
-                        </TiltCard>
-                      )}
-
                       {/* 3b. Actionable read of the same hourly data */}
                       <TiltCard>
                         <OpportunityCard
@@ -984,6 +975,15 @@ export default function App() {
                           windSpeed={weather.current.windSpeed}
                         />
                       </TiltCard>
+
+                      {/* 3c. Air quality & pollen (separate free CAMS-backed API).
+                          Guarded here as well as inside the card so a failed
+                          request doesn't leave an empty TiltCard taking up space. */}
+                      {airQuality && (
+                        <TiltCard>
+                          <AirQualityCard data={airQuality} />
+                        </TiltCard>
+                      )}
 
                       {/* 4. Prévisions de la semaine (Météo-France) */}
                       <TiltCard>
