@@ -18,7 +18,6 @@ PWA météo française avec alertes push, brief matinal IA et vigilances Météo
 - 🔮 Brief matinal en 2 couches : ancre factuelle + punchline IA (Mistral)
 - 🔊 Lecture audio du brief (Web Speech API, natif navigateur)
 - 🌬️ Qualité de l'air + pollens par espèce (Open-Meteo Air Quality / CAMS)
-- ☂️ Fenêtres d'opportunité : créneau sec, verdict linge
 - 📴 Fonctionne hors-ligne (dernières prévisions en cache + badge explicite)
 - 🌕 Phases de lune + alertes pleine lune
 - ⛪ Saint du jour + comptes à rebours (Noël, etc.)
@@ -65,7 +64,6 @@ src/
   utils/                 Logique métier + tests unitaires
     weatherApi.ts        Fusion 3 modèles, parsing, nowcast
     morningAnchor.ts     Ancre factuelle du brief (calculée en code, pas par l'IA)
-    opportunityWindows.ts Créneaux secs / linge
     airQuality.ts        Pollens (seuils par espèce) + EAQI
     forecastConfidence.ts Accord entre modèles
     weatherCache.ts      Cache offline stale-while-revalidate

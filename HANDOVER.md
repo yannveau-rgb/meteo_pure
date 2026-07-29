@@ -86,7 +86,6 @@ dégradé bleu azur.
 - Notifications push fonctionnelles **app fermée** (iOS + Android, confirmé)
 - Brief matinal 2 couches (ancre factuelle + punchline IA) + lecture audio
 - Qualité de l'air + pollens avec seuils par espèce
-- Fenêtres d'opportunité (créneau sec, verdict linge)
 - Indice de confiance multi-modèles
 - Cache offline avec badge « Hors-ligne · relevé de HH:MM »
 - Comparaison de villes, favoris, partage PNG, phases de lune, saint du jour
