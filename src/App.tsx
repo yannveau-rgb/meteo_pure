@@ -73,7 +73,6 @@ import RainForecast from './components/RainForecast';
 import VigilanceCard from './components/VigilanceCard';
 const WeatherStats = lazy(() => import('./components/WeatherStats'));
 import HourlyForecast from './components/HourlyForecast';
-import OpportunityCard from './components/OpportunityCard';
 import AirQualityCard from './components/AirQualityCard';
 import DailyForecast from './components/DailyForecast';
 import AmbientWeatherBackground from './components/AmbientWeatherBackground';
@@ -964,15 +963,6 @@ export default function App() {
                           dayName={selectedDayIndex === 0 ? "Aujourd'hui" : (weather.daily[selectedDayIndex]?.date || "Sélectionné")}
                           sunrise={selectedDayIndex === 0 ? weather.sunrise : (weather.daily[selectedDayIndex]?.sunrise ?? weather.sunrise)}
                           sunset={selectedDayIndex === 0 ? weather.sunset : (weather.daily[selectedDayIndex]?.sunset ?? weather.sunset)}
-                        />
-                      </TiltCard>
-
-                      {/* 3b. Actionable read of the same hourly data */}
-                      <TiltCard>
-                        <OpportunityCard
-                          hourlyData={selectedDayIndex === 0 ? weather.hourly : (weather.daily[selectedDayIndex]?.hourly || [])}
-                          humidity={selectedDayIndex === 0 ? weather.current.humidity : weather.daily[selectedDayIndex]?.humidity}
-                          windSpeed={weather.current.windSpeed}
                         />
                       </TiltCard>
 
