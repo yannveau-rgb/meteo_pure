@@ -53,7 +53,8 @@ import {
   HumorLevel,
   NotificationLog,
   NotificationSettings,
-  NotificationIntensity
+  NotificationIntensity,
+  DEFAULT_NOTIFICATION_SETTINGS
 } from './utils/notificationService';
 
 // Custom hooks
@@ -79,6 +80,7 @@ import AmbientWeatherBackground from './components/AmbientWeatherBackground';
 import ClimateComparison from './components/ClimateComparison';
 const RainRadar = lazy(() => import('./components/RainRadar'));
 import TiltCard from './components/TiltCard';
+import PrivacyPolicy from './components/PrivacyPolicy';
 
 // Lazy-loaded: only fetched when their tab/modal is opened
 const CityComparison = lazy(() => import('./components/CityComparison'));
@@ -139,6 +141,7 @@ export default function App() {
   } | null>(null);
   const [testingPush, setTestingPush] = useState<boolean>(false);
   const [testingCron, setTestingCron] = useState<boolean>(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState<boolean>(false);
 
   // Weather data (fetch + 10-min refresh)
   const { weather, setWeather, loading, errorMsg, setErrorMsg, staleSince } = useWeatherFetch(currentCommune, () => {
@@ -331,6 +334,36 @@ export default function App() {
     );
   };
 
+  // GDPR: delete all user data (local + server)
+  const handleDeleteAllData = async () => {
+    try {
+      // 1. Call server unsubscribe
+      const reg = await navigator.serviceWorker?.ready;
+      const sub = await reg?.pushManager?.getSubscription();
+      if (sub) {
+        await fetch('/api/unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        });
+      }
+    } catch (e) {
+      console.warn('Server unsubscribe failed (may be offline):', e);
+    }
+    // 2. Clear localStorage
+    localStorage.clear();
+    // 3. Reset state
+    setNotifSettings(DEFAULT_NOTIFICATION_SETTINGS);
+    setNotifLogs([]);
+    setShowPrivacyPolicy(false);
+    setActiveToast({
+      id: Math.random().toString(),
+      title: "Données supprimées",
+      message: "Toutes vos données personnelles ont été effacées de votre appareil et de notre serveur.",
+      intensity: "moderate"
+    });
+  };
+
   // Direct City pin click on the weather map
   const selectCityFromMap = (cityName: string, coords: [number, number]) => {
     // Generate dummy commune object format for trigger
@@ -359,9 +392,15 @@ export default function App() {
   return (
     <div className={`min-h-screen w-full flex justify-center items-center p-0 sm:p-6 text-white antialiased overflow-x-hidden bg-gradient-to-br ${isNightTimeNow ? 'from-[#0a1f38] via-[#123a5e] to-[#081b2e]' : 'from-[#123a5e] via-[#2a72a8] to-[#0d2e4a]'}`}>
       
+      {/* Skip-to-content link for keyboard/screen-reader users */}
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-[200] focus:px-4 focus:py-2 focus:bg-sky-500 focus:text-white focus:rounded-full focus:font-bold focus:shadow-lg">
+        Aller au contenu principal
+      </a>
+
       {/* Container Principal (Mobile-First responsive frame) */}
-      <div 
+      <main 
         id="applet-main-frame"
+        role="main"
         className="relative w-full max-w-md min-h-screen sm:min-h-[880px] sm:max-h-[920px] sm:rounded-[40px] shadow-2xl overflow-hidden bg-white/5 backdrop-blur-[45px] border border-white/20 flex flex-col justify-between pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] px-6 sm:p-6"
       >
         
@@ -560,6 +599,17 @@ export default function App() {
                 </div>
               </div>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* PRIVACY POLICY MODAL */}
+        <AnimatePresence>
+          {showPrivacyPolicy && (
+            <PrivacyPolicy
+              isOpen={showPrivacyPolicy}
+              onClose={() => setShowPrivacyPolicy(false)}
+              onDeleteAllData={handleDeleteAllData}
+            />
           )}
         </AnimatePresence>
 
@@ -1556,11 +1606,25 @@ export default function App() {
                   />
                 </Suspense>
 
-                {/* Dev / Application information */}
-                <div className="glass-premium rounded-3xl p-4 shadow-sm text-center">
-                  <div className="text-[9px] text-white/40 font-bold uppercase tracking-widest">
-                    <span>Météo Pure v3.0</span>
+                {/* Legal & Privacy */}
+                <button
+                  onClick={() => setShowPrivacyPolicy(true)}
+                  className="glass-premium rounded-3xl p-4 shadow-sm text-center hover:bg-white/10 transition-colors active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-400/60 w-full"
+                  aria-label="Confidentialité et mentions légales"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <ShieldAlert className="w-4 h-4 text-sky-300" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/70">
+                      Confidentialité & Mentions légales
+                    </span>
                   </div>
+                </button>
+
+                {/* Dev / Application information */}
+                <div className="text-center py-1">
+                  <span className="text-[9px] text-white/30 font-bold uppercase tracking-widest">
+                    Météo Pure v3.0
+                  </span>
                 </div>
               </motion.div>
             )}
@@ -1639,7 +1703,7 @@ export default function App() {
           </button>
         </nav>
 
-      </div>
+      </main>
 
       {/* Share today's weather as PNG */}
       <Suspense fallback={null}>
