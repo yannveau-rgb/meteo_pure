@@ -14,6 +14,21 @@ export interface Commune {
   score?: number;
 }
 
+/** A real measurement from a Météo-France station, as served by /api/observation. */
+export interface StationObservation {
+  station: string;
+  stationId: string;
+  distanceKm: number;
+  observedAt: string;
+  temperature?: number;      // °C
+  humidity?: number;         // %
+  windSpeed?: number;        // km/h
+  windGusts?: number;        // km/h
+  precipitation1h?: number;  // mm over the past hour
+  altitudeDeltaM?: number;   // commune minus station
+  lapseCorrected?: boolean;  // temperature adjusted for the altitude gap
+}
+
 export interface CurrentWeather {
   temperature: number;
   feelsLike: number;
@@ -29,6 +44,10 @@ export interface CurrentWeather {
   iconName: string;
   precipitation: number;
   time: string;
+  confidence?: 'high' | 'medium' | 'low';  // agreement between the three models on the current temperature
+  modelSpread?: number;                    // °C between the warmest and coldest model
+  /** Set when the values above are a station measurement rather than a forecast. */
+  observed?: StationObservation;
 }
 
 export interface HourlyForecastItem {

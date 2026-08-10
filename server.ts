@@ -1,3 +1,6 @@
+// dotenv was already a dependency but nothing ever imported it, so .env was
+// silently ignored in development and every secret had to come from the shell.
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -6,6 +9,7 @@ import { createServer as createViteServer } from 'vite';
 import { getFunnyRainMessage, getSarcasticChristmasCountdownMessage } from './src/utils/notificationService';
 import { calculateVigilance } from './src/utils/weatherUtils';
 import { generateAiMorningBrief } from './api/_lib/gemini';
+import { getNearestObservation } from './api/_lib/meteofrance';
 
 // Initialize VAPID Keys
 const VAPID_FILE = path.join(process.cwd(), 'vapid.json');
@@ -138,6 +142,25 @@ async function startServer() {
   // API Route: Healthcheck/Status
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', subscriptionsCount: getSubscriptions().length });
+  });
+
+  // API Route: latest measured conditions from the nearest Météo-France station.
+  // 204 when nothing trustworthy is in range — the frontend then keeps the model
+  // forecast, which is also what happens when no API key is configured.
+  app.get('/api/observation', async (req, res) => {
+    const lat = Number(req.query.lat);
+    const lon = Number(req.query.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      return res.status(400).json({ error: 'lat and lon are required' });
+    }
+    try {
+      const observation = await getNearestObservation(lat, lon);
+      if (!observation) return res.status(204).end();
+      res.json(observation);
+    } catch (err: any) {
+      console.error('[API OBSERVATION ERROR]', err);
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // API Route: Generate a fresh morning brief using Gemini AI
