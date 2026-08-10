@@ -958,8 +958,33 @@ export default function App() {
                               }`}>
                                 °C
                               </span>
+
+                              {/* A measured temperature and a forecast one look identical on
+                                  screen, so name the difference. Measurement wins the slot. */}
+                              {weather.current.observed ? (
+                                <span
+                                  className="self-end mb-3 ml-2 px-2 py-0.5 rounded-full bg-emerald-400/25 text-[11px] font-medium text-white/95 whitespace-nowrap"
+                                  title={
+                                    `Relevé de la station ${weather.current.observed.station}, à ${weather.current.observed.distanceKm} km` +
+                                    (weather.current.observed.lapseCorrected
+                                      ? `, ajusté de ${weather.current.observed.altitudeDeltaM} m de dénivelé.`
+                                      : '.')
+                                  }
+                                >
+                                  Relevé · {weather.current.observed.distanceKm} km
+                                </span>
+                              ) : weather.current.confidence === 'low' && weather.current.modelSpread !== undefined ? (
+                                /* No station in range: it is a forecast, and the models disagree
+                                   by more than 3°C on this very hour. Say so. */
+                                <span
+                                  className="self-end mb-3 ml-2 px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-medium text-white/90 whitespace-nowrap"
+                                  title={`Prévision. Les trois modèles s'écartent de ${weather.current.modelSpread} °C sur cette heure ; la valeur affichée est leur médiane.`}
+                                >
+                                  ± {Math.round(weather.current.modelSpread / 2)}°
+                                </span>
+                              ) : null}
                             </div>
-                            
+
                             {/* Glossy Weather Status icon aligned beautifully to the right */}
                             <div className="flex flex-col items-center pr-3 space-y-1">
                               <div className="relative w-20 h-20 flex items-center justify-center">
@@ -1015,15 +1040,6 @@ export default function App() {
                           sunset={selectedDayIndex === 0 ? weather.sunset : (weather.daily[selectedDayIndex]?.sunset ?? weather.sunset)}
                         />
                       </TiltCard>
-
-                      {/* 3c. Air quality & pollen (separate free CAMS-backed API).
-                          Guarded here as well as inside the card so a failed
-                          request doesn't leave an empty TiltCard taking up space. */}
-                      {airQuality && (
-                        <TiltCard>
-                          <AirQualityCard data={airQuality} />
-                        </TiltCard>
-                      )}
 
                       {/* 4. Prévisions de la semaine (Météo-France) */}
                       <TiltCard>
@@ -1092,6 +1108,15 @@ export default function App() {
                           />
                         </Suspense>
                       </TiltCard>
+
+                      {/* 7. Air quality & pollen (separate free CAMS-backed API).
+                          Guarded here as well as inside the card so a failed
+                          request doesn't leave an empty TiltCard taking up space. */}
+                      {airQuality && (
+                        <TiltCard>
+                          <AirQualityCard data={airQuality} />
+                        </TiltCard>
+                      )}
                     </>
                   ) : (
                     <div className="flex flex-col items-center justify-center text-center p-8 bg-white/10 rounded-2xl border border-white/20 my-auto">

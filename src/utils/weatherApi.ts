@@ -1,6 +1,40 @@
 import { Commune, WeatherData, CurrentWeather, HourlyForecastItem, DailyForecastItem } from '../types';
 import { generateRainInTheHour, parseRealMinutelyRain, calculateVigilance, getWeatherUI } from './weatherUtils';
 import { assessConfidence } from './forecastConfidence';
+import { fetchObservation } from './observationApi';
+
+/**
+ * Consensus value across the models that supplied one.
+ *
+ * The median, not the mean: on a convective afternoon a single run can sit 5°C
+ * above the other two (AROME read 29.7°C over the Aisne while ECMWF said 26.0
+ * and the blend 24.8), and an average would carry that outlier into the number
+ * shown to the user. The median simply ignores it.
+ */
+function consensus(values: Array<number | null | undefined>): number | null {
+  const usable = values.filter((v): v is number => typeof v === 'number' && !Number.isNaN(v));
+  if (usable.length === 0) return null;
+  usable.sort((a, b) => a - b);
+  const mid = usable.length >> 1;
+  return usable.length % 2 ? usable[mid] : (usable[mid - 1] + usable[mid]) / 2;
+}
+
+/**
+ * Sky code derived from actual cloud cover.
+ *
+ * Replaces the rule that promoted "Couvert" to "Peu nuageux" whenever rain
+ * probability was low — cloudiness and rain probability are different physical
+ * quantities, and that rule painted a near-clear sky over a 100%-overcast
+ * afternoon. Thresholds follow the okta convention (clear / few / broken /
+ * overcast). Falls back to the model's own code when cloud cover is missing.
+ */
+function skyCodeFromCloudCover(cloudCover: number | null | undefined, fallback: number): number {
+  if (typeof cloudCover !== 'number' || Number.isNaN(cloudCover)) return fallback;
+  if (cloudCover < 20) return 0; // Soleil
+  if (cloudCover < 50) return 1; // Peu nuageux
+  if (cloudCover < 85) return 2; // Éclaircies
+  return 3;                      // Couvert
+}
 
 /**
  * Search French communes by name via the official geo.api.gouv.fr.
@@ -45,7 +79,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
 
   // Primary: Météo-France AROME model (1.3 km resolution over France — highest precision available)
   const currentVars = 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,surface_pressure,visibility';
-  const hourlyVars  = 'temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cape';
+  const hourlyVars  = 'temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,cape';
   const dailyVars   = 'weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max';
   const minuteVars  = 'precipitation,weather_code,lightning_potential';
 
@@ -65,18 +99,32 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
   let fallbackData: any = null;
   let ecmwfData: any = null;
 
-  // Per-model daily maxima, captured pre-merge for the confidence indicator.
-  const modelDailyMax: { meteoFrance: any[]; ecmwf: any[]; blend: any[] } = {
-    meteoFrance: [], ecmwf: [], blend: [],
+  // Per-model series, captured pre-merge. Model agreement can only be measured
+  // against un-blended values, and the consensus median needs each model's own
+  // number rather than the coalesced one.
+  type ModelSeries = { hourlyTemp: any[]; dailyMax: any[]; dailyMin: any[] };
+  const empty = (): ModelSeries => ({ hourlyTemp: [], dailyMax: [], dailyMin: [] });
+  const models: { meteoFrance: ModelSeries; ecmwf: ModelSeries; blend: ModelSeries } = {
+    meteoFrance: empty(), ecmwf: empty(), blend: empty(),
   };
 
+  // Météo-France returns precipitation_probability as null for all 240 hours on
+  // /v1/meteofrance, so this field is always somebody else's. Take it from the
+  // GFS/ICON blend, whose probability is calibrated, rather than from ECMWF —
+  // its 0.25° grid is the coarsest of the three for showers.
+  const PREFER_BLEND = new Set(['precipitation_probability', 'precipitation_probability_max']);
+
   // 3-way coalesce: prefer AROME/ARPEGE, then ECMWF (for the medium-range gap),
-  // then the generic blend as last resort.
+  // then the generic blend as last resort — except for the fields above.
   function mergeSeries(primary: any, secondary: any, tertiary: any) {
-    for (const source of [secondary, tertiary]) {
-      if (!source) continue;
-      for (const key of Object.keys(source)) {
-        const srcArr = source[key];
+    const keys = new Set<string>([
+      ...Object.keys(secondary ?? {}),
+      ...Object.keys(tertiary ?? {}),
+    ]);
+    for (const key of keys) {
+      const sources = PREFER_BLEND.has(key) ? [tertiary, secondary] : [secondary, tertiary];
+      for (const source of sources) {
+        const srcArr = source?.[key];
         if (!Array.isArray(srcArr)) continue;
         const curArr = primary[key];
         if (!curArr || !Array.isArray(curArr)) {
@@ -99,6 +147,10 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       }
     }
   }
+
+  // Requested alongside the models rather than after them — a measurement that
+  // arrives half a second late is a measurement the user never sees.
+  const observationPromise = fetchObservation(latitude, longitude, signal);
 
   try {
     const [resMF, resStd, resEcmwf] = await Promise.allSettled([
@@ -131,17 +183,17 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       throw new Error('Échec de la connexion à l\'API météo. Veuillez vérifier votre connexion ou réessayer.');
     }
 
-    // Snapshot Météo-France's own daily maxima before the merge overwrites
-    // them — model agreement can only be measured against un-blended values.
-    modelDailyMax.meteoFrance = Array.isArray(data.daily?.temperature_2m_max)
-      ? [...data.daily.temperature_2m_max]
-      : [];
-    modelDailyMax.ecmwf = Array.isArray(ecmwfData?.daily?.temperature_2m_max)
-      ? [...ecmwfData.daily.temperature_2m_max]
-      : [];
-    modelDailyMax.blend = Array.isArray(fallbackData?.daily?.temperature_2m_max)
-      ? [...fallbackData.daily.temperature_2m_max]
-      : [];
+    // Snapshot each model's own temperatures before the merge overwrites them.
+    const snapshot = (src: any): ModelSeries => ({
+      hourlyTemp: Array.isArray(src?.hourly?.temperature_2m) ? [...src.hourly.temperature_2m] : [],
+      dailyMax: Array.isArray(src?.daily?.temperature_2m_max) ? [...src.daily.temperature_2m_max] : [],
+      dailyMin: Array.isArray(src?.daily?.temperature_2m_min) ? [...src.daily.temperature_2m_min] : [],
+    });
+    // When Météo-France failed outright, `data` *is* the blend — counting it
+    // twice would fake a perfect agreement between two identical series.
+    models.meteoFrance = data === fallbackData ? empty() : snapshot(data);
+    models.ecmwf = snapshot(ecmwfData);
+    models.blend = snapshot(fallbackData);
 
     // Blend missing (null, undefined, or truncated) future data into MeteoFrance data
     if (data !== fallbackData) {
@@ -211,11 +263,14 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       currentCode = fallbackCurrentCode;
     }
 
+    // Cloud cover now drives every dry-sky code below, so resolve it once.
+    const currentCloudCover = rawCurrentMF.cloud_cover ?? rawCurrentStd.cloud_cover;
+
     // 2. Fix false drizzle (Meteo-France bug where code is 51-69 but precipitation is 0.0)
     if ((currentCode >= 50 && currentCode <= 59) || (currentCode >= 60 && currentCode <= 69)) {
        const currentPrecip = rawCurrentMF.precipitation ?? rawCurrentStd.precipitation ?? 0;
        if (currentPrecip === 0) {
-          currentCode = 3; 
+          currentCode = skyCodeFromCloudCover(currentCloudCover, 3);
        }
     }
 
@@ -257,31 +312,61 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       currentCode = imminentRainCode; // Display Rain
     }
 
-    // 4. Overcast to dry sky refinement:
-    // If the final code is overcast (3) but there's no actual rain, map to:
-    // - "Peu nuageux" (1) if the precipitation probability is very low (<= 15%)
-    // - "Éclaircies" (2) if the precipitation probability is low to moderate (<= 35%)
-    const currentPrecipTotal = rawCurrentMF.precipitation ?? rawCurrentStd.precipitation ?? 0;
-    if (currentCode === 3 && currentPrecipTotal === 0) {
-      if (currentProb <= 15) {
-        currentCode = 1;
-      } else if (currentProb <= 35) {
-        currentCode = 2;
-      }
+    // 4. Dry-sky refinement from observed cloud cover.
+    // This used to key off precipitation probability, which turned a 100%
+    // overcast sky into "Peu nuageux" whenever rain was unlikely.
+    if (currentCode < 50) {
+      currentCode = skyCodeFromCloudCover(currentCloudCover, currentCode);
+    }
+
+    // A real measurement beats every model, and this is the whole point of the
+    // DPObs proxy: on the afternoon that started all this, the three models
+    // spanned 24.8 to 31.8°C over the Aisne and the station 7.6 km away simply
+    // read 23.8°C. Null whenever no station is close and comparable enough — the
+    // forecast then stands, exactly as before.
+    const observed = await observationPromise;
+
+    // Measured rain settles what the models were getting wrong. If the station
+    // has collected water in the past hour while the sky code says dry, it is
+    // the sky code that is wrong.
+    if (observed?.precipitation1h !== undefined && observed.precipitation1h > 0 && currentCode < 50) {
+      currentCode = observed.precipitation1h >= 2.5 ? 63 : 61;
     }
 
     const ui = getWeatherUI(currentCode);
 
-    // Always display the real measured temperature — never substitute feels-like
-    const displayTemp = rawCurrentMF.temperature_2m ?? rawCurrentStd.temperature_2m ?? 15;
-    const apparent = rawCurrentMF.apparent_temperature ?? rawCurrentStd.apparent_temperature ?? displayTemp;
+    // Temperature: median of the three models rather than Météo-France alone.
+    // AROME's 15-minute `current` is a single volatile run — it read 29.7°C then
+    // 26.2°C for the *same* timestamp minutes apart, while the other models sat
+    // 3-5°C lower. ECMWF has no `current` block, so its nearest hour stands in.
+    const tempMF = typeof rawCurrentMF.temperature_2m === 'number' ? rawCurrentMF.temperature_2m : null;
+    const tempStd = typeof rawCurrentStd.temperature_2m === 'number' ? rawCurrentStd.temperature_2m : null;
+    const tempEcmwf = models.ecmwf.hourlyTemp[startIdx] ?? null;
+    const currentSources = [tempMF, tempStd, tempEcmwf];
+    const modelTemp = consensus(currentSources) ?? 15;
+    const modelConfidence = assessConfidence(currentSources);
+
+    const displayTemp = observed?.temperature ?? modelTemp;
+
+    // Feels-like is only published by MF/std, and re-anchoring it on the value
+    // actually displayed keeps the humidity- and wind-driven offset while staying
+    // coherent with it — otherwise the two can contradict each other on screen.
+    const rawApparent = rawCurrentMF.apparent_temperature ?? rawCurrentStd.apparent_temperature;
+    const rawApparentBase = rawCurrentMF.apparent_temperature !== undefined ? tempMF : tempStd;
+    const apparent = typeof rawApparent === 'number' && typeof rawApparentBase === 'number'
+      ? Math.round((displayTemp + (rawApparent - rawApparentBase)) * 10) / 10
+      : displayTemp;
 
     const current: CurrentWeather = {
       temperature: displayTemp,
       feelsLike: apparent,
-      humidity: rawCurrentMF.relative_humidity_2m ?? rawCurrentStd.relative_humidity_2m ?? 50,
-      windSpeed: rawCurrentMF.wind_speed_10m ?? rawCurrentStd.wind_speed_10m ?? 0,
-      windGusts: rawCurrentMF.wind_gusts_10m ?? rawCurrentStd.wind_gusts_10m,
+      // Model spread is only meaningful while the models are what we are showing.
+      confidence: observed ? undefined : modelConfidence?.level,
+      modelSpread: observed ? undefined : modelConfidence?.spread,
+      observed: observed ?? undefined,
+      humidity: observed?.humidity ?? rawCurrentMF.relative_humidity_2m ?? rawCurrentStd.relative_humidity_2m ?? 50,
+      windSpeed: observed?.windSpeed ?? rawCurrentMF.wind_speed_10m ?? rawCurrentStd.wind_speed_10m ?? 0,
+      windGusts: observed?.windGusts ?? rawCurrentMF.wind_gusts_10m ?? rawCurrentStd.wind_gusts_10m,
       windDirection: rawCurrentMF.wind_direction_10m ?? rawCurrentStd.wind_direction_10m,
       cloudCover: rawCurrentMF.cloud_cover ?? rawCurrentStd.cloud_cover,
       pressure: rawCurrentMF.surface_pressure ?? rawCurrentStd.surface_pressure,
@@ -289,7 +374,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       weatherCode: currentCode,
       weatherDesc: ui.label,
       iconName: currentCode.toString(),
-      precipitation: rawCurrentMF.precipitation ?? rawCurrentStd.precipitation ?? 0,
+      precipitation: observed?.precipitation1h ?? rawCurrentMF.precipitation ?? rawCurrentStd.precipitation ?? 0,
       time: rawCurrentMF.time ?? rawCurrentStd.time ?? ''
     };
 
@@ -312,6 +397,15 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
     const hourlyPrecip = data.hourly?.precipitation || [];
     const hourlyWind = data.hourly?.wind_speed_10m || [];
     const hourlyCape = data.hourly?.cape || [];
+    const hourlyCloud = data.hourly?.cloud_cover || [];
+
+    /** Consensus temperature for one hourly index, across the three models. */
+    const hourlyConsensusTemp = (idx: number): number =>
+      consensus([
+        models.meteoFrance.hourlyTemp[idx],
+        models.ecmwf.hourlyTemp[idx],
+        models.blend.hourlyTemp[idx],
+      ]) ?? hourlyTemps[idx] ?? 15;
 
     for (let j = 0; j < 12; j++) {
       const idx = startIdx + j;
@@ -334,21 +428,18 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
         
         // 2. Fix false drizzle
         const precip = hourlyPrecip[idx] ?? fallbackData?.hourly?.precipitation?.[idx] ?? 0;
+        const cloud = hourlyCloud[idx] ?? fallbackData?.hourly?.cloud_cover?.[idx];
         if ((code >= 50 && code <= 59) || (code >= 60 && code <= 69)) {
           if (precip === 0) {
-            code = 3;
+            code = skyCodeFromCloudCover(cloud, 3);
           }
         }
 
-        // 3. Apply general smart overcast override globally to prevent false overcast/cloudy icons
-        if (code === 3 && precip === 0) {
-          if (prob <= 15) {
-            code = 1;
-          } else if (prob <= 35) {
-            code = 2;
-          }
+        // 3. Dry-sky codes come from cloud cover, not from rain probability
+        if (code < 50) {
+          code = skyCodeFromCloudCover(cloud, code);
         }
-        
+
         const hourKey = hourlyTimes[idx]?.substring(0, 13) ?? '';
         const lpMax = lightningByHour.get(hourKey) ?? 0;
         const capeVal = (hourlyCape[idx] ?? 0) as number;
@@ -357,7 +448,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
 
         hourly.push({
           time: hourLabel,
-          temp: hourlyTemps[idx] ?? 15,
+          temp: hourlyConsensusTemp(idx),
           weatherCode: code,
           iconName: code.toString(),
           precipitationProbability: hourlyProb[idx] ?? 0,
@@ -438,24 +529,21 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
 
           // 2. Fix false drizzle
           const hPrecip = hourlyPrecip[idx] ?? fallbackData?.hourly?.precipitation?.[idx] ?? 0;
+          const hCloud = hourlyCloud[idx] ?? fallbackData?.hourly?.cloud_cover?.[idx];
           if ((hCode >= 50 && hCode <= 59) || (hCode >= 60 && hCode <= 69)) {
             if (hPrecip === 0) {
-              hCode = 3;
+              hCode = skyCodeFromCloudCover(hCloud, 3);
             }
           }
 
-          // 3. Apply general smart overcast override
-          if (hCode === 3 && hPrecip === 0) {
-            if (hProb <= 15) {
-              hCode = 1;
-            } else if (hProb <= 35) {
-              hCode = 2;
-            }
+          // 3. Dry-sky codes come from cloud cover, not from rain probability
+          if (hCode < 50) {
+            hCode = skyCodeFromCloudCover(hCloud, hCode);
           }
 
           dailyHourly.push({
             time: hourLabel,
-            temp: hourlyTemps[idx] ?? 15,
+            temp: hourlyConsensusTemp(idx),
             weatherCode: hCode,
             iconName: hCode.toString(),
             precipitationProbability: hourlyProb[idx] ?? 0,
@@ -480,11 +568,9 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       }
 
       // How much do the three models disagree about this day's high?
-      const dayConfidence = assessConfidence([
-        modelDailyMax.meteoFrance[k],
-        modelDailyMax.ecmwf[k],
-        modelDailyMax.blend[k],
-      ]);
+      const dayMaxSources = [models.meteoFrance.dailyMax[k], models.ecmwf.dailyMax[k], models.blend.dailyMax[k]];
+      const dayMinSources = [models.meteoFrance.dailyMin[k], models.ecmwf.dailyMin[k], models.blend.dailyMin[k]];
+      const dayConfidence = assessConfidence(dayMaxSources);
 
       // Compute a representative weather code for the day based on daily and hourly parameters
       let representativeCode = apiDailyCode;
@@ -548,28 +634,13 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
                 }
               }
             } else {
-              // No rain/storm code in daily API and no hourly rain codes!
-              // Respect the API daily code (0, 1, 2, 3), but refine it if needed to avoid wrong overcast/sunny extremes
-              const clearHours = daytimeHours.filter(h => h.weatherCode === 0).length;
-              const mainlyClearHours = daytimeHours.filter(h => h.weatherCode === 1).length;
-              const partlyCloudyHours = daytimeHours.filter(h => h.weatherCode === 2).length;
-              const overcastHours = daytimeHours.filter(h => h.weatherCode === 3).length;
-
-              if (apiDailyCode === 3) {
-                if (maxRainProb <= 15 && (clearHours + mainlyClearHours > partlyCloudyHours + overcastHours)) {
-                  representativeCode = 1; // Peu nuageux
-                } else if (maxRainProb <= 30 && overcastHours < daytimeHours.length * 0.4) {
-                  representativeCode = 2; // Éclaircies
-                }
-              } else if (apiDailyCode === 0) {
-                if (overcastHours > daytimeHours.length * 0.6) {
-                  representativeCode = 3; // Couvert
-                } else if (partlyCloudyHours > daytimeHours.length * 0.5) {
-                  representativeCode = 2; // Éclaircies
-                } else if (mainlyClearHours > daytimeHours.length * 0.4) {
-                  representativeCode = 1; // Peu nuageux
-                }
-              }
+              // Dry day: the hourly codes are already derived from cloud cover,
+              // so the day's icon is simply the dominant sky over daytime hours.
+              // The previous version gated this on rain probability, which could
+              // turn a fully overcast day into "Peu nuageux" just because no rain
+              // was expected.
+              const counts = [0, 1, 2, 3].map(c => daytimeHours.filter(h => h.weatherCode === c).length);
+              representativeCode = counts.indexOf(Math.max(...counts));
             }
           }
         }
@@ -577,8 +648,8 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
 
       daily.push({
         date: k === 0 ? "Auj." : dayName,
-        tempMax: dailyMax[k] ?? 20,
-        tempMin: dailyMin[k] ?? 10,
+        tempMax: consensus(dayMaxSources) ?? dailyMax[k] ?? 20,
+        tempMin: consensus(dayMinSources) ?? dailyMin[k] ?? 10,
         weatherCode: representativeCode,
         iconName: representativeCode.toString(),
         uvIndex: dailyUv[k] ? Math.round(dailyUv[k] ?? 3) : 3,
