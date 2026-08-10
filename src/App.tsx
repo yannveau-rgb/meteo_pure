@@ -915,8 +915,12 @@ export default function App() {
                         const isFreezing = temp < 10;
 
                         return (
-                          <div className="flex items-center justify-between py-2 px-1 text-white select-none">
-                            <div className="relative flex items-start pl-2">
+                          <div className="flex items-center justify-between gap-2 py-2 px-1 text-white select-none">
+                            {/* Column, not a row: the badge sits under the number rather than
+                                beside it. Inline, it stole enough width to push the weather
+                                icon and its label off the right edge of a phone screen. */}
+                            <div className="flex flex-col items-start pl-2 min-w-0">
+                              <div className="relative flex items-start">
                               {/* Particles container for Burning (Sparks rising up) */}
                               {isBurning && (
                                 <>
@@ -958,12 +962,13 @@ export default function App() {
                               }`}>
                                 °C
                               </span>
+                              </div>
 
                               {/* A measured temperature and a forecast one look identical on
                                   screen, so name the difference. Measurement wins the slot. */}
                               {weather.current.observed ? (
                                 <span
-                                  className="self-end mb-3 ml-2 px-2 py-0.5 rounded-full bg-emerald-400/25 text-[11px] font-medium text-white/95 whitespace-nowrap"
+                                  className="-mt-1 ml-1 px-2 py-0.5 rounded-full bg-emerald-400/25 text-[11px] font-medium text-white/95 whitespace-nowrap"
                                   title={
                                     `Relevé de la station ${weather.current.observed.station}, à ${weather.current.observed.distanceKm} km` +
                                     (weather.current.observed.lapseCorrected
@@ -977,7 +982,7 @@ export default function App() {
                                 /* No station in range: it is a forecast, and the models disagree
                                    by more than 3°C on this very hour. Say so. */
                                 <span
-                                  className="self-end mb-3 ml-2 px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-medium text-white/90 whitespace-nowrap"
+                                  className="-mt-1 ml-1 px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-medium text-white/90 whitespace-nowrap"
                                   title={`Prévision. Les trois modèles s'écartent de ${weather.current.modelSpread} °C sur cette heure ; la valeur affichée est leur médiane.`}
                                 >
                                   ± {Math.round(weather.current.modelSpread / 2)}°
@@ -985,8 +990,10 @@ export default function App() {
                               ) : null}
                             </div>
 
-                            {/* Glossy Weather Status icon aligned beautifully to the right */}
-                            <div className="flex flex-col items-center pr-3 space-y-1">
+                            {/* Glossy Weather Status icon aligned beautifully to the right.
+                                shrink-0 so a long label like "Averses orageuses" can never
+                                again be squeezed past the edge by whatever sits on its left. */}
+                            <div className="flex flex-col items-center shrink-0 pr-3 space-y-1">
                               <div className="relative w-20 h-20 flex items-center justify-center">
                                 <div className={`absolute inset-1.5 rounded-full filter blur-md animate-pulse transition-colors duration-300 ${
                                   isBurning ? 'bg-orange-500/25' : isFreezing ? 'bg-sky-300/25' : 'bg-blue-200/20'
