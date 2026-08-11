@@ -972,8 +972,10 @@ export default function App() {
                                   title={
                                     `Relevé de la station ${weather.current.observed.station}, à ${weather.current.observed.distanceKm} km` +
                                     (weather.current.observed.lapseCorrected
-                                      ? `, ajusté de ${weather.current.observed.altitudeDeltaM} m de dénivelé.`
-                                      : '.')
+                                      ? `, ajusté de ${weather.current.observed.altitudeDeltaM} m de dénivelé`
+                                      : '') +
+                                    `. Mesuré à ${new Date(weather.current.observed.observedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` +
+                                    (weather.current.observed.sampling === '6min' ? '.' : ' (bulletin horaire).')
                                   }
                                 >
                                   Relevé · {weather.current.observed.distanceKm} km

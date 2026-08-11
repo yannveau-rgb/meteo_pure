@@ -1,5 +1,5 @@
 // Météo Pure Service Worker - Offline cache + Web Push
-const CACHE_NAME = 'meteo-pure-v8';
+const CACHE_NAME = 'meteo-pure-v9';
 const META_CACHE_NAME = 'meteo-pure-meta';
 const ASSETS_TO_CACHE = [
   '/',
@@ -25,39 +25,74 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+/**
+ * The HTML document decides which build the browser runs, so it is the one
+ * thing that must never be served stale.
+ *
+ * Cache-first on index.html meant a returning visitor got the previous build's
+ * document, which asks for that build's hashed bundles. Those still resolve
+ * while they sit in this cache — but the code-split chunks (radar, comparison,
+ * sharing) are only cached once visited, so the first tap on a feature the
+ * visitor had not opened before requested a filename the new deployment no
+ * longer serves. A 404, and a dead tab.
+ *
+ * Navigations therefore go to the network first and fall back to the cache only
+ * when offline, which is what the fallback was always for. Hashed assets stay
+ * cache-first: their name changes whenever their content does, so they can
+ * never be stale, and that is where the offline speed actually comes from.
+ */
+function isNavigation(request) {
+  return request.mode === 'navigate' ||
+    (request.method === 'GET' && (request.headers.get('accept') || '').includes('text/html'));
+}
+
 self.addEventListener('fetch', (event) => {
   // Never intercept /api/* calls — they must always hit the server
   const url = new URL(event.request.url);
   if (url.pathname.startsWith('/api/')) return;
 
-  const isStaticAsset = url.origin === self.location.origin;
-
-  if (isStaticAsset) {
-    event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          fetch(event.request).then((networkResponse) => {
-            if (networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-            }
-          }).catch(() => {});
-          return cachedResponse;
-        }
-        return fetch(event.request).then((networkResponse) => {
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-            return networkResponse;
-          }
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
-          return networkResponse;
-        });
-      })
-    );
-  } else {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
-    );
+  if (url.origin !== self.location.origin) {
+    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+    return;
   }
+
+  if (isNavigation(event.request)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
+          }
+          return networkResponse;
+        })
+        // Offline: the last good document, or the shell if this exact URL was
+        // never visited. Without the second fallback, deep links break offline.
+        .catch(() => caches.match(event.request).then((r) => r || caches.match('/index.html')))
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        fetch(event.request).then((networkResponse) => {
+          if (networkResponse.status === 200) {
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
+          }
+        }).catch(() => {});
+        return cachedResponse;
+      }
+      return fetch(event.request).then((networkResponse) => {
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
+        }
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+        return networkResponse;
+      });
+    })
+  );
 });
 
 // BACKGROUND WEB PUSH NOTIFICATION RECEIVER

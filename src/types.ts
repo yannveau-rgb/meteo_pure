@@ -24,9 +24,11 @@ export interface StationObservation {
   humidity?: number;         // %
   windSpeed?: number;        // km/h
   windGusts?: number;        // km/h
-  precipitation1h?: number;  // mm over the past hour
-  altitudeDeltaM?: number;   // commune minus station
-  lapseCorrected?: boolean;  // temperature adjusted for the altitude gap
+  precipitation1h?: number;      // mm over the past hour — hourly bulletin only
+  precipitationRateMmH?: number; // mm/h, normalised: answers "is it raining now"
+  sampling: 'hourly' | '6min';   // which bulletin the instantaneous values came from
+  altitudeDeltaM?: number;       // commune minus station
+  lapseCorrected?: boolean;      // temperature adjusted for the altitude gap
 }
 
 export interface CurrentWeather {
