@@ -26,8 +26,19 @@ const ELEVATION_URL = 'https://api.open-meteo.com/v1/elevation';
 
 /** Stations further than this are not describing the user's sky any more. */
 const MAX_STATION_DISTANCE_KM = 35;
-/** RADOME publishes hourly; past this the reading is stale enough to mislead. */
+/** Past this, the reading is stale enough to mislead rather than inform. */
 const MAX_OBSERVATION_AGE_MIN = 90;
+/**
+ * The hourly bulletin lands around ten past the hour, so a reading could be
+ * nearly an hour old — long enough for a temperature to move several degrees on
+ * a summer afternoon. DPObs also publishes every six minutes, which cuts that
+ * lag to roughly a quarter of an hour at worst. Measured side by side at 14:41:
+ * the hourly bulletin said 28.2°C (valid 14:00), the six-minute one 29.1°C
+ * (valid 14:30). Both endpoints are queried; the fresher one wins on the
+ * instantaneous values, the hourly one still supplies the rain accumulation it
+ * alone reports.
+ */
+const SUBHOURLY_MAX_AGE_MIN = 25;
 
 /**
  * Altitude is the trap, not distance.
@@ -69,7 +80,15 @@ export interface StationObservation {
   humidity?: number;         // %
   windSpeed?: number;        // km/h
   windGusts?: number;        // km/h
-  precipitation1h?: number;  // mm over the past hour
+  precipitation1h?: number;  // mm over the past hour — hourly bulletin only
+  /**
+   * Rain rate in mm/h, normalised from whichever sample we got. This, not the
+   * hourly total, is what answers "is it raining right now": an hour that
+   * collected 3 mm at dawn reads the same as one still pouring at noon.
+   */
+  precipitationRateMmH?: number;
+  /** Which bulletin the instantaneous values came from. */
+  sampling: 'hourly' | '6min';
   /** Metres between the station and the commune; drives the two flags below. */
   altitudeDeltaM?: number;
   /** True when `temperature` had the lapse rate applied rather than being raw. */
@@ -280,26 +299,46 @@ async function getElevation(lat: number, lon: number): Promise<number | null> {
   return value;
 }
 
+/** Age of a bulletin in minutes, or null when its timestamp is unusable. */
+function ageMinutes(record: any): number | null {
+  const observedAt = record?.validity_time ?? record?.reference_time;
+  if (!observedAt) return null;
+  const age = (Date.now() - new Date(observedAt).getTime()) / 60000;
+  // A negative age beyond clock-skew tolerance means we misread the timestamp.
+  return Number.isFinite(age) && age >= -15 ? age : null;
+}
+
 /**
- * Reads one hourly bulletin.
+ * Builds one observation from the six-minute bulletin, the hourly one, or both.
  *
- * DPObs publishes temperature in kelvin and wind in m/s. The unit guards below
- * are deliberate: a silently mis-scaled temperature is far more damaging than a
- * missing one, since it looks perfectly plausible on screen.
+ * `fresh` carries the instantaneous values and `hourly` the rain accumulation
+ * only it reports; either may be null. DPObs publishes temperature in kelvin
+ * and wind in m/s, and the two bulletins do not even name their fields alike —
+ * `raf`/`rr1` hourly against `raf10`/`rr_per` at six minutes. The unit guards
+ * below are deliberate: a silently mis-scaled temperature is far more damaging
+ * than a missing one, since it looks perfectly plausible on screen.
  */
 function parseObservation(
-  record: any,
+  fresh: any,
+  hourly: any,
   station: Station,
   distanceKm: number,
   communeElevation: number | null,
 ): StationObservation | null {
-  if (!record) return null;
+  const freshAge = fresh ? ageMinutes(fresh) : null;
+  const hourlyAge = hourly ? ageMinutes(hourly) : null;
+
+  // Prefer the six-minute bulletin, but only while it is actually fresher; a
+  // stalled station must not pin the display to an old sub-hourly reading.
+  const useFresh =
+    fresh !== null && freshAge !== null && freshAge <= SUBHOURLY_MAX_AGE_MIN &&
+    (hourlyAge === null || freshAge <= hourlyAge);
+
+  const record = useFresh ? fresh : hourly;
+  const age = useFresh ? freshAge : hourlyAge;
+  if (!record || age === null || age > MAX_OBSERVATION_AGE_MIN) return null;
 
   const observedAt = record.validity_time ?? record.reference_time;
-  if (!observedAt) return null;
-
-  const ageMin = (Date.now() - new Date(observedAt).getTime()) / 60000;
-  if (!Number.isFinite(ageMin) || ageMin > MAX_OBSERVATION_AGE_MIN || ageMin < -15) return null;
 
   let temperature = num(record.t);
   // Kelvin above ~100; no French station has ever read 100°C or -173°C.
@@ -322,21 +361,32 @@ function parseObservation(
   }
 
   const windMs = num(record.ff);
-  const gustMs = num(record.raf);
+  // `raf` over the hour, `raf10` over ten minutes — same quantity, different name.
+  const gustMs = num(record.raf) ?? num(record.raf10);
   const humidity = num(record.u);
-  const precipitation1h = num(record.rr1);
+
+  // Negative values are DPObs' "trace, below measurement threshold" marker.
+  const clampRain = (v: number | undefined) => (v !== undefined ? Math.max(0, v) : undefined);
+  const rain1h = clampRain(num(hourly?.rr1));
+  const rainPeriod = clampRain(num(fresh?.rr_per));
+
+  // Six minutes of rain scaled to an hourly rate; otherwise the hourly total is
+  // already one. Prefer the sub-hourly figure — it says whether it is raining
+  // *now*, which an hour that filled up at dawn cannot.
+  const precipitationRateMmH = rainPeriod !== undefined ? Math.round(rainPeriod * 100) / 10 : rain1h;
 
   return {
     station: station.name,
     stationId: station.id,
     distanceKm: Math.round(distanceKm * 10) / 10,
     observedAt: new Date(observedAt).toISOString(),
+    sampling: useFresh ? '6min' : 'hourly',
     temperature: temperature !== undefined ? Math.round(temperature * 10) / 10 : undefined,
     humidity: humidity !== undefined ? Math.round(humidity) : undefined,
     windSpeed: windMs !== undefined ? Math.round(windMs * 3.6) : undefined,
     windGusts: gustMs !== undefined ? Math.round(gustMs * 3.6) : undefined,
-    // A negative rr1 is DPObs' "trace, below measurement threshold" marker.
-    precipitation1h: precipitation1h !== undefined ? Math.max(0, precipitation1h) : undefined,
+    precipitation1h: rain1h,
+    precipitationRateMmH,
     altitudeDeltaM,
     lapseCorrected,
   };
@@ -373,11 +423,17 @@ export async function getNearestObservation(lat: number, lon: number): Promise<S
     // The best station is not always reporting — walk outwards a little rather
     // than giving up on the first gap.
     for (const candidate of ranked.slice(0, 4)) {
-      const raw = await apiGetJson(
-        `/station/horaire?id_station=${encodeURIComponent(candidate.station.id)}&format=json`,
+      const id = encodeURIComponent(candidate.station.id);
+      // Both bulletins in parallel: two requests, one round-trip of latency.
+      const [freshRaw, hourlyRaw] = await Promise.all([
+        apiGetJson(`/station/infrahoraire-6m?id_station=${id}&format=json`),
+        apiGetJson(`/station/horaire?id_station=${id}&format=json`),
+      ]);
+      const first = (raw: any) => (Array.isArray(raw) ? raw[0] ?? null : raw ?? null);
+      const parsed = parseObservation(
+        first(freshRaw), first(hourlyRaw),
+        candidate.station, candidate.distanceKm, communeElevation,
       );
-      const record = Array.isArray(raw) ? raw[0] : raw;
-      const parsed = parseObservation(record, candidate.station, candidate.distanceKm, communeElevation);
       if (parsed?.temperature !== undefined) {
         result = parsed;
         break;

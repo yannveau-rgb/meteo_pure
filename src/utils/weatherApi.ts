@@ -326,11 +326,12 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
     // forecast then stands, exactly as before.
     const observed = await observationPromise;
 
-    // Measured rain settles what the models were getting wrong. If the station
-    // has collected water in the past hour while the sky code says dry, it is
-    // the sky code that is wrong.
-    if (observed?.precipitation1h !== undefined && observed.precipitation1h > 0 && currentCode < 50) {
-      currentCode = observed.precipitation1h >= 2.5 ? 63 : 61;
+    // Measured rain settles what the models were getting wrong. Keyed on the
+    // rate, not the hourly total: an hour that collected 3 mm at dawn reads the
+    // same as one still pouring at noon, and only the second should show rain.
+    const observedRate = observed?.precipitationRateMmH;
+    if (observedRate !== undefined && observedRate > 0 && currentCode < 50) {
+      currentCode = observedRate >= 2.5 ? 63 : 61; // pluie modérée / faible
     }
 
     const ui = getWeatherUI(currentCode);
