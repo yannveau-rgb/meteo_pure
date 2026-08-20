@@ -8,7 +8,7 @@ interface TiltCardProps {
   onClick?: () => void;
 }
 
-export default function TiltCard({ children, className = '', id, onClick }: TiltCardProps) {
+function TiltCard({ children, className = '', id, onClick }: TiltCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
 
@@ -87,3 +87,5 @@ export default function TiltCard({ children, className = '', id, onClick }: Tilt
     </div>
   );
 }
+
+export default React.memo(TiltCard);

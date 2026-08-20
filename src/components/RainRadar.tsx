@@ -22,7 +22,7 @@ function formatFrameLabel(frame: RadarFrame): string {
   return `il y a ${Math.abs(diffMin)} min`;
 }
 
-export default function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
+function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   // One persistent tile layer per radar frame, created once and left on the
@@ -214,3 +214,5 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
     </div>
   );
 }
+
+export default React.memo(RainRadar);

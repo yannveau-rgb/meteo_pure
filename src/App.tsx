@@ -19,7 +19,6 @@ import {
   Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { getCommuneByCoords } from './utils/weatherApi';
 import { getWeatherUI, getMoonPhase, calculateCurrentUv, isNightTime } from './utils/weatherUtils';
 import { getSaintDuJour } from './utils/ephemeris';
 import { formatCacheTime } from './utils/weatherCache';
@@ -52,6 +51,7 @@ import { useMorningBrief } from './hooks/useMorningBrief';
 import { useAirQuality } from './hooks/useAirQuality';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { useShareImage } from './hooks/useShareImage';
+import { useGeolocation } from './hooks/useGeolocation';
 
 // Modular child components
 import RainForecast from './components/RainForecast';
@@ -70,6 +70,7 @@ import BottomNav from './components/BottomNav';
 import MoonPhasesModal from './components/modals/MoonPhasesModal';
 import MorningBriefModal from './components/modals/MorningBriefModal';
 import WelcomePrompt from './components/modals/WelcomePrompt';
+import Toast, { ToastData } from './components/Toast';
 
 // Lazy-loaded: only fetched when their tab/modal is opened
 const CityComparison = lazy(() => import('./components/CityComparison'));
@@ -106,9 +107,6 @@ export default function App() {
     showSearchList, setShowSearchList,
   } = useCitySearch();
 
-  // Geolocation active indicators
-  const [geoLocating, setGeoLocating] = useState(false);
-
   // Date + clock in French (updated every 10s)
   const { frenchDate, currentTime } = useFrenchClock();
 
@@ -122,12 +120,7 @@ export default function App() {
   const [notifSettings, setNotifSettings] = useState<NotificationSettings>(() => loadNotificationSettings());
   const [notifLogs, setNotifLogs] = useState<NotificationLog[]>(() => loadNotificationLogs());
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
-  const [activeToast, setActiveToast] = useState<{
-    id: string;
-    title: string;
-    message: string;
-    intensity: NotificationIntensity;
-  } | null>(null);
+  const [activeToast, setActiveToast] = useState<ToastData | null>(null);
   const [testingPush, setTestingPush] = useState<boolean>(false);
   const [testingCron, setTestingCron] = useState<boolean>(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState<boolean>(false);
@@ -138,6 +131,9 @@ export default function App() {
       checkAndFireFullMoonNotification(notifSettings.humorLevel);
     }
   });
+
+  // Geolocation active indicator + handler
+  const { geoLocating, handleGeolocation } = useGeolocation(setCurrentCommune, setActiveTab, setErrorMsg);
 
   // Reset selected forecast day whenever commune changes
   useEffect(() => { setSelectedDayIndex(0); }, [currentCommune]);
@@ -365,40 +361,6 @@ export default function App() {
   }, [weather?.city]);
 
   // Handle Dynamic Geolocation Pin search
-  const handleGeolocation = () => {
-    if (!navigator.geolocation) {
-      setErrorMsg("La géolocalisation n'est pas supportée par votre navigateur.");
-      return;
-    }
-
-    setGeoLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          const nearestCommune = await getCommuneByCoords(latitude, longitude);
-          if (nearestCommune) {
-            setCurrentCommune(nearestCommune);
-            setActiveTab('meteo');
-          } else {
-            setErrorMsg("Aucune commune française correspondante trouvée.");
-          }
-        } catch (err) {
-          console.error(err);
-          setErrorMsg("Échec de la recherche de commune locale.");
-        } finally {
-          setGeoLocating(false);
-        }
-      },
-      (geoError) => {
-        console.warn(geoError);
-        setGeoLocating(false);
-        setErrorMsg("La géolocalisation a échoué (accès refusé ou bloqué). Si vous êtes sur Safari/iPhone, essayez d'ouvrir l'application en plein écran, ou recherchez votre ville manuellement.");
-      },
-      { enableHighAccuracy: true, timeout: 5000 }
-    );
-  };
-
   // GDPR: delete all user data (local + server)
   const handleDeleteAllData = async () => {
     try {
@@ -510,89 +472,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* FLOATING FUNNY TOAST NOTIFICATION */}
-        <AnimatePresence>
-          {activeToast && (
-            <motion.div
-              initial={{ opacity: 0, y: -45, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 150, damping: 18 }}
-              role="status"
-              aria-live="polite"
-              className="absolute top-[calc(env(safe-area-inset-top,0px)+1rem)] sm:top-4 left-4 right-4 z-50 pointer-events-auto"
-            >
-              <div className={`glass-premium p-4 rounded-2xl shadow-2xl border flex flex-col gap-1.5 relative overflow-hidden backdrop-blur-2xl ${
-                activeToast.intensity === 'alert_red' ? 'border-rose-500/50 bg-rose-950/75 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.4)]' :
-                activeToast.intensity === 'alert_orange' ? 'border-amber-500/50 bg-amber-950/75 text-amber-100 shadow-[0_0_15px_rgba(245,158,11,0.35)]' :
-                activeToast.intensity === 'alert_yellow' ? 'border-yellow-400/50 bg-yellow-950/75 text-yellow-100' :
-                activeToast.intensity === 'heavy' ? 'border-red-500/40 bg-red-950/75 text-red-100' :
-                activeToast.intensity === 'moderate' ? 'border-amber-500/40 bg-amber-950/75 text-amber-100' :
-                activeToast.intensity === 'thunderstorm' ? 'border-purple-500/50 bg-indigo-950/75 text-indigo-100 shadow-[0_0_15px_rgba(168,85,247,0.35)]' :
-                activeToast.intensity === 'heatwave' ? 'border-orange-500/50 bg-orange-950/75 text-orange-100 shadow-[0_0_15px_rgba(249,115,22,0.35)]' :
-                'border-sky-500/40 bg-sky-950/75 text-sky-100'
-              }`}>
-                {/* Visual Timer Progress Bar */}
-                <motion.div
-                  initial={{ width: "100%" }}
-                  animate={{ width: "0%" }}
-                  transition={{ duration: 6, ease: 'linear' }}
-                  onAnimationComplete={() => setActiveToast(null)}
-                  className={`absolute bottom-0 left-0 h-1 ${
-                    activeToast.intensity === 'alert_red' ? 'bg-rose-500' :
-                    activeToast.intensity === 'alert_orange' ? 'bg-amber-500' :
-                    activeToast.intensity === 'alert_yellow' ? 'bg-yellow-400' :
-                    activeToast.intensity === 'heavy' ? 'bg-red-500' :
-                    activeToast.intensity === 'moderate' ? 'bg-amber-400' :
-                    activeToast.intensity === 'thunderstorm' ? 'bg-purple-500' :
-                    activeToast.intensity === 'heatwave' ? 'bg-orange-500' :
-                    'bg-sky-400'
-                  }`}
-                />
-
-                <div className="flex justify-between items-start gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm select-none">
-                      {activeToast.intensity === 'alert_red' ? '🟥' :
-                       activeToast.intensity === 'alert_orange' ? '🟧' :
-                       activeToast.intensity === 'alert_yellow' ? '🟨' :
-                       activeToast.intensity === 'heavy' ? '🤬' :
-                       activeToast.intensity === 'moderate' ? '☔' :
-                       activeToast.intensity === 'thunderstorm' ? '⚡' :
-                       activeToast.intensity === 'heatwave' ? '🌡️' : '💧'}
-                    </span>
-                    <h4 className="font-extrabold text-[11px] tracking-wider uppercase">
-                      {activeToast.title}
-                    </h4>
-                  </div>
-
-                  <button
-                    onClick={() => setActiveToast(null)}
-                    className="p-1 rounded-full hover:bg-white/10 active:scale-95 transition-all text-white/50 hover:text-white"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <p className="text-[11px] font-bold leading-relaxed pl-0.5 text-white/95 mt-0.5">
-                  "{activeToast.message}"
-                </p>
-
-                <div className="flex justify-between items-center text-[9px] text-white/50 font-extrabold pl-0.5 mt-1 uppercase select-none tracking-widest">
-                  <span>Météo à {currentCommune.nom}</span>
-                  <span className="bg-white/15 px-1.5 py-0.5 rounded-full text-[9px] text-white/90">
-                    {activeToast.intensity === 'alert_red' ? 'Vigilance rouge' :
-                     activeToast.intensity === 'alert_orange' ? 'Vigilance orange' :
-                     activeToast.intensity === 'alert_yellow' ? 'Vigilance jaune' :
-                     activeToast.intensity === 'heavy' ? 'Averse forte' :
-                     activeToast.intensity === 'moderate' ? 'Pluie soutenue' :
-                     activeToast.intensity === 'thunderstorm' ? 'Orage électrique !' :
-                     activeToast.intensity === 'heatwave' ? 'Chaleur Intense !' : 'Petite bruine'}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <Toast toast={activeToast} cityName={currentCommune.nom} onDismiss={() => setActiveToast(null)} />
         
         {/* Animated decorative 3D liquid waves and drop overlays matching mockup design perfectly */}
         <div className="liquid-wave-top" />
@@ -976,11 +856,11 @@ export default function App() {
 
                       {/* 4. Prévisions de la semaine (Météo-France) */}
                       <TiltCard>
-                        <DailyForecast 
-                          dailyData={weather.daily} 
-                          cityName={weather.city} 
+                        <DailyForecast
+                          dailyData={weather.daily}
+                          cityName={weather.city}
                           selectedDayIndex={selectedDayIndex}
-                          onSelectDay={(index) => setSelectedDayIndex(index)}
+                          onSelectDay={setSelectedDayIndex}
                         />
                       </TiltCard>
 

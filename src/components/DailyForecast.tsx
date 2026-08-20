@@ -15,7 +15,7 @@ interface DailyForecastProps {
   onSelectDay: (index: number) => void;
 }
 
-export default function DailyForecast({ dailyData, cityName, selectedDayIndex, onSelectDay }: DailyForecastProps) {
+function DailyForecast({ dailyData, cityName, selectedDayIndex, onSelectDay }: DailyForecastProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -203,3 +203,5 @@ export default function DailyForecast({ dailyData, cityName, selectedDayIndex, o
     </>
   );
 }
+
+export default React.memo(DailyForecast);

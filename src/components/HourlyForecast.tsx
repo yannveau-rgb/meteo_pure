@@ -11,7 +11,7 @@ interface HourlyForecastProps {
   sunset?: string;
 }
 
-export default function HourlyForecast({ hourlyData, humidity, dayName = "Aujourd'hui", sunrise, sunset }: HourlyForecastProps) {
+function HourlyForecast({ hourlyData, humidity, dayName = "Aujourd'hui", sunrise, sunset }: HourlyForecastProps) {
   // Allow full horizontal scrolling for the given data
   const displayItems = hourlyData;
 
@@ -91,3 +91,5 @@ export default function HourlyForecast({ hourlyData, humidity, dayName = "Aujour
     </div>
   );
 }
+
+export default React.memo(HourlyForecast);

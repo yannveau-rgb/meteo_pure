@@ -24,7 +24,7 @@ function getUvRiskStyle(uv: number): { label: string; color: string } {
   return { label: 'Extrême', color: 'text-fuchsia-300 bg-fuchsia-500/20 border-fuchsia-500/30' };
 }
 
-export default function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }: WeatherStatsProps) {
+function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }: WeatherStatsProps) {
   const uvRisk = getUvRiskStyle(uvIndex);
 
   // Calculate relative indicator representation
@@ -272,3 +272,5 @@ export default function WeatherStats({ current, uvIndex = 3, hourlyData = [], da
   );
 }
 
+
+export default React.memo(WeatherStats);

@@ -9,7 +9,7 @@ interface ClimateComparisonProps {
   currentMax: number;
 }
 
-export default function ClimateComparison({
+function ClimateComparison({
   latitude,
   longitude,
   currentMin,
@@ -147,3 +147,5 @@ export default function ClimateComparison({
     </div>
   );
 }
+
+export default React.memo(ClimateComparison);
