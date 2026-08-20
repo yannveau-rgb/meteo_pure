@@ -208,7 +208,8 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
       }
 
       if (shouldTrigger && transitionType) {
-        const msg = getFunnyRainMessage(transitionType, sub.humorLevel as any);
+        const prevMsgIndex = sub.lastMsgIndexByIntensity?.[transitionType];
+        const msg = getFunnyRainMessage(transitionType, sub.humorLevel as any, prevMsgIndex);
         try {
           await webPush.sendNotification(sub.subscription, JSON.stringify({
             title: msg.title,
@@ -217,6 +218,7 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
             city: sub.commune.nom
           }), { urgency: 'high', TTL: 3600 });
           sub.lastTransitionPushAt = new Date().toISOString();
+          sub.lastMsgIndexByIntensity = { ...(sub.lastMsgIndexByIntensity || {}), [transitionType]: msg.messageIndex };
           sent++;
         } catch (err: any) {
           console.error('[PUSH] alert failed:', sub.id, err.statusCode);

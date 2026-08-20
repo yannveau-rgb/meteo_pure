@@ -41,6 +41,9 @@ export interface StoredSubscription {
   alertNotificationsEnabled?: boolean;
   minMinutesBetweenAlerts?: number;
   lastTransitionPushAt?: string;
+  // Last message index sent per notification category, so the next pick for
+  // that same category can skip it and avoid an immediate repeat.
+  lastMsgIndexByIntensity?: Record<string, number>;
 }
 
 export async function getSubscriptions(): Promise<StoredSubscription[]> {

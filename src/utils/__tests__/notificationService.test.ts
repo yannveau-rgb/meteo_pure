@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getZodiacSign, getDaysUntilChristmas } from '../notificationService';
+import { getZodiacSign, getDaysUntilChristmas, getFunnyRainMessage } from '../notificationService';
 
 describe('getZodiacSign', () => {
   it('returns Bélier for late March', () => {
@@ -47,5 +47,31 @@ describe('getDaysUntilChristmas', () => {
     const result = getDaysUntilChristmas(june25);
     expect(result).toBeGreaterThan(180);
     expect(result).toBeLessThan(190);
+  });
+
+  it('returns 0 on Christmas Day itself, even mid-morning', () => {
+    // The push cron calls this between 6h and 10h, i.e. always past midnight.
+    // A naive instant comparison used to treat that as "already past
+    // Christmas" and roll over to next year's countdown (~365).
+    const christmasMorning = new Date(2025, 11, 25, 8, 30, 0);
+    expect(getDaysUntilChristmas(christmasMorning)).toBe(0);
+  });
+});
+
+describe('getFunnyRainMessage', () => {
+  it('never returns vulgar content for the safe humor level', () => {
+    for (let i = 0; i < 50; i++) {
+      const { title, message } = getFunnyRainMessage('moderate', 'safe');
+      expect(title.toLowerCase()).not.toMatch(/merde|putain|connard|bâtard/);
+      expect(message.toLowerCase()).not.toMatch(/merde|putain|connard|bâtard/);
+    }
+  });
+
+  it('avoids repeating the excluded message index when the pool allows it', () => {
+    const first = getFunnyRainMessage('moderate', 'spicy');
+    for (let i = 0; i < 20; i++) {
+      const next = getFunnyRainMessage('moderate', 'spicy', first.messageIndex);
+      expect(next.messageIndex).not.toBe(first.messageIndex);
+    }
   });
 });

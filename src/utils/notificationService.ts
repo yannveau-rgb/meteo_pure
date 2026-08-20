@@ -73,21 +73,30 @@ const RAIN_MESSAGES: Record<
       "Une vraie ondée se prépare d'ici quelques minutes. Mieux vaut s'abriter sous un porche.",
       "Le ciel rince la ville. De bons filets d'eau tiède arrivent, sors ton imperméable.",
       "Pluie rythmée en chemin. Une ambiance parfaite pour rester à l'intérieur avec une boisson chaude.",
-      "Averses confirmées. Pensez à vos proches dehors et surtout, prenez un grand parapluie !"
+      "Averses confirmées. Pensez à vos proches dehors et surtout, prenez un grand parapluie !",
+      "Le ciel se couvre pour de bon. Une pluie franche arrive, rentrez le linge étendu dehors.",
+      "Averse en approche : idéal pour un après-midi lecture au chaud plutôt qu'une balade.",
+      "Le crachin cède la place à une vraie pluie. Fermez les fenêtres et sortez les bottes."
     ],
     spicy: [
       "Une bonne douche gratuite arrive pour te rappeler qu'on n'échappe pas à son triste destin d'humain trempé.",
       "Le ciel a choisi de laver ta bagnole gratuite... idéal pour camoufler tes larmes quand tu réaliseras que ta vie n'a aucun sens.",
       "Ça commence à pisser sévère d'ici un quart d'heure. De quoi accélérer l'érosion du sol et de tes derniers espoirs de bonheur.",
       "Une ondée hostile arrive pour humidifier ton jean favori. Un détail agaçant, mais insignifiant face à la mort thermique de l'univers.",
-      "Le ciel fait ruisseler ses filons. Parfait pour masquer tes pleurs extatiques pendant ta crise de la trentaine."
+      "Le ciel fait ruisseler ses filons. Parfait pour masquer tes pleurs extatiques pendant ta crise de la trentaine.",
+      "Averse en approche. Le moment parfait pour annuler tes plans et prétendre que c'était la météo, pas la flemme.",
+      "Le ciel change d'avis et décide de tout mouiller. Comme toi avec tes bonnes résolutions.",
+      "Ça va tomber dru d'ici peu. Ton brushing du matin n'aura servi à rien, comme souvent."
     ],
     vulgar: [
       "Alerte drache ! Trouve un abri avant de ressembler à un cadavre trempé repêché dans le canal municipal.",
       "Ça va pisser sec d'ici peu. Tes jolies baskets blanches vont se muer en piscines de désespoir boueux.",
       "Le ciel t'arrose copieusement la tronche. Idéal pour te rappeler que la nature te déteste autant que ton banquier.",
       "Une grosse averse qui tache arrive. Prépare-toi à te faire rincer le fion d'ici quelques minutes !",
-      "Le nuage lâche sa pisse tiède. Cours chez toi ou accepte joyeusement ta punition mouillée hebdomadaire."
+      "Le nuage lâche sa pisse tiède. Cours chez toi ou accepte joyeusement ta punition mouillée hebdomadaire.",
+      "Ça va dégouliner sévère dans dix minutes. Planque ta clope et ton ego, les deux vont morfler.",
+      "Le ciel te chie dessus poliment pour commencer. Rentre avant que ça devienne du gros calibre.",
+      "Averse de merde en approche. Assume tes cheveux plaqués et ta bonne humeur qui se casse avec."
     ]
   },
   heavy: {
@@ -119,20 +128,28 @@ const RAIN_MESSAGES: Record<
       "Un risque d'orage approche. Soyez vigilants dehors, évitez de rester sous de grands arbres ou près de structures isolées.",
       "Alerte foudre imminente. Mettez-vous au sec dès les premiers grondements.",
       "Le ciel va gronder fortement d'ici peu. Une activité électrique est prévue dans les prochaines minutes.",
-      "Atmosphère électrique en vue. Mettez-vous à l'abri le temps que la vague passe."
+      "Atmosphère électrique en vue. Mettez-vous à l'abri le temps que la vague passe.",
+      "Orage annoncé sous peu. Débranchez les appareils sensibles et évitez les zones dégagées.",
+      "Grondements attendus dans les prochaines minutes. Restez à distance des points hauts et des fenêtres.",
+      "Cellule orageuse en approche rapide. Prenez vos précautions avant qu'elle n'arrive."
     ],
     spicy: [
       "Alerte foudre imminente : idéal pour recharger ton téléphone gratos si tu oses lever ton parapluie métallique bien haut. Spoiler : évite !",
       "Alerte coup de foudre non romantique ! Le ciel va gronder encore plus fort que ton patron en fin d'année. Rentre chez toi !",
       "Attention, ça va secouer ! Les nuages fêtent la fin de la semaine un peu trop bruyamment d'ici 30 minutes.",
       "Le ciel est plus sous tension que ton compte en banque un lendemain de fête. Planque-toi avant de servir de cible de fardeau électrique !",
-      "Orage violent en approche ! Prépare-toi à un concert gratuit de décibels célestes et d'éclairs stroboscopiques."
+      "Orage violent en approche ! Prépare-toi à un concert gratuit de décibels célestes et d'éclairs stroboscopiques.",
+      "Le ciel a décidé de faire du bruit pour rien, comme toi en réunion. Rentre avant le premier éclair.",
+      "Alerte orage : la nature teste son nouveau kit son et lumière directement au-dessus de ta tête.",
+      "Grondements en approche. Débranche la box avant que l'orage ne le fasse à sa manière, plus définitive."
     ],
     vulgar: [
       "ALERTE ORAGE DE BÂTARD ! Ça va péter dans tous les sens ! Rentre tes fesses rapido avant de griller sur place !",
       "Le ciel pète des câbles, de la foudre bien hargneuse s'annonce. C'est vraiment pas le moment de frimer dehors avec un parapluie pointu !",
       "Bordel de merde, la foudre arrive ! Prépare-toi à un bruit apocalyptique et rentre vite si tu veux pas finir rôti comme un poulet au four.",
       "Alerte foudre de dingue de niveau fin du monde ! Rentre immédiatement ou prépare-toi à finir carbonisé !",
+      "Ça va tonner comme un putain de feu d'artifice raté. Débranche tout et planque-toi, sérieux.",
+      "Le ciel nous pète une durite électrique carabinée. Bouge ton cul à l'intérieur, tout de suite.",
       "La nature s'énerve grave et nous balance des millions de volts dans la gueule ! Rentre au chaud avant que ce soit le bordel total !"
     ]
   },
@@ -174,68 +191,104 @@ const RAIN_MESSAGES: Record<
     safe: [
       "Mise en place d'une vigilance jaune de Météo-France. Soyez attentifs lors de vos déplacements.",
       "Vigilance jaune déclarée pour votre secteur. Tenez-vous au courant de l'évolution de la situation.",
-      "Alerte de niveau jaune. Des phénomènes habituels mais localement dangereux sont possibles."
+      "Alerte de niveau jaune. Des phénomènes habituels mais localement dangereux sont possibles.",
+      "Vigilance jaune activée. Rien d'alarmant, mais restez informés au fil de la journée.",
+      "Un phénomène météo modéré est signalé pour votre secteur. Prudence de mise.",
+      "Vigilance jaune en cours. Adaptez vos activités extérieures si besoin."
     ],
     spicy: [
       "Météo-France lance une vigilance jaune. Sois moyennement attentif, ou fais semblant, comme d'habitude.",
       "Alerte jaune déclarée. Pas de quoi paniquer, mais évite de rester planté sous l'unique arbre mort du parc comme un glandu.",
-      "C'est jaune, c'est mou, c'est la vigilance jaune. Idéal pour avoir un sujet de conversation inutile à la machine à café."
+      "C'est jaune, c'est mou, c'est la vigilance jaune. Idéal pour avoir un sujet de conversation inutile à la machine à café.",
+      "Vigilance jaune : le niveau 'on te préviens, mais on n'y croit qu'à moitié nous-mêmes'.",
+      "Alerte jaune activée. Prends un k-way, prends l'air blasé, la routine quoi.",
+      "Météo-France a jugé bon de t'envoyer un jaune. Fais-en ce que tu veux, personne ne vérifiera."
     ],
     vulgar: [
       "Vigilance jaune de merde activée. C'est juste pour que Météo-France se couvre si une branche te tombe sur le groin.",
       "Alerte jaune. Rien de bien folichon, ne mouille pas ton short tout de suite, c'est gérable.",
-      "Vigilance jaune de feignasse. Fais gaffe mais sans trop te fouler les méninges non plus."
+      "Vigilance jaune de feignasse. Fais gaffe mais sans trop te fouler les méninges non plus.",
+      "Jaune de merde en approche. Autant dire que dalle, mais bon, fallait cocher la case.",
+      "Alerte jaune, le niveau flemme de la vigilance. Sors si tu veux, on s'en cogne un peu.",
+      "Vigilance jaune activée pour la forme. Fais pas le con quand même, ducon."
     ]
   },
   alert_orange: {
     safe: [
       "Vigilance Orange : phénomènes très dangereux prévus. Soyez extrêmement vigilants !",
       "Alerte orange déclarée. Évitez les déplacements non indispensables et les activités en plein air.",
-      "Météo-France conseille la plus grande vigilance. Suivez scrupuleusement les consignes de sécurité."
+      "Météo-France conseille la plus grande vigilance. Suivez scrupuleusement les consignes de sécurité.",
+      "Vigilance orange activée pour votre secteur. Sécurisez vos affaires extérieures dès maintenant.",
+      "Phénomène dangereux annoncé. Limitez les déplacements et restez informés des consignes locales.",
+      "Alerte orange en vigueur. La prudence doit primer sur toute autre activité aujourd'hui."
     ],
     spicy: [
       "Vigilance orange ! Attache ton trampoline et tes derniers espoirs de passer un week-end tranquille.",
       "Alerte orange active. Reste planqué au chaud au lieu de faire le aventurier du dimanche. On n'a pas envie de te chercher dans un fossé.",
-      "Niveau d'alerte orange. Les éléments vont coopérer pour te pourrir la vie de manière organisée et agressive."
+      "Niveau d'alerte orange. Les éléments vont coopérer pour te pourrir la vie de manière organisée et agressive.",
+      "Orange activé. Le ciel a décidé de prendre ta journée au sérieux, contrairement à toi.",
+      "Vigilance orange : le moment où Météo-France arrête de plaisanter. Toi aussi, pour une fois.",
+      "Alerte orange sérieuse. Range le trampoline, le barbecue et ta fierté de bricoleur du dimanche."
     ],
     vulgar: [
       "ATTENTION BORDEL ! Vigilance orange déclarée ! Ça va secouer sévère, range tes affaires avant que le vent ne te les foute chez le voisin.",
       "Alerte orange de niveau vénère. Sors de là si tu veux pas te faire dégommer le portrait par une tuile volante.",
-      "Vigilance de bâtard orange active. Ne fais pas le mariolle dehors sous peine de leçon d'humilité naturelle."
+      "Vigilance de bâtard orange active. Ne fais pas le mariolle dehors sous peine de leçon d'humilité naturelle.",
+      "Orange de merde activé. Range tout ce qui traîne dehors avant que ça devienne un projectile.",
+      "Alerte orange sérieuse, connard. Cette fois c'est pas pour la déco, bouge tes fesses à l'abri.",
+      "Vigilance orange qui pique. Le ciel est vénère, évite de jouer au con dehors aujourd'hui."
     ]
   },
   alert_red: {
     safe: [
       "ALERTE ROUGE VIGILANCE ABSOLUE : Phénomènes météorologiques d'intensité exceptionnelle en cours ou prévus.",
       "Danger extrême déclaré. Restez impérativement à l'abri, ne vous déplacez sous aucun prétexte.",
-      "Météo-France alerte de dangers majeurs pour la sécurité des personnes. Respectez les consignes des autorités."
+      "Météo-France alerte de dangers majeurs pour la sécurité des personnes. Respectez les consignes des autorités.",
+      "Vigilance rouge activée. La situation est exceptionnelle, suivez impérativement les recommandations officielles.",
+      "Danger imminent pour la sécurité des personnes et des biens. Ne prenez aucun risque.",
+      "Alerte rouge en vigueur. Restez chez vous et suivez l'évolution de la situation."
     ],
     spicy: [
       "ALERTE ROUGE ! L'apocalypse locale est en cours de téléchargement. Si tu sors maintenant, c'est de la sélection naturelle pure et dure.",
       "Alerte rouge totale ! Reste cloîtré chez toi, ferme les volets, fais des prières et commence à stocker de l'eau tiède.",
-      "Vigilance rouge absolue. À ce niveau, même les arbres préfèrent s'asseoir. Reste vissé à ton canapé !"
+      "Vigilance rouge absolue. À ce niveau, même les arbres préfèrent s'asseoir. Reste vissé à ton canapé !",
+      "Rouge activé. C'est le niveau où Météo-France arrête les blagues et toi aussi, pour une fois dans ta vie.",
+      "Alerte rouge maximale. Ferme tout, reste planqué, ce n'est vraiment pas le moment de faire le malin.",
+      "Vigilance rouge : le ciel ne rigole plus du tout. Toi non plus, s'il te plaît, pour une fois."
     ],
     vulgar: [
       "ALERTE ROUGE DE MORT ! C'est la fin du monde dehors, ne sors même pas un orteil de ton taudis sous peine de désintégration.",
       "Bordel de merde, alerte rouge maximale ! Planque tout ce que tu possèdes et prie pour que ton toit ne s'envole pas dans l'espace.",
-      "Sélection naturelle de niveau rouge sang activée. Reste chez toi ou crève comme le dernier des imbéciles !"
+      "Sélection naturelle de niveau rouge sang activée. Reste chez toi ou crève comme le dernier des imbéciles !",
+      "ALERTE ROUGE DE FOU FURIEUX ! Bouge pas ton cul dehors, sérieux, c'est pas le moment de faire le con.",
+      "Rouge de bâtard activé. Cloître-toi chez toi et ferme ta gueule et tes volets, dans cet ordre.",
+      "Bordel, c'est l'apocalypse rouge ! Reste planqué si tu veux voir demain, connard chanceux."
     ]
   },
   heatwave: {
     safe: [
       "La température dépasse les 30°C. Hydratez-vous régulièrement et privilégiez les endroits frais.",
       "Alerte forte chaleur déclarée. Pensez à limiter vos efforts physiques aux heures les plus chaudes de la journée.",
-      "Il fait chaud aujourd'hui ! Restez au frais autant que possible."
+      "Il fait chaud aujourd'hui ! Restez au frais autant que possible.",
+      "Températures élevées en cours. Buvez régulièrement de l'eau, même sans avoir soif.",
+      "Chaleur marquée aujourd'hui. Évitez le soleil direct entre 12h et 16h.",
+      "Alerte chaleur. Pensez aux personnes fragiles autour de vous et gardez les volets fermés en journée."
     ],
     spicy: [
       "Alerte 30°C ! Préparez la crème indice 500, le short à fleurs de mauvais goût, et n'oubliez pas d'arroser votre cactus d'intérieur qui s'auto-combuste doucement.",
       "Il fait plus de 30°C dehors. Vos fesses vont fusionner instantanément avec les sièges de voiture en simili-cuir s'ils sont exposés au soleil. Réfugiez-vous près du frigo !",
-      "30°C atteints ! À ce niveau-là, notre climatiseur imaginaire fait grève et les pingouins réclament des glaces au poisson. Bonne chance à votre carcasse humide !"
+      "30°C atteints ! À ce niveau-là, notre climatiseur imaginaire fait grève et les pingouins réclament des glaces au poisson. Bonne chance à votre carcasse humide !",
+      "Plus de 30°C. Le bitume fond, ton déodorant capitule et ta motivation aussi. Tout se tient.",
+      "Canicule officielle. Ton ventilateur va bosser plus dur que toi cette semaine, et c'est pas peu dire.",
+      "30°C+ dehors. C'est le moment de tester si le carrelage de la salle de bain est vraiment plus frais que ton lit."
     ],
     vulgar: [
       "PUTAIN DE CANICULE ! Plus de 30 degrés ! C'est officiel, on cuit comme des merguez oubliées au barbecue. Sors la bière fraîche ou assume ton trépas !",
       "Chaleur de malade à plus de 30°C. Ton slip va fondre sur tes fesses si tu ne te réfugies pas dare-dare dans un congélo !",
-      "Bordel de merde, plus de 30°C ! On transpire comme dans un hammam low-cost, prépare-toi à puer de la gueule et des aisselles d'ici 5 minutes !"
+      "Bordel de merde, plus de 30°C ! On transpire comme dans un hammam low-cost, prépare-toi à puer de la gueule et des aisselles d'ici 5 minutes !",
+      "Putain de four ambiant activé. Plus de 30°C dehors, tu vas fondre comme une merde au soleil.",
+      "Chaleur de bâtard. Colle-toi devant le frigo ouvert et assume ta facture d'électricité de merde.",
+      "Ça cogne à plus de 30°C. Ta transpiration va faire fuir même les moustiques, bravo champion."
     ]
   }
 };
@@ -301,37 +354,44 @@ const END_STORM_TITLES: Record<HumorLevel, string[]> = {
 };
 
 const ALERT_YELLOW_TITLES: Record<HumorLevel, string[]> = {
-  safe: ["⚠️ Vigilance Jaune", "🔔 Soyez attentifs", "👀 Risque météo léger"],
-  spicy: ["⚠️ Alerte Jaune : Vigilance de canapé", "🔔 C'est Jaune, c'est mollasson", "👀 Petit avertissement mesquin"],
-  vulgar: ["🤬 VIGILANCE JAUNE À LA CON", "🖕 Alerte jaune, fait pas chier", "💀 Risques de merde minimes"]
+  safe: ["⚠️ Vigilance Jaune", "🔔 Soyez attentifs", "👀 Risque météo léger", "⚠️ Point de vigilance", "🔔 Petit avertissement météo", "👀 Restez informés"],
+  spicy: ["⚠️ Alerte Jaune : Vigilance de canapé", "🔔 C'est Jaune, c'est mollasson", "👀 Petit avertissement mesquin", "⚠️ Jaune : le niveau flemme", "🔔 Alerte jaune, pour la forme", "👀 Vigilance sans conviction"],
+  vulgar: ["🤬 VIGILANCE JAUNE À LA CON", "🖕 Alerte jaune, fait pas chier", "💀 Risques de merde minimes", "🤬 Jaune de merde activé", "🖕 Vigilance flemmarde de service", "💀 Alerte jaune bidon"]
 };
 
 const ALERT_ORANGE_TITLES: Record<HumorLevel, string[]> = {
-  safe: ["⚠️ Vigilance Orange", "🔥 Soyez très vigilants", "🚨 Alerte météo importante"],
-  spicy: ["⚡ Alerte Orange : Ça rigole plus !", "🔥 Alerte Orange : Alerte sérieuse !", "🚨 Préparez l'abri anti-cataclysme !"],
-  vulgar: ["😱 ALERTE ORANGE SA MÈRE !", "🖕 Gros bordel météo imminent", "🚨 Planque ton cul, ça va fesser !"]
+  safe: ["⚠️ Vigilance Orange", "🔥 Soyez très vigilants", "🚨 Alerte météo importante", "⚠️ Vigilance renforcée", "🔥 Prudence requise", "🚨 Alerte orange en cours"],
+  spicy: ["⚡ Alerte Orange : Ça rigole plus !", "🔥 Alerte Orange : Alerte sérieuse !", "🚨 Préparez l'abri anti-cataclysme !", "⚡ Orange activé : range tes affaires", "🔥 Ça se corse dehors", "🚨 Alerte orange, pour de vrai cette fois"],
+  vulgar: ["😱 ALERTE ORANGE SA MÈRE !", "🖕 Gros bordel météo imminent", "🚨 Planque ton cul, ça va fesser !", "😱 Orange de bâtard activé", "🖕 Ça va secouer sévère, connard", "🚨 Vigilance orange, magne-toi"]
 };
 
 const ALERT_RED_TITLES: Record<HumorLevel, string[]> = {
-  safe: ["🟥 VIGILANCE ROUGE ABSOLUE", "🚨 DANGER TRÈS GRAND", "💀 Alerte météo maximale"],
-  spicy: ["🚨 ALERTE ROUGE : Apocalypse imminente !", "💀 ALERTE ROUGE : Stay home ou crève", "🟥 Alerte Rouge : Sélection naturelle active !"],
-  vulgar: ["🤬 APOCALYPSE ROUGE FRACASSANTE !", "💀 ROUGE SANG : C'est la fin du monde", "🖕 Alerte Rouge absolue de mes deux !"]
+  safe: ["🟥 VIGILANCE ROUGE ABSOLUE", "🚨 DANGER TRÈS GRAND", "💀 Alerte météo maximale", "🟥 Danger extrême déclaré", "🚨 Vigilance rouge active", "💀 Situation exceptionnelle"],
+  spicy: ["🚨 ALERTE ROUGE : Apocalypse imminente !", "💀 ALERTE ROUGE : Stay home ou crève", "🟥 Alerte Rouge : Sélection naturelle active !", "🚨 Rouge activé : ferme tout", "💀 Ça ne rigole plus du tout", "🟥 Vigilance rouge, sérieusement"],
+  vulgar: ["🤬 APOCALYPSE ROUGE FRACASSANTE !", "💀 ROUGE SANG : C'est la fin du monde", "🖕 Alerte Rouge absolue de mes deux !", "🤬 Rouge de bâtard, bouge ton cul", "💀 C'est chaud, planque-toi", "🖕 Vigilance rouge, magne-toi sérieux"]
 };
 
 const HEATWAVE_TITLES: Record<HumorLevel, string[]> = {
-  safe: ["🌡️ Alerte Forte Chaleur", "☀️ 30°C Dépassés !", "🥵 Soleil intense"],
-  spicy: ["🌡️ Alerte Merguez !", "🔥 Cuisson moyenne à point !", "🏖️ Sahara Express ! Préservation vitale."],
-  vulgar: ["🥵 ENFER EN COURS !", "🤬 PUTAIN DE CHALEUR TRICOLORE !", "🖕 Chaud comme la braise sa mère !"]
+  safe: ["🌡️ Alerte Forte Chaleur", "☀️ 30°C Dépassés !", "🥵 Soleil intense", "🌡️ Chaleur marquée", "☀️ Températures élevées", "🥵 Vigilance canicule"],
+  spicy: ["🌡️ Alerte Merguez !", "🔥 Cuisson moyenne à point !", "🏖️ Sahara Express ! Préservation vitale.", "🌡️ Ça cogne dur dehors", "🔥 Mode four ambiant activé", "🏖️ Canicule : planque-toi au frais"],
+  vulgar: ["🥵 ENFER EN COURS !", "🤬 PUTAIN DE CHALEUR TRICOLORE !", "🖕 Chaud comme la braise sa mère !", "🥵 Four de merde activé", "🤬 Ça crame dehors, connard", "🖕 Canicule de bâtard en cours"]
 };
 
 /**
- * Get a random funny alert message based on rain intensity with a spicy/biting humor
+ * Get a random funny alert message based on rain intensity, honoring the
+ * subscriber's chosen humor level ('safe' never returns 'vulgar' content).
  * @param intensity The rain level ('light', 'moderate', 'heavy', 'thunderstorm', etc.)
- * @param _level Ignored parameter, kept for compatibility
+ * @param level The subscriber's humor level. Defaults to 'spicy' (the app default).
+ * @param excludeMessageIndex If provided, skip this message index when possible
+ *   (the caller's last-sent index) so the same line doesn't fire twice in a row.
  */
-export function getFunnyRainMessage(intensity: NotificationIntensity, _level?: HumorLevel): { title: string, message: string } {
+export function getFunnyRainMessage(
+  intensity: NotificationIntensity,
+  level: HumorLevel = 'spicy',
+  excludeMessageIndex?: number
+): { title: string, message: string, messageIndex: number } {
   const chosenMessages = RAIN_MESSAGES[intensity];
-  
+
   let chosenTitlesMap = ALERT_TITLES;
   if (intensity === 'thunderstorm') {
     chosenTitlesMap = THUNDERSTORM_TITLES;
@@ -349,24 +409,19 @@ export function getFunnyRainMessage(intensity: NotificationIntensity, _level?: H
     chosenTitlesMap = HEATWAVE_TITLES;
   }
 
-  const messages = [
-    ...(chosenMessages?.spicy || []),
-    ...(chosenMessages?.vulgar || []),
-    ...(chosenMessages?.safe || [])
-  ];
-  
-  const titles = [
-    ...(chosenTitlesMap?.spicy || []),
-    ...(chosenTitlesMap?.vulgar || []),
-    ...(chosenTitlesMap?.safe || [])
-  ];
-  
-  const randomMsgIndex = Math.floor(Math.random() * (messages.length || 1));
+  const messages = chosenMessages?.[level] || chosenMessages?.spicy || [];
+  const titles = chosenTitlesMap?.[level] || chosenTitlesMap?.spicy || [];
+
+  let messageIndex = Math.floor(Math.random() * (messages.length || 1));
+  if (messages.length > 1 && messageIndex === excludeMessageIndex) {
+    messageIndex = (messageIndex + 1) % messages.length;
+  }
   const randomTitleIndex = Math.floor(Math.random() * (titles.length || 1));
-  
+
   return {
     title: titles[randomTitleIndex] || "Alerte Météo",
-    message: messages[randomMsgIndex] || "Le temps change."
+    message: messages[messageIndex] || "Le temps change.",
+    messageIndex
   };
 }
 
@@ -533,66 +588,75 @@ export function getZodiacSign(dateStr: string): string {
 
 export function getDaysUntilChristmas(now: Date): number {
   const currentYear = now.getFullYear();
-  let christmasDate = new Date(currentYear, 11, 25, 0, 0, 0, 0); // Dec 25
-  
-  // If we are already on or past Christmas Day of this year, calculate for next year
-  if (now.getTime() > christmasDate.getTime()) {
-    christmasDate = new Date(currentYear + 1, 11, 25, 0, 0, 0, 0);
+  // Compare date-only, not the exact instant: this function is called with
+  // a 6h-10h timestamp on the 25th itself, and time-of-day was always past
+  // midnight, which made the "on or past Christmas" check below roll over
+  // to *next* year's countdown (~365) on Christmas Day. Truncating both
+  // sides to midnight makes Dec 25 correctly resolve to 0.
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let christmasDate = new Date(currentYear, 11, 25);
+
+  if (today.getTime() > christmasDate.getTime()) {
+    christmasDate = new Date(currentYear + 1, 11, 25);
   }
-  
-  // Calculate difference in days
-  const diffTime = christmasDate.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  const diffTime = christmasDate.getTime() - today.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
 }
 
+// This message only ever fires on Christmas Day itself (see weatherCheck.ts),
+// so it's dedicated "it's happening today" copy rather than a J-X countdown —
+// a "J-0" counter read oddly, and reusing getDaysUntilChristmas here used to
+// return ~365 anyway (see the fix above). The index is keyed off the year so
+// the exact same line doesn't repeat verbatim every single Christmas.
 export function getSarcasticChristmasCountdownMessage(now: Date, humorLevel: HumorLevel): { title: string, body: string } {
-  const days = getDaysUntilChristmas(now);
-  
   const titleTemplates: Record<HumorLevel, string[]> = {
     safe: [
-      `🎄 Alerte Cadeaux : J-${days} avant Noël !`,
-      `🎅 Décompte de Noël : Encore ${days} jours`,
-      `🎁 J-${days} : L'esprit de Noël arrive (lentement)`
+      `🎄 C'est Noël aujourd'hui !`,
+      `🎅 Joyeux Noël !`,
+      `🎁 Le grand jour est arrivé`,
+      `🔔 Noël est là !`
     ],
     spicy: [
-      `🎄 Plus que ${days} jours d'hypocrisie avant Noël !`,
-      `💸 J-${days} avant la faillite bancaire de décembre !`,
-      `🎅 Alerte Gremlins Festifs : J-${days} avant le calvaire familial`,
-      `🤮 Ruine & Dinde Sèche : J-${days} d'attente forcée`
+      `🎄 C'est le jour J : l'hypocrisie festive commence maintenant !`,
+      `💸 Joyeux Noël, ton compte en banque ne s'en remettra pas`,
+      `🎅 Alerte Gremlins Festifs : c'est aujourd'hui le calvaire familial`,
+      `🤮 Dinde sèche et sourires forcés : bienvenue à Noël`
     ],
     vulgar: [
-      `🖕 Plus que ${days} jours avant de te taper tes oncles bourrés !`,
-      `💸 J-${days} et ta thune va encore dégager pour des cadeaux de merde !`,
-      `🤮 Foutue dinde et hypocrisie de fin de saison : J-${days} avant le drame !`,
-      `🎄 J-${days} avant que le gros barbu rouge te l'enfonce bien profond !`
+      `🖕 C'est le jour de te taper tes oncles bourrés, joyeux Noël !`,
+      `💸 Noël aujourd'hui, ta thune vient de partir en fumée pour des cadeaux de merde`,
+      `🤮 Dinde trop sèche et hypocrisie de saison : bienvenue au drame annuel`,
+      `🎄 Aujourd'hui le gros barbu rouge te l'enfonce bien profond, joyeux Noël`
     ]
   };
 
   const bodyTemplates: Record<HumorLevel, string[]> = {
     safe: [
-      `Encore ${days} jours d'attente studieuse. Pensez à commencer à lister vos envies et à préparer votre lettre au Père Noël.`,
-      `Le temps passe vite ! Plus que ${days} jours avant de déguster les chocolats sous le sapin de Noël.`,
-      `Déjà J-${days} avant la dinde aux marrons. C'est le moment de réfléchir aux cadeaux pour vos proches !`
+      `Le grand jour est enfin arrivé. Profitez de vos proches et de la magie de Noël !`,
+      `Joyeux Noël ! Prenez le temps de savourer les chocolats et la compagnie de ceux que vous aimez.`,
+      `C'est aujourd'hui la dinde aux marrons. Passez un merveilleux réveillon en famille !`,
+      `Noël est là. Que cette journée soit douce, chaleureuse et pleine de bons moments.`
     ],
     spicy: [
-      `Plus que ${days} jours à tirer avant d'offrir une bougie parfumée à 5€ achetée à la va-vite que ta belle-mère va immédiatement revendre sur Vinted ou offrir à quelqu'un d'autre. Courage.`,
-      `Prépare ton foie et ton compte en banque : encore ${days} jours avant de feindre l'extase devant une écharpe beige tricotée par une grand-tante qui a perdu la vue en 1998.`,
-      `J-${days} ! C'est exactement le moment idéal pour paniquer sur le prix du saumon fumé alors qu'on est en plein milieu de l'année. Ne change rien à tes priorités financières désastreuses.`,
-      `À J-${days} de Noël, ton compte d'épargne tremble déjà d'effroi. Rappelle-toi que le bonheur ne s'achète pas, sauf pour les gosses qui pleureront si c'est pas la bonne console de jeux.`
+      `C'est le jour où tu vas offrir une bougie parfumée à 5€ que ta belle-mère revendra sur Vinted avant ce soir. Courage.`,
+      `Prépare ton foie et ton compte en banque : aujourd'hui c'est l'écharpe beige de la grand-tante qui a perdu la vue en 1998.`,
+      `C'est aujourd'hui qu'il faut feindre la surprise devant un cadeau dont tout le monde connaissait déjà le contenu.`,
+      `Ton compte d'épargne tremble d'effroi depuis ce matin. Rappelle-toi que le bonheur ne s'achète pas, sauf pour les gosses et leur console.`
     ],
     vulgar: [
-      `Bordel, encore ${days} foutus jours de patience avant de devoir embrasser tes cousins insupportables et simuler un orgasme mental devant une boîte de chocolats low-cost périmée.`,
-      `J-${days} ! Prépare ta thune de merde pour acheter des cadeaux à des gens que tu ne peux pas blairer les 11 autres mois de l'année. Joyeux capitalisme cul-béni !`,
-      `Plus que ${days} jours de répit avant de bouffer de la dinde farcie trop sèche et d'avoir une chiasse monumentale à cause des huîtres tièdes de ton oncle Gérard. Magnifique perspective.`,
-      `Optimise ton foie d'oie dès maintenant : encore ${days} jours de calvaire avant le marathon de bouffe grasse, l'overdose de champagne tiède et les disputes politiques à table.`
+      `Bordel, c'est le jour où tu dois embrasser tes cousins insupportables et simuler l'extase devant une boîte de chocolats low-cost périmée.`,
+      `Aujourd'hui tu claques ta thune de merde sur des gens que tu ne peux pas blairer les 364 autres jours de l'année. Joyeux capitalisme cul-béni !`,
+      `C'est le jour de bouffer de la dinde trop sèche et de choper la chiasse à cause des huîtres tièdes de ton oncle Gérard. Magnifique.`,
+      `Optimise ton foie d'oie maintenant : marathon de bouffe grasse, champagne tiède et disputes politiques à table démarrent aujourd'hui.`
     ]
   };
 
   const titles = titleTemplates[humorLevel] || titleTemplates['spicy'];
   const bodies = bodyTemplates[humorLevel] || bodyTemplates['spicy'];
 
-  const idx = now.getMonth() % titles.length;
+  const idx = now.getFullYear() % titles.length;
 
   return {
     title: titles[idx],
@@ -929,11 +993,12 @@ export function getMorningBriefContent(humorLevel: HumorLevel, birthDate: string
   const weatherPool = weatherPhrases[humorLevel]?.[weatherType] || weatherPhrases.spicy[weatherType];
   const signPool = signPhrases[sign] || ["L'univers t'ignore aujourd'hui. C'est mérité."];
 
-  const wIdx = dayOfMonth % weatherPool.length;
-  const sIdx = (dayOfMonth * 7 + sign.length) % signPool.length;
-
-  const weatherLine = weatherPool[wIdx];
-  const signLine = signPool[sIdx];
+  // Random rather than keyed off the date: this is the fallback used when the
+  // AI brief (Mistral) is unavailable, and a date-keyed index made it repeat
+  // the exact same line every ~6-9 days whenever the AI stayed down for a
+  // stretch — the opposite of what a "fallback for variety" should do.
+  const weatherLine = weatherPool[Math.floor(Math.random() * weatherPool.length)];
+  const signLine = signPool[Math.floor(Math.random() * signPool.length)];
 
   const titles = [
     `🔮 ${dayOfWeek} ${sign}`,
@@ -941,7 +1006,7 @@ export function getMorningBriefContent(humorLevel: HumorLevel, birthDate: string
     `⚡ Brief ${sign}`,
     `🌀 ${dayOfWeek} pour ${sign}`,
   ];
-  const title = titles[dayOfMonth % titles.length];
+  const title = titles[Math.floor(Math.random() * titles.length)];
 
   // The factual weather line now lives in the brief's "anchor" (see
   // utils/morningAnchor.ts), so the body stays a single punchline. Repeating
