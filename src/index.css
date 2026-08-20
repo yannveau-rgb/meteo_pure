@@ -253,7 +253,10 @@
 
 /* Super premium frosting classes */
 .glass-premium {
-  background: linear-gradient(135deg, rgba(8, 20, 52, 0.55) 0%, rgba(255, 255, 255, 0.12) 100%);
+  /* Light corner darkened from 0.12 to 0.06: at the busiest part of the
+     gradient, text at 50% white opacity dropped to a ~2.2:1 contrast ratio
+     against it — under half the WCAG AA floor for body text (4.5:1). */
+  background: linear-gradient(135deg, rgba(8, 20, 52, 0.55) 0%, rgba(255, 255, 255, 0.06) 100%);
   backdrop-filter: blur(40px) saturate(170%);
   -webkit-backdrop-filter: blur(40px) saturate(170%);
   border: 1.5px solid rgba(255, 255, 255, 0.32);

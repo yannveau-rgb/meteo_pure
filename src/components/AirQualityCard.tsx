@@ -18,7 +18,7 @@ const SEVERITY_STYLES: Record<string, string> = {
 };
 
 const POLLEN_STYLES: Record<PollenLevel, string> = {
-  none: 'text-white/40 bg-white/5 border-white/10',
+  none: 'text-white/60 bg-white/5 border-white/10',
   low: 'text-white/60 bg-white/5 border-white/10',
   moderate: 'text-amber-300 bg-amber-500/15 border-amber-400/30',
   high: 'text-orange-300 bg-orange-500/15 border-orange-400/30',

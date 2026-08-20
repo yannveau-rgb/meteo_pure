@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { VigilanceStatus } from '../types';
 import { ShieldAlert, X, Sun } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { getLevelStyle } from '../utils/levelStyles';
 
 interface VigilanceCardProps {
   vigilance: VigilanceStatus;
@@ -12,44 +13,7 @@ interface VigilanceCardProps {
 export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'red': return {
-        bg: 'bg-rose-500',
-        pingBg: 'bg-rose-400',
-        text: 'text-rose-400',
-        border: 'border-rose-500/30 bg-rose-500/5',
-        shadow: 'shadow-[0_0_10px_rgba(244,63,94,0.6)]',
-        colorLabel: 'Rouge'
-      };
-      case 'orange': return {
-        bg: 'bg-amber-500',
-        pingBg: 'bg-amber-400',
-        text: 'text-amber-400',
-        border: 'border-amber-500/30 bg-amber-500/5',
-        shadow: 'shadow-[0_0_10px_rgba(245,158,11,0.6)]',
-        colorLabel: 'Orange'
-      };
-      case 'yellow': return {
-        bg: 'bg-yellow-400',
-        pingBg: 'bg-yellow-300',
-        text: 'text-yellow-400',
-        border: 'border-yellow-400/30 bg-yellow-400/5',
-        shadow: 'shadow-[0_0_10px_rgba(250,204,21,0.6)]',
-        colorLabel: 'Jaune'
-      };
-      default: return {
-        bg: 'bg-emerald-500',
-        pingBg: 'bg-emerald-400',
-        text: 'text-emerald-400',
-        border: 'border-emerald-500/30 bg-emerald-500/5',
-        shadow: 'shadow-[0_0_10px_rgba(16,185,129,0.6)]',
-        colorLabel: 'Verte'
-      };
-    }
-  };
-
-  const activeColor = getLevelColor(vigilance.globalLevel);
+  const activeColor = getLevelStyle(vigilance.globalLevel);
 
   return (
     <>
@@ -61,7 +25,7 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
         {/* Card Header */}
         <div className="flex justify-between items-center text-[10px] text-white/50 uppercase tracking-widest leading-none select-none w-full">
           <span>Rayonnement UV</span>
-          <Sun className="w-3.5 h-3.5 text-white/40" />
+          <Sun className="w-3.5 h-3.5 text-white/60" />
         </div>
         
         {/* Custom Central UV Display */}
@@ -70,10 +34,10 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
             <span className="text-4xl sm:text-5xl font-black text-white tracking-widest drop-shadow-[0_2px_10px_rgba(255,255,255,0.15)]">
               {uvIndex !== undefined ? uvIndex : '—'}
             </span>
-            <span className="text-xs font-semibold text-white/30 tracking-tight">/11</span>
+            <span className="text-xs font-semibold text-white/60 tracking-tight">/11</span>
           </div>
 
-          <span className={`text-[8.5px] font-black tracking-wider uppercase mt-2 rounded-full px-2.5 py-0.5 border select-none transition-colors duration-300 ${
+          <span className={`text-[9px] font-black tracking-wider uppercase mt-2 rounded-full px-2.5 py-0.5 border select-none transition-colors duration-300 ${
             uvIndex !== undefined && uvIndex >= 11 ? 'bg-violet-500/10 text-violet-300 border-violet-500/30' :
             uvIndex !== undefined && uvIndex >= 8 ? 'bg-rose-500/10 text-rose-300 border-rose-500/30' :
             uvIndex !== undefined && uvIndex >= 6 ? 'bg-orange-500/10 text-orange-300 border-orange-500/30' :
@@ -90,17 +54,17 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
 
         {/* Elegant Bottom Border & Vigilance Status */}
         <div className="w-full border-t border-white/5 pt-2 flex items-center justify-between gap-2 select-none">
-          <span className="text-[9px] text-white/40 font-medium tracking-wide uppercase">Vigilance</span>
+          <span className="text-[9px] text-white/60 font-medium tracking-wide uppercase">Vigilance</span>
           
-          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9.5px] font-bold tracking-normal ${activeColor.border}`}>
+          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9.5px] font-bold tracking-normal ${activeColor.outline}`}>
             <span className="relative flex h-1.5 w-1.5">
               {vigilance.globalLevel !== 'green' && (
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${activeColor.bg}`}></span>
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${activeColor.pingDot}`}></span>
               )}
-              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${activeColor.bg}`}></span>
+              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${activeColor.dot}`}></span>
             </span>
-            <span className={activeColor.text}>
-              {activeColor.colorLabel}
+            <span className={activeColor.accentText}>
+              {activeColor.label}
             </span>
           </div>
         </div>
@@ -138,15 +102,10 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
 
                 {/* SCROLLABLE BODY CONTENT */}
                 <div className="flex-1 overflow-y-auto no-scrollbar p-5 space-y-4">
-                  <div className={`p-4 rounded-2xl border flex items-start gap-3 ${
-                    vigilance.globalLevel === 'red' ? 'bg-rose-50 border-rose-100 text-rose-905' :
-                    vigilance.globalLevel === 'orange' ? 'bg-amber-50 border-amber-100 text-amber-905' :
-                    vigilance.globalLevel === 'yellow' ? 'bg-yellow-50/70 border-yellow-100 text-yellow-905' :
-                    'bg-emerald-50 border-emerald-100 text-emerald-905'
-                  }`}>
-                    <div className={`w-3.5 h-3.5 rounded-full mt-1 shrink-0 ${activeColor.bg}`} />
+                  <div className={`p-4 rounded-2xl border flex items-start gap-3 ${activeColor.lightBlock}`}>
+                    <div className={`w-3.5 h-3.5 rounded-full mt-1 shrink-0 ${activeColor.dot}`} />
                     <div>
-                      <h4 className="font-bold text-sm text-slate-900">Vigilance : niveau {activeColor.colorLabel}</h4>
+                      <h4 className="font-bold text-sm text-slate-900">Vigilance : niveau {activeColor.label}</h4>
                       <p className="text-xs leading-relaxed mt-1 text-slate-700">
                         {vigilance.globalLevel === 'red' && "Alerte maximale. Des phénomènes météorologiques exceptionnels de très forte intensité sont prévus."}
                         {vigilance.globalLevel === 'orange' && "Soyez très vigilants. Des phénomènes météorologiques dangereux sont prévus."}
@@ -189,13 +148,13 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
                   {/* Grid of the 4 key categories */}
                   <div className="space-y-3">
                     {vigilance.categories.map((cat, i) => {
-                      const catColor = getLevelColor(cat.level);
+                      const catColor = getLevelStyle(cat.level);
                       return (
                         <div key={i} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-sm transition-all text-slate-800">
                           <div className="flex justify-between items-center">
                             <span className="font-bold text-sm text-slate-800">{cat.name}</span>
-                            <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${catColor.text}`}>
-                              {catColor.colorLabel}
+                            <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${catColor.lightBlock}`}>
+                              {catColor.label}
                             </span>
                           </div>
                           <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">

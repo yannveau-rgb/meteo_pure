@@ -207,7 +207,7 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setShowDropdown(searchResults.length > 0)}
           />
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/60">
             {isSearching ? (
               <Loader2 className="w-4 h-4 animate-spin text-sky-400" />
             ) : (
@@ -310,7 +310,7 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
               <div className="grid grid-cols-2 gap-3.5">
                 {/* Left Card: Main Commune */}
                 <div className="bg-gradient-to-br from-indigo-950/40 to-slate-900/50 border border-white/10 p-4 rounded-2xl flex flex-col items-center text-center space-y-2.5 relative overflow-hidden">
-                  <div className="absolute top-2.5 left-2.5 bg-sky-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase">
+                  <div className="absolute top-2.5 left-2.5 bg-sky-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase">
                     Ici
                   </div>
                   <span className="text-xs uppercase font-bold tracking-wider text-slate-300 mt-1 truncate max-w-full">
@@ -330,7 +330,7 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
 
                 {/* Right Card: Compared Commune */}
                 <div className="bg-gradient-to-br from-sky-950/40 to-slate-900/50 border border-sky-500/20 p-4 rounded-2xl flex flex-col items-center text-center space-y-2.5 relative overflow-hidden">
-                  <div className="absolute top-2.5 right-2.5 bg-orange-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase">
+                  <div className="absolute top-2.5 right-2.5 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase">
                     Cible
                   </div>
                   <span className="text-xs uppercase font-bold tracking-wider text-amber-300 mt-1 truncate max-w-full">
@@ -470,7 +470,7 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
               exit={{ opacity: 0 }}
               className="flex-1 flex flex-col items-center justify-center py-14 text-center space-y-4"
             >
-              <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
+              <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60">
                 <ArrowRightLeft className="w-8 h-8 animate-pulse text-sky-400" />
               </div>
               <div>

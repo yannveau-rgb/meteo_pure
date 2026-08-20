@@ -71,13 +71,13 @@ export default function RainForecast({ rainData }: RainForecastProps) {
             {/* Drops & Labels below cylinders mimicking screenshot */}
             <div className="flex flex-col items-center mt-1 space-y-0.5">
               <svg 
-                className={`w-1.5 h-1.5 transition-colors ${item.percentage > 10 ? 'text-sky-300' : 'text-white/40'}`} 
+                className={`w-1.5 h-1.5 transition-colors ${item.percentage > 10 ? 'text-sky-300' : 'text-white/60'}`} 
                 fill="currentColor" 
                 viewBox="0 0 24 24"
               >
                 <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
               </svg>
-              <span className="text-[8px] text-white/50 font-bold leading-none">
+              <span className="text-[9px] text-white/50 font-bold leading-none">
                 +{item.minutes}m
               </span>
             </div>

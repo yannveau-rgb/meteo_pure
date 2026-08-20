@@ -15,14 +15,17 @@ function getWindDir(deg?: number): string {
   return dirs[Math.round(deg / 45) % 8];
 }
 
+// Was duplicated verbatim further down for the 7-day UV row — one copy now.
+function getUvRiskStyle(uv: number): { label: string; color: string } {
+  if (uv <= 2) return { label: 'Faible', color: 'text-green-300 bg-green-500/20 border-green-500/30' };
+  if (uv <= 5) return { label: 'Modéré', color: 'text-amber-300 bg-amber-500/20 border-amber-500/30' };
+  if (uv <= 7) return { label: 'Élevé', color: 'text-orange-300 bg-orange-500/20 border-orange-500/30' };
+  if (uv <= 10) return { label: 'Très élevé', color: 'text-red-300 bg-red-500/20 border-red-500/30' };
+  return { label: 'Extrême', color: 'text-fuchsia-300 bg-fuchsia-500/20 border-fuchsia-500/30' };
+}
+
 export default function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }: WeatherStatsProps) {
-  const uvRisk = (() => {
-    if (uvIndex <= 2) return { label: 'Faible', color: 'text-green-300 bg-green-500/20 border-green-500/30' };
-    if (uvIndex <= 5) return { label: 'Modéré', color: 'text-amber-300 bg-amber-500/20 border-amber-500/30' };
-    if (uvIndex <= 7) return { label: 'Élevé', color: 'text-orange-300 bg-orange-500/20 border-orange-500/30' };
-    if (uvIndex <= 10) return { label: 'Très élevé', color: 'text-red-300 bg-red-500/20 border-red-500/30' };
-    return { label: 'Extrême', color: 'text-fuchsia-300 bg-fuchsia-500/20 border-fuchsia-500/30' };
-  })();
+  const uvRisk = getUvRiskStyle(uvIndex);
 
   // Calculate relative indicator representation
   const windPercentage = Math.min(95, Math.max(5, (current.windSpeed / 50) * 100));
@@ -128,7 +131,7 @@ export default function WeatherStats({ current, uvIndex = 3, hourlyData = [], da
         <div className="pt-3.5 border-t border-white/10 space-y-1.5">
           <div className="flex justify-between items-center text-[10px] font-bold text-sky-200 uppercase tracking-widest">
             <span>Tendance Temp. (6h venir)</span>
-            <span className="text-[9px] text-white/40 normal-case font-medium">Jusqu'à {featuredHourly[featuredHourly.length - 1].time}</span>
+            <span className="text-[9px] text-white/60 normal-case font-medium">Jusqu'à {featuredHourly[featuredHourly.length - 1].time}</span>
           </div>
           
           <div className="relative bg-white/5 rounded-2xl p-2.5 border border-white/10 overflow-hidden">
@@ -181,7 +184,7 @@ export default function WeatherStats({ current, uvIndex = 3, hourlyData = [], da
                     x={pt.x} 
                     y={pt.y - 6} 
                     textAnchor="middle" 
-                    className="text-[8px] font-bold fill-white/95 select-none"
+                    className="text-[9px] font-bold fill-white/95 select-none"
                   >
                     {Math.round(pt.temp)}°
                   </text>
@@ -190,7 +193,7 @@ export default function WeatherStats({ current, uvIndex = 3, hourlyData = [], da
             </svg>
             
             {/* Highly legible and aligned hours array row */}
-            <div className="flex justify-between px-1.5 text-[8px] font-bold text-white/40 pt-1.5 border-t border-white/5">
+            <div className="flex justify-between px-1.5 text-[9px] font-bold text-white/60 pt-1.5 border-t border-white/5">
               {spark.points.map((pt, idx) => (
                 <span key={idx} className="w-8 text-center">{pt.time}</span>
               ))}
@@ -200,19 +203,11 @@ export default function WeatherStats({ current, uvIndex = 3, hourlyData = [], da
       )}
 
       {dailyData && dailyData.length > 0 && (() => {
-        const getUvRisk = (uv: number) => {
-          if (uv <= 2) return { label: 'Faible', color: 'text-green-300 bg-green-500/20 border-green-500/30' };
-          if (uv <= 5) return { label: 'Modéré', color: 'text-amber-300 bg-amber-500/20 border-amber-500/30' };
-          if (uv <= 7) return { label: 'Élevé', color: 'text-orange-300 bg-orange-500/20 border-orange-500/30' };
-          if (uv <= 10) return { label: 'Très élevé', color: 'text-red-300 bg-red-500/20 border-red-500/30' };
-          return { label: 'Extrême', color: 'text-fuchsia-300 bg-fuchsia-500/20 border-fuchsia-500/30' };
-        };
-
         return (
           <div className="pt-3.5 border-t border-white/10 space-y-1.5">
             <div className="flex justify-between items-center text-[10px] font-bold text-amber-200 uppercase tracking-widest">
               <span>Indice UV (7 jours à venir)</span>
-              <span className="text-[9px] text-white/40 normal-case font-medium">Évolution prévue</span>
+              <span className="text-[9px] text-white/60 normal-case font-medium">Évolution prévue</span>
             </div>
             
             <div className="relative bg-white/5 rounded-2xl p-2 border border-white/10 overflow-hidden h-28 w-full">
@@ -245,12 +240,12 @@ export default function WeatherStats({ current, uvIndex = 3, hourlyData = [], da
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const val = Number(payload[0].value);
-                        const risk = getUvRisk(val);
+                        const risk = getUvRiskStyle(val);
                         return (
                           <div className="bg-slate-900/90 backdrop-blur-md border border-white/15 rounded-xl p-2 text-[10px] font-semibold text-white shadow-xl flex flex-col items-center">
                             <p className="text-white/60 font-bold mb-0.5">{payload[0].payload.name}</p>
                             <p className="text-amber-300 font-extrabold text-xs">UV : {val}</p>
-                            <span className={`inline-block px-1.5 py-0.5 rounded-full text-[8px] mt-1 font-extrabold border ${risk.color}`}>
+                            <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] mt-1 font-extrabold border ${risk.color}`}>
                               {risk.label}
                             </span>
                           </div>

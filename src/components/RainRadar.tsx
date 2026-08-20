@@ -185,7 +185,7 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
           </div>
         )}
         {error && (
-          <div className="flex items-center justify-center h-52 text-white/40 text-xs">
+          <div className="flex items-center justify-center h-52 text-white/60 text-xs">
             Radar indisponible
           </div>
         )}
@@ -204,7 +204,7 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
             className="w-full h-1 accent-sky-400 cursor-pointer"
             aria-label="Curseur radar"
           />
-          <div className="flex justify-between text-[8px] text-white/35 font-bold">
+          <div className="flex justify-between text-[9px] text-white/60 font-bold">
             <span>Passé</span>
             <span className="text-amber-400/70">◆ Nowcast ({frames.length - pastCount} pas)</span>
             <span>+30 min</span>

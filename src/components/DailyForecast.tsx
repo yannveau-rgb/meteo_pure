@@ -178,7 +178,7 @@ export default function DailyForecast({ dailyData, cityName, selectedDayIndex, o
       <div className="text-[10px] text-white/50 border-t border-white/10 pt-2 text-center font-semibold space-y-1">
         <p>Modèles Météo-France à maille fine (AROME / ARPEGE)</p>
         {dailyData.some(d => d.confidence && d.confidence !== 'high') && (
-          <p className="flex items-center justify-center gap-1.5 text-white/35 font-medium normal-case">
+          <p className="flex items-center justify-center gap-1.5 text-white/60 font-medium normal-case">
             <span className="w-1.5 h-1.5 rounded-full bg-orange-400/80" />
             Les modèles divergent sur ces jours
           </p>

@@ -431,7 +431,7 @@ export default function App() {
                           <span className="text-sm text-white font-medium capitalize">{moon.name}</span>
                         </div>
                       </div>
-                      <div className="text-[10px] text-white/40 font-mono">
+                      <div className="text-[10px] text-white/60 font-mono">
                         {Math.round(moon.phase * 100)}%
                       </div>
                     </div>
@@ -514,7 +514,7 @@ export default function App() {
                         {aiBrief.anchor.split(' · ').map((seg, i, arr) => (
                           <span key={i}>
                             {seg}
-                            {i < arr.length - 1 && <span className="text-white/40 mx-1.5">·</span>}
+                            {i < arr.length - 1 && <span className="text-white/60 mx-1.5">·</span>}
                           </span>
                         ))}
                       </p>
@@ -618,19 +618,25 @@ export default function App() {
               className="absolute top-[calc(env(safe-area-inset-top,0px)+1rem)] sm:top-4 left-4 right-4 z-50 pointer-events-auto"
             >
               <div className={`glass-premium p-4 rounded-2xl shadow-2xl border flex flex-col gap-1.5 relative overflow-hidden backdrop-blur-2xl ${
-                activeToast.intensity === 'heavy' ? 'border-red-500/40 bg-red-950/75 text-red-100' : 
-                activeToast.intensity === 'moderate' ? 'border-amber-500/40 bg-amber-950/75 text-amber-100' : 
+                activeToast.intensity === 'alert_red' ? 'border-rose-500/50 bg-rose-950/75 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.4)]' :
+                activeToast.intensity === 'alert_orange' ? 'border-amber-500/50 bg-amber-950/75 text-amber-100 shadow-[0_0_15px_rgba(245,158,11,0.35)]' :
+                activeToast.intensity === 'alert_yellow' ? 'border-yellow-400/50 bg-yellow-950/75 text-yellow-100' :
+                activeToast.intensity === 'heavy' ? 'border-red-500/40 bg-red-950/75 text-red-100' :
+                activeToast.intensity === 'moderate' ? 'border-amber-500/40 bg-amber-950/75 text-amber-100' :
                 activeToast.intensity === 'thunderstorm' ? 'border-purple-500/50 bg-indigo-950/75 text-indigo-100 shadow-[0_0_15px_rgba(168,85,247,0.35)]' :
                 activeToast.intensity === 'heatwave' ? 'border-orange-500/50 bg-orange-950/75 text-orange-100 shadow-[0_0_15px_rgba(249,115,22,0.35)]' :
                 'border-sky-500/40 bg-sky-950/75 text-sky-100'
               }`}>
                 {/* Visual Timer Progress Bar */}
-                <motion.div 
+                <motion.div
                   initial={{ width: "100%" }}
                   animate={{ width: "0%" }}
                   transition={{ duration: 6, ease: 'linear' }}
                   onAnimationComplete={() => setActiveToast(null)}
                   className={`absolute bottom-0 left-0 h-1 ${
+                    activeToast.intensity === 'alert_red' ? 'bg-rose-500' :
+                    activeToast.intensity === 'alert_orange' ? 'bg-amber-500' :
+                    activeToast.intensity === 'alert_yellow' ? 'bg-yellow-400' :
                     activeToast.intensity === 'heavy' ? 'bg-red-500' :
                     activeToast.intensity === 'moderate' ? 'bg-amber-400' :
                     activeToast.intensity === 'thunderstorm' ? 'bg-purple-500' :
@@ -638,38 +644,44 @@ export default function App() {
                     'bg-sky-400'
                   }`}
                 />
-                
+
                 <div className="flex justify-between items-start gap-2">
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm select-none">
-                      {activeToast.intensity === 'heavy' ? '🤬' :
-                       activeToast.intensity === 'moderate' ? '☔' : 
-                       activeToast.intensity === 'thunderstorm' ? '⚡' : 
+                      {activeToast.intensity === 'alert_red' ? '🟥' :
+                       activeToast.intensity === 'alert_orange' ? '🟧' :
+                       activeToast.intensity === 'alert_yellow' ? '🟨' :
+                       activeToast.intensity === 'heavy' ? '🤬' :
+                       activeToast.intensity === 'moderate' ? '☔' :
+                       activeToast.intensity === 'thunderstorm' ? '⚡' :
                        activeToast.intensity === 'heatwave' ? '🌡️' : '💧'}
                     </span>
                     <h4 className="font-extrabold text-[11px] tracking-wider uppercase">
                       {activeToast.title}
                     </h4>
                   </div>
-                  
-                  <button 
+
+                  <button
                     onClick={() => setActiveToast(null)}
                     className="p-1 rounded-full hover:bg-white/10 active:scale-95 transition-all text-white/50 hover:text-white"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                
+
                 <p className="text-[11px] font-bold leading-relaxed pl-0.5 text-white/95 mt-0.5">
                   "{activeToast.message}"
                 </p>
-                
+
                 <div className="flex justify-between items-center text-[9px] text-white/50 font-extrabold pl-0.5 mt-1 uppercase select-none tracking-widest">
                   <span>Météo à {currentCommune.nom}</span>
-                  <span className="bg-white/15 px-1.5 py-0.5 rounded-full text-[8px] text-white/90">
-                    {activeToast.intensity === 'heavy' ? 'Averse forte' :
-                     activeToast.intensity === 'moderate' ? 'Pluie soutenue' : 
-                     activeToast.intensity === 'thunderstorm' ? 'Orage électrique !' : 
+                  <span className="bg-white/15 px-1.5 py-0.5 rounded-full text-[9px] text-white/90">
+                    {activeToast.intensity === 'alert_red' ? 'Vigilance rouge' :
+                     activeToast.intensity === 'alert_orange' ? 'Vigilance orange' :
+                     activeToast.intensity === 'alert_yellow' ? 'Vigilance jaune' :
+                     activeToast.intensity === 'heavy' ? 'Averse forte' :
+                     activeToast.intensity === 'moderate' ? 'Pluie soutenue' :
+                     activeToast.intensity === 'thunderstorm' ? 'Orage électrique !' :
                      activeToast.intensity === 'heatwave' ? 'Chaleur Intense !' : 'Petite bruine'}
                   </span>
                 </div>
@@ -726,7 +738,7 @@ export default function App() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute top-12 left-0 right-0 max-h-56 overflow-y-auto bg-white/95 backdrop-blur-xl border border-slate-205 shadow-2xl rounded-2xl z-40 no-scrollbar text-slate-800"
+                    className="absolute top-12 left-0 right-0 max-h-56 overflow-y-auto bg-white/95 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-2xl z-40 no-scrollbar text-slate-800"
                   >
                     {searchResults.map((commune, index) => (
                       <button
@@ -794,7 +806,7 @@ export default function App() {
                         setFavorites(favorites.filter(f => f.code !== fav.code));
                       }}
                       aria-label={`Retirer ${fav.nom} des favoris`}
-                      className="text-white/40 hover:text-rose-300 hover:scale-110 transition-transform cursor-pointer focus:outline-none p-1 -m-0.5"
+                      className="text-white/60 hover:text-rose-300 hover:scale-110 transition-transform cursor-pointer focus:outline-none p-1 -m-0.5"
                       title="Retirer des favoris"
                     >
                       <X className="w-3 h-3" />
@@ -872,7 +884,7 @@ export default function App() {
                         <span>{frenchDate || 'Aujourd\'hui'}</span>
                         {saintDuJour && (
                           <>
-                            <span className="text-white/30 text-xs font-light">•</span>
+                            <span className="text-white/60 text-xs font-light">•</span>
                             <span className="text-[12px] text-white/60 font-medium bg-white/5 border border-white/10 px-2 py-0.5 rounded-full" title="Saint(e) du jour">
                               ✨ Fête : {saintDuJour}
                             </span>
@@ -1302,7 +1314,7 @@ export default function App() {
                       </div>
 
                       {/* Informative helper tips for bulletproof push notifications */}
-                      <div className="bg-black/30 p-2.5 rounded-xl border border-white/5 space-y-1.5 text-[8.5px] text-white/60 leading-normal">
+                      <div className="bg-black/30 p-2.5 rounded-xl border border-white/5 space-y-1.5 text-[9px] text-white/60 leading-normal">
                         <div className="flex items-start gap-1.5">
                           <div className="w-1.5 h-1.5 rounded-full bg-sky-400 mt-1 shrink-0" />
                           <p>
@@ -1339,12 +1351,12 @@ export default function App() {
                           <p className="text-[9.5px] text-white/80 leading-relaxed mt-1">
                             Recevez chaque matin à 8h00 un récapitulatif ultra-personnalisé mêlant sarcasme météo et prédictions astrales croustillantes liées à votre signe astrologique !
                           </p>
-                          <p className="text-[8.5px] text-white/50 leading-relaxed mt-1.5 italic">
+                          <p className="text-[9px] text-white/50 leading-relaxed mt-1.5 italic">
                             Pour activer cette fonctionnalité, veuillez renseigner votre date de naissance complète ci-dessous :
                           </p>
                         </div>
                         {notifSettings.birthDate && (
-                          <span className="text-[8px] bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded-md font-black tracking-wider uppercase shrink-0">
+                          <span className="text-[9px] bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded-md font-black tracking-wider uppercase shrink-0">
                             ACTIF
                           </span>
                         )}
@@ -1650,7 +1662,7 @@ export default function App() {
 
                 {/* Dev / Application information */}
                 <div className="text-center py-1">
-                  <span className="text-[9px] text-white/30 font-bold uppercase tracking-widest">
+                  <span className="text-[9px] text-white/60 font-bold uppercase tracking-widest">
                     Météo Pure v3.0
                   </span>
                 </div>

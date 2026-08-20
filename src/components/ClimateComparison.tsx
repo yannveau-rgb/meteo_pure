@@ -127,7 +127,7 @@ export default function ClimateComparison({
             <div className="w-1.5 h-1.5 rounded-full bg-slate-900" />
           </div>
         </div>
-        <div className="text-[8px] text-white/30 text-center select-none pt-0.5">
+        <div className="text-[9px] text-white/60 text-center select-none pt-0.5">
           Aide de lecture : le point marque le niveau d'écart moyen face aux normales de 1991-2020.
         </div>
       </div>

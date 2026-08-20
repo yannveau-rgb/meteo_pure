@@ -177,7 +177,7 @@ export function getWeatherUI(code: number, isNight = false): WeatherUI {
         label: 'Bruine légère',
         icon: CloudDrizzle,
         colorClass: 'text-sky-300',
-        bgGradient: 'from-sky-300 via-slate-300 to-sky-150'
+        bgGradient: 'from-sky-300 via-slate-300 to-sky-100'
       };
     case 56:
     case 57:
@@ -193,8 +193,8 @@ export function getWeatherUI(code: number, isNight = false): WeatherUI {
       return {
         label: 'Pluie faible',
         icon: CloudRain,
-        colorClass: 'text-sky-350',
-        bgGradient: 'from-sky-450 via-indigo-200 to-indigo-100'
+        colorClass: 'text-sky-400',
+        bgGradient: 'from-sky-400 via-indigo-200 to-indigo-100'
       };
     case 63:
     case 65:
