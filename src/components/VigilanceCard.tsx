@@ -31,8 +31,8 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
             {/* Vigilance active: it outranks UV, so it takes the card's
                 dominant slot instead of a small footer pill. */}
             <div className="flex justify-between items-center text-[10px] text-white/50 uppercase tracking-widest leading-none select-none w-full">
-              <span>Vigilance météo</span>
-              <ShieldAlert className={`w-3.5 h-3.5 ${activeColor.accentText}`} />
+              <span className="whitespace-nowrap">Vigilance</span>
+              <ShieldAlert className={`w-3.5 h-3.5 shrink-0 ${activeColor.accentText}`} />
             </div>
 
             <div className="flex flex-col items-center justify-center my-auto py-1 select-none w-full">
@@ -43,13 +43,13 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
               <span className={`text-2xl sm:text-3xl font-black tracking-wide drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)] ${activeColor.accentText}`}>
                 {activeColor.label}
               </span>
-              <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider mt-1">Appuyez pour les détails</span>
+              <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider mt-1 whitespace-nowrap">Voir les détails</span>
             </div>
 
             <div className="w-full border-t border-white/5 pt-2 flex items-center justify-between gap-2 select-none">
-              <span className="text-[9px] text-white/60 font-medium tracking-wide uppercase">Rayonnement UV</span>
-              <div className="flex items-center gap-1.5 text-[9.5px] font-bold text-white/80">
-                <Sun className="w-3 h-3 text-amber-300" />
+              <span className="text-[9px] text-white/60 font-medium tracking-wide uppercase whitespace-nowrap">UV</span>
+              <div className="flex items-center gap-1.5 text-[9.5px] font-bold text-white/80 whitespace-nowrap">
+                <Sun className="w-3 h-3 text-amber-300 shrink-0" />
                 {uvIndex !== undefined ? `${uvIndex} / 11` : 'Indisponible'}
               </div>
             </div>
