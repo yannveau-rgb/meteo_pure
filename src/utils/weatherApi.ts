@@ -36,6 +36,51 @@ function skyCodeFromCloudCover(cloudCover: number | null | undefined, fallback: 
   return 3;                      // Couvert
 }
 
+// Météo-France returns precipitation_probability as null for all 240 hours on
+// /v1/meteofrance, so this field is always somebody else's. Take it from the
+// GFS/ICON blend, whose probability is calibrated, rather than from ECMWF —
+// its 0.25° grid is the coarsest of the three for showers.
+export const PREFER_BLEND = new Set(['precipitation_probability', 'precipitation_probability_max']);
+
+/**
+ * 3-way coalesce of a daily/hourly series object: prefers whatever `primary`
+ * already has, then `secondary`, then `tertiary` — except for the
+ * PREFER_BLEND fields, which prefer `tertiary` over `secondary`. Mutates and
+ * returns `primary`.
+ */
+export function mergeSeries(primary: any, secondary: any, tertiary: any) {
+  const keys = new Set<string>([
+    ...Object.keys(secondary ?? {}),
+    ...Object.keys(tertiary ?? {}),
+  ]);
+  for (const key of keys) {
+    const sources = PREFER_BLEND.has(key) ? [tertiary, secondary] : [secondary, tertiary];
+    for (const source of sources) {
+      const srcArr = source?.[key];
+      if (!Array.isArray(srcArr)) continue;
+      const curArr = primary[key];
+      if (!curArr || !Array.isArray(curArr)) {
+        primary[key] = [...srcArr];
+        continue;
+      }
+      const maxLength = Math.max(curArr.length, srcArr.length);
+      const merged: any[] = [];
+      for (let i = 0; i < maxLength; i++) {
+        const curVal = curArr[i];
+        if (i < curArr.length && curVal !== null && curVal !== undefined) {
+          merged.push(curVal);
+        } else if (i < srcArr.length && srcArr[i] !== null && srcArr[i] !== undefined) {
+          merged.push(srcArr[i]);
+        } else {
+          merged.push(i < curArr.length ? curArr[i] : null);
+        }
+      }
+      primary[key] = merged;
+    }
+  }
+  return primary;
+}
+
 /**
  * Search French communes by name via the official geo.api.gouv.fr.
  */
@@ -107,46 +152,6 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
   const models: { meteoFrance: ModelSeries; ecmwf: ModelSeries; blend: ModelSeries } = {
     meteoFrance: empty(), ecmwf: empty(), blend: empty(),
   };
-
-  // Météo-France returns precipitation_probability as null for all 240 hours on
-  // /v1/meteofrance, so this field is always somebody else's. Take it from the
-  // GFS/ICON blend, whose probability is calibrated, rather than from ECMWF —
-  // its 0.25° grid is the coarsest of the three for showers.
-  const PREFER_BLEND = new Set(['precipitation_probability', 'precipitation_probability_max']);
-
-  // 3-way coalesce: prefer AROME/ARPEGE, then ECMWF (for the medium-range gap),
-  // then the generic blend as last resort — except for the fields above.
-  function mergeSeries(primary: any, secondary: any, tertiary: any) {
-    const keys = new Set<string>([
-      ...Object.keys(secondary ?? {}),
-      ...Object.keys(tertiary ?? {}),
-    ]);
-    for (const key of keys) {
-      const sources = PREFER_BLEND.has(key) ? [tertiary, secondary] : [secondary, tertiary];
-      for (const source of sources) {
-        const srcArr = source?.[key];
-        if (!Array.isArray(srcArr)) continue;
-        const curArr = primary[key];
-        if (!curArr || !Array.isArray(curArr)) {
-          primary[key] = [...srcArr];
-          continue;
-        }
-        const maxLength = Math.max(curArr.length, srcArr.length);
-        const merged: any[] = [];
-        for (let i = 0; i < maxLength; i++) {
-          const curVal = curArr[i];
-          if (i < curArr.length && curVal !== null && curVal !== undefined) {
-            merged.push(curVal);
-          } else if (i < srcArr.length && srcArr[i] !== null && srcArr[i] !== undefined) {
-            merged.push(srcArr[i]);
-          } else {
-            merged.push(i < curArr.length ? curArr[i] : null);
-          }
-        }
-        primary[key] = merged;
-      }
-    }
-  }
 
   // Requested alongside the models rather than after them — a measurement that
   // arrives half a second late is a measurement the user never sees.

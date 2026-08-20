@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CurrentWeather, HourlyForecastItem, DailyForecastItem } from '../types';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 
 interface WeatherStatsProps {
   current: CurrentWeather;
@@ -26,6 +25,7 @@ function getUvRiskStyle(uv: number): { label: string; color: string } {
 
 function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }: WeatherStatsProps) {
   const uvRisk = getUvRiskStyle(uvIndex);
+  const [selectedUvDay, setSelectedUvDay] = useState<number | null>(null);
 
   // Calculate relative indicator representation
   const windPercentage = Math.min(95, Math.max(5, (current.windSpeed / 50) * 100));
@@ -70,6 +70,43 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
   };
 
   const spark = drawSparkline();
+
+  // Same SVG sparkline technique as drawSparkline above, for the 7-day UV
+  // row — this used to be a Recharts LineChart, 109 kB gzip pulled in
+  // (preloaded in <head>, so it wasn't even lazy) for 7 data points.
+  const drawUvChart = () => {
+    const days = dailyData.filter(d => d.uvIndex !== undefined);
+    if (days.length < 2) return null;
+
+    const values = days.map(d => d.uvIndex as number);
+    const maxUv = Math.max(...values, 1);
+
+    const width = 320;
+    const height = 90;
+    const paddingX = 14;
+    const paddingTop = 12;
+    const paddingBottom = 20;
+
+    const plotWidth = width - paddingX * 2;
+    const plotHeight = height - paddingTop - paddingBottom;
+
+    const points = days.map((d, idx) => {
+      const uv = d.uvIndex as number;
+      const x = paddingX + idx * (plotWidth / (days.length - 1));
+      const y = paddingTop + plotHeight - (uv / maxUv) * plotHeight;
+      return { x, y, uv, label: d.date.split(' ')[0] };
+    });
+
+    let pathD = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      pathD += ` L ${points[i].x} ${points[i].y}`;
+    }
+
+    return { points, pathD, width, height };
+  };
+
+  const uvChart = drawUvChart();
+  const selectedUv = uvChart && selectedUvDay !== null ? uvChart.points[selectedUvDay] : null;
   
   return (
     <div 
@@ -202,72 +239,50 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
         </div>
       )}
 
-      {dailyData && dailyData.length > 0 && (() => {
-        return (
-          <div className="pt-3.5 border-t border-white/10 space-y-1.5">
-            <div className="flex justify-between items-center text-[10px] font-bold text-amber-200 uppercase tracking-widest">
-              <span>Indice UV (7 jours à venir)</span>
-              <span className="text-[9px] text-white/60 normal-case font-medium">Évolution prévue</span>
-            </div>
-            
-            <div className="relative bg-white/5 rounded-2xl p-2 border border-white/10 overflow-hidden h-28 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={dailyData.map(d => ({
-                    name: d.date.split(' ')[0],
-                    uv: d.uvIndex,
-                  }))}
-                  margin={{ top: 12, right: 10, left: -25, bottom: -5 }}
+      {uvChart && (
+        <div className="pt-3.5 border-t border-white/10 space-y-1.5">
+          <div className="flex justify-between items-center text-[10px] font-bold text-amber-200 uppercase tracking-widest">
+            <span>Indice UV (7 jours à venir)</span>
+            <span className="text-[9px] text-white/60 normal-case font-medium">
+              {selectedUv ? `${selectedUv.label} · UV ${selectedUv.uv}` : 'Évolution prévue'}
+            </span>
+          </div>
+
+          <div className="relative bg-white/5 rounded-2xl p-2 border border-white/10 overflow-hidden">
+            <svg
+              viewBox={`0 0 ${uvChart.width} ${uvChart.height}`}
+              className="w-full h-20"
+              onMouseLeave={() => setSelectedUvDay(null)}
+            >
+              <path d={uvChart.pathD} fill="none" stroke="#fbbf24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              {uvChart.points.map((pt, idx) => (
+                <g
+                  key={idx}
+                  onMouseEnter={() => setSelectedUvDay(idx)}
+                  onClick={() => setSelectedUvDay(selectedUvDay === idx ? null : idx)}
+                  className="cursor-pointer"
                 >
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="rgba(255,255,255,0.4)" 
-                    fontSize={8}
-                    tickLine={false}
-                    axisLine={false}
-                    fontWeight="bold"
-                  />
-                  <YAxis 
-                    stroke="rgba(255,255,255,0.4)" 
-                    fontSize={8}
-                    tickLine={false}
-                    axisLine={false}
-                    domain={[0, 'dataMax + 1']}
-                    fontWeight="bold"
-                  />
-                  <Tooltip
-                    cursor={{ stroke: 'rgba(255, 255, 255, 0.1)', strokeWidth: 1 }}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const val = Number(payload[0].value);
-                        const risk = getUvRiskStyle(val);
-                        return (
-                          <div className="bg-slate-900/90 backdrop-blur-md border border-white/15 rounded-xl p-2 text-[10px] font-semibold text-white shadow-xl flex flex-col items-center">
-                            <p className="text-white/60 font-bold mb-0.5">{payload[0].payload.name}</p>
-                            <p className="text-amber-300 font-extrabold text-xs">UV : {val}</p>
-                            <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] mt-1 font-extrabold border ${risk.color}`}>
-                              {risk.label}
-                            </span>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="uv"
+                  {/* Generous invisible hit target — the visible dot alone is too small to tap reliably */}
+                  <circle cx={pt.x} cy={pt.y} r={10} fill="transparent" />
+                  <circle
+                    cx={pt.x}
+                    cy={pt.y}
+                    r={selectedUvDay === idx ? 4 : 3}
+                    fill={selectedUvDay === idx ? '#fff' : '#1e293b'}
                     stroke="#fbbf24"
-                    strokeWidth={2}
-                    dot={{ r: 3, fill: '#1e293b', stroke: '#fbbf24', strokeWidth: 1.5 }}
-                    activeDot={{ r: 5, fill: '#fff', stroke: '#f59e0b', strokeWidth: 2 }}
+                    strokeWidth={selectedUvDay === idx ? 2 : 1.5}
                   />
-                </LineChart>
-              </ResponsiveContainer>
+                </g>
+              ))}
+            </svg>
+            <div className="flex justify-between px-1.5 text-[8px] font-bold text-white/50 uppercase">
+              {uvChart.points.map((pt, idx) => (
+                <span key={idx} className={selectedUvDay === idx ? 'text-amber-200' : ''}>{pt.label}</span>
+              ))}
             </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
     </div>
   );
 }

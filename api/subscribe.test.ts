@@ -6,6 +6,11 @@ const state = { subs: [] as any[] };
 vi.mock('./_lib/storage.js', () => ({
   getSubscriptions: vi.fn(async () => state.subs),
   saveSubscriptions: vi.fn(async (subs: any[]) => { state.subs = subs; }),
+  withSubscriptionsLock: vi.fn(async (fn: (subs: any[]) => Promise<{ subs: any[]; result: any }>) => {
+    const { subs: newSubs, result } = await fn(state.subs);
+    state.subs = newSubs;
+    return result;
+  }),
 }));
 
 import handler from './subscribe.js';
