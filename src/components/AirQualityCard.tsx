@@ -4,6 +4,7 @@ import { Wind, Flower2 } from 'lucide-react';
 import {
   AirQualitySnapshot, getAqiBand, getNotablePollens, POLLEN_LEVEL_LABELS, PollenLevel,
 } from '../utils/airQuality';
+import InfoBadge from './ui/InfoBadge';
 
 interface AirQualityCardProps {
   data: AirQualitySnapshot | null;
@@ -66,13 +67,13 @@ export default function AirQualityCard({ data }: AirQualityCardProps) {
           </div>
           <div className="flex flex-wrap gap-1.5">
             {notable.map(p => (
-              <span
+              <InfoBadge
                 key={p.species}
-                title={`${Math.round(p.value)} grains/m³`}
+                label={`${Math.round(p.value)} grains/m³`}
                 className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${POLLEN_STYLES[p.level]}`}
               >
                 {p.label} · {POLLEN_LEVEL_LABELS[p.level]}
-              </span>
+              </InfoBadge>
             ))}
           </div>
         </div>

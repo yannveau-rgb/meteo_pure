@@ -26,52 +26,81 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
         aria-haspopup="dialog"
         className="w-full text-left glass-premium rounded-3xl p-4 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:brightness-105 hover:scale-[1.02] active:scale-95 h-40 relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60"
       >
-        {/* Card Header */}
-        <div className="flex justify-between items-center text-[10px] text-white/50 uppercase tracking-widest leading-none select-none w-full">
-          <span>Rayonnement UV</span>
-          <Sun className="w-3.5 h-3.5 text-white/60" />
-        </div>
-        
-        {/* Custom Central UV Display */}
-        <div className="flex flex-col items-center justify-center my-auto py-1 select-none w-full">
-          <div className="flex items-baseline justify-center gap-0.5 leading-none">
-            <span className="text-4xl sm:text-5xl font-black text-white tracking-widest drop-shadow-[0_2px_10px_rgba(255,255,255,0.15)]">
-              {uvIndex !== undefined ? uvIndex : '—'}
-            </span>
-            <span className="text-xs font-semibold text-white/60 tracking-tight">/11</span>
-          </div>
+        {vigilance.globalLevel !== 'green' ? (
+          <>
+            {/* Vigilance active: it outranks UV, so it takes the card's
+                dominant slot instead of a small footer pill. */}
+            <div className="flex justify-between items-center text-[10px] text-white/50 uppercase tracking-widest leading-none select-none w-full">
+              <span>Vigilance météo</span>
+              <ShieldAlert className={`w-3.5 h-3.5 ${activeColor.accentText}`} />
+            </div>
 
-          <span className={`text-[9px] font-black tracking-wider uppercase mt-2 rounded-full px-2.5 py-0.5 border select-none transition-colors duration-300 ${
-            uvIndex !== undefined && uvIndex >= 11 ? 'bg-violet-500/10 text-violet-300 border-violet-500/30' :
-            uvIndex !== undefined && uvIndex >= 8 ? 'bg-rose-500/10 text-rose-300 border-rose-500/30' :
-            uvIndex !== undefined && uvIndex >= 6 ? 'bg-orange-500/10 text-orange-300 border-orange-500/30' :
-            uvIndex !== undefined && uvIndex >= 3 ? 'bg-amber-500/10 text-amber-300 border-amber-500/30' :
-            'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-          }`}>
-            {uvIndex === undefined ? 'INDISPONIBLE' :
-             uvIndex >= 11 ? 'UV EXTRÊME' :
-             uvIndex >= 8 ? 'UV TRÈS ÉLEVÉ' :
-             uvIndex >= 6 ? 'UV ÉLEVÉ' :
-             uvIndex >= 3 ? 'UV MODÉRÉ' : 'UV FAIBLE'}
-          </span>
-        </div>
-
-        {/* Elegant Bottom Border & Vigilance Status */}
-        <div className="w-full border-t border-white/5 pt-2 flex items-center justify-between gap-2 select-none">
-          <span className="text-[9px] text-white/60 font-medium tracking-wide uppercase">Vigilance</span>
-          
-          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9.5px] font-bold tracking-normal ${activeColor.outline}`}>
-            <span className="relative flex h-1.5 w-1.5">
-              {vigilance.globalLevel !== 'green' && (
+            <div className="flex flex-col items-center justify-center my-auto py-1 select-none w-full">
+              <span className="relative flex h-3 w-3 mb-2">
                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${activeColor.pingDot}`}></span>
-              )}
-              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${activeColor.dot}`}></span>
-            </span>
-            <span className={activeColor.accentText}>
-              {activeColor.label}
-            </span>
-          </div>
-        </div>
+                <span className={`relative inline-flex rounded-full h-3 w-3 ${activeColor.dot}`}></span>
+              </span>
+              <span className={`text-2xl sm:text-3xl font-black tracking-wide drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)] ${activeColor.accentText}`}>
+                {activeColor.label}
+              </span>
+              <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider mt-1">Appuyez pour les détails</span>
+            </div>
+
+            <div className="w-full border-t border-white/5 pt-2 flex items-center justify-between gap-2 select-none">
+              <span className="text-[9px] text-white/60 font-medium tracking-wide uppercase">Rayonnement UV</span>
+              <div className="flex items-center gap-1.5 text-[9.5px] font-bold text-white/80">
+                <Sun className="w-3 h-3 text-amber-300" />
+                {uvIndex !== undefined ? `${uvIndex} / 11` : 'Indisponible'}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Card Header */}
+            <div className="flex justify-between items-center text-[10px] text-white/50 uppercase tracking-widest leading-none select-none w-full">
+              <span>Rayonnement UV</span>
+              <Sun className="w-3.5 h-3.5 text-white/60" />
+            </div>
+
+            {/* Custom Central UV Display */}
+            <div className="flex flex-col items-center justify-center my-auto py-1 select-none w-full">
+              <div className="flex items-baseline justify-center gap-0.5 leading-none">
+                <span className="text-4xl sm:text-5xl font-black text-white tracking-widest drop-shadow-[0_2px_10px_rgba(255,255,255,0.15)]">
+                  {uvIndex !== undefined ? uvIndex : '—'}
+                </span>
+                <span className="text-xs font-semibold text-white/60 tracking-tight">/11</span>
+              </div>
+
+              <span className={`text-[9px] font-black tracking-wider uppercase mt-2 rounded-full px-2.5 py-0.5 border select-none transition-colors duration-300 ${
+                uvIndex !== undefined && uvIndex >= 11 ? 'bg-violet-500/10 text-violet-300 border-violet-500/30' :
+                uvIndex !== undefined && uvIndex >= 8 ? 'bg-rose-500/10 text-rose-300 border-rose-500/30' :
+                uvIndex !== undefined && uvIndex >= 6 ? 'bg-orange-500/10 text-orange-300 border-orange-500/30' :
+                uvIndex !== undefined && uvIndex >= 3 ? 'bg-amber-500/10 text-amber-300 border-amber-500/30' :
+                'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+              }`}>
+                {uvIndex === undefined ? 'INDISPONIBLE' :
+                 uvIndex >= 11 ? 'UV EXTRÊME' :
+                 uvIndex >= 8 ? 'UV TRÈS ÉLEVÉ' :
+                 uvIndex >= 6 ? 'UV ÉLEVÉ' :
+                 uvIndex >= 3 ? 'UV MODÉRÉ' : 'UV FAIBLE'}
+              </span>
+            </div>
+
+            {/* Elegant Bottom Border & Vigilance Status */}
+            <div className="w-full border-t border-white/5 pt-2 flex items-center justify-between gap-2 select-none">
+              <span className="text-[9px] text-white/60 font-medium tracking-wide uppercase">Vigilance</span>
+
+              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9.5px] font-bold tracking-normal ${activeColor.outline}`}>
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${activeColor.dot}`}></span>
+                </span>
+                <span className={activeColor.accentText}>
+                  {activeColor.label}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
       </button>
 
       {createPortal(

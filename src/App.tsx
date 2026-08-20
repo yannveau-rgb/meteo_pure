@@ -66,6 +66,7 @@ const RainRadar = lazy(() => import('./components/RainRadar'));
 import TiltCard from './components/TiltCard';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import Toggle from './components/ui/Toggle';
+import InfoBadge from './components/ui/InfoBadge';
 import BottomNav from './components/BottomNav';
 import MoonPhasesModal from './components/modals/MoonPhasesModal';
 import MorningBriefModal from './components/modals/MorningBriefModal';
@@ -126,7 +127,7 @@ export default function App() {
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState<boolean>(false);
 
   // Weather data (fetch + 10-min refresh)
-  const { weather, loading, errorMsg, setErrorMsg, staleSince } = useWeatherFetch(currentCommune, () => {
+  const { weather, loading, refreshing, errorMsg, setErrorMsg, staleSince } = useWeatherFetch(currentCommune, () => {
     if (notifSettings.systemEnabled) {
       checkAndFireFullMoonNotification(notifSettings.humorLevel);
     }
@@ -699,6 +700,20 @@ export default function App() {
                             Hors-ligne · relevé de {formatCacheTime(staleSince)}
                           </span>
                         )}
+                        {/* Cached data paints instantly on a city change, then
+                            revalidates silently — without this, that revalidation
+                            was invisible: nothing on screen said a fetch was even
+                            happening. */}
+                        {refreshing && !staleSince && (
+                          <span
+                            className="flex items-center gap-1 normal-case tracking-normal text-[10px] font-semibold text-white/50"
+                            role="status"
+                            aria-live="polite"
+                          >
+                            <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+                            Actualisation…
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -771,9 +786,9 @@ export default function App() {
                               {/* A measured temperature and a forecast one look identical on
                                   screen, so name the difference. Measurement wins the slot. */}
                               {weather.current.observed ? (
-                                <span
+                                <InfoBadge
                                   className="-mt-1 ml-1 px-2 py-0.5 rounded-full bg-emerald-400/25 text-[11px] font-medium text-white/95 whitespace-nowrap"
-                                  title={
+                                  label={
                                     `Relevé de la station ${weather.current.observed.station}, à ${weather.current.observed.distanceKm} km` +
                                     (weather.current.observed.lapseCorrected
                                       ? `, ajusté de ${weather.current.observed.altitudeDeltaM} m de dénivelé`
@@ -783,16 +798,16 @@ export default function App() {
                                   }
                                 >
                                   Relevé · {weather.current.observed.distanceKm} km
-                                </span>
+                                </InfoBadge>
                               ) : weather.current.confidence === 'low' && weather.current.modelSpread !== undefined ? (
                                 /* No station in range: it is a forecast, and the models disagree
                                    by more than 3°C on this very hour. Say so. */
-                                <span
+                                <InfoBadge
                                   className="-mt-1 ml-1 px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-medium text-white/90 whitespace-nowrap"
-                                  title={`Prévision. Les trois modèles s'écartent de ${weather.current.modelSpread} °C sur cette heure ; la valeur affichée est leur médiane.`}
+                                  label={`Prévision. Les trois modèles s'écartent de ${weather.current.modelSpread} °C sur cette heure ; la valeur affichée est leur médiane.`}
                                 >
                                   ± {Math.round(weather.current.modelSpread / 2)}°
-                                </span>
+                                </InfoBadge>
                               ) : null}
                             </div>
 

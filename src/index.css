@@ -91,11 +91,14 @@
   box-shadow: 0 5px 8px rgba(147, 197, 253, 0.3);
 }
 
-/* Drips dripping down the main container */
+/* Drips dripping down the main container. Positioned in % of the container's
+   own height/width rather than fixed px, so it stays near the weather-icon
+   area it was tuned against instead of drifting onto unrelated content as
+   that container's height changes with the active tab or a taller forecast. */
 .liquid-drip-lone {
   position: absolute;
-  top: 360px;
-  right: 110px;
+  top: 38%;
+  right: 8%;
   width: 4px;
   height: 18px;
   background: linear-gradient(to bottom, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.15));

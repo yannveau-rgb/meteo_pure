@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Play, Pause, Radio } from 'lucide-react';
+import { Play, Pause, Radio, CloudOff } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 interface RainRadarProps {
@@ -108,7 +108,10 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
         setFrameIdx(initIdx);
         setIsLoading(false);
       } catch {
-        if (!cancelled) setError(true);
+        if (!cancelled) {
+          setError(true);
+          setIsLoading(false);
+        }
       }
     })();
 
@@ -184,12 +187,15 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
             </div>
           </div>
         )}
-        {error && (
-          <div className="flex items-center justify-center h-52 text-white/60 text-xs">
-            Radar indisponible
+        {error ? (
+          <div className="flex flex-col items-center justify-center text-center p-8 h-[240px] bg-white/10 border-y border-white/20">
+            <CloudOff className="w-10 h-10 text-white mb-2" />
+            <p className="text-sm text-white font-semibold">Radar indisponible.</p>
+            <p className="text-[11px] text-white/60 mt-1">RainViewer ne répond pas pour le moment.</p>
           </div>
+        ) : (
+          <div ref={containerRef} style={{ height: '240px' }} className="w-full" />
         )}
-        <div ref={containerRef} style={{ height: '240px' }} className="w-full" />
       </div>
 
       {/* Timeline scrubber */}
