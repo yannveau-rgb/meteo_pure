@@ -11,7 +11,7 @@ interface HourlyForecastProps {
   sunset?: string;
 }
 
-export default function HourlyForecast({ hourlyData, humidity, dayName = "Aujourd'hui", sunrise, sunset }: HourlyForecastProps) {
+function HourlyForecast({ hourlyData, humidity, dayName = "Aujourd'hui", sunrise, sunset }: HourlyForecastProps) {
   // Allow full horizontal scrolling for the given data
   const displayItems = hourlyData;
 
@@ -23,7 +23,7 @@ export default function HourlyForecast({ hourlyData, humidity, dayName = "Aujour
       {/* Title area displaying the selected day */}
       <div className="flex justify-between items-center text-[10px] font-bold text-sky-200 uppercase tracking-widest pb-1 border-b border-white/10">
         <span>Heure par heure — {dayName}</span>
-        {displayItems.length > 6 && <span className="text-[8px] text-white/40 normal-case">(Défilez ➔)</span>}
+        {displayItems.length > 6 && <span className="text-[9px] text-white/60 normal-case">(Défilez ➔)</span>}
       </div>
 
       {/* Sliding Row of beautiful Pill items */}
@@ -91,3 +91,5 @@ export default function HourlyForecast({ hourlyData, humidity, dayName = "Aujour
     </div>
   );
 }
+
+export default React.memo(HourlyForecast);

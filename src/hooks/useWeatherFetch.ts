@@ -11,6 +11,11 @@ export function useWeatherFetch(commune: Commune, onBackgroundRefresh?: () => vo
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   /** Timestamp of the data currently displayed — null while it is live. */
   const [staleSince, setStaleSince] = useState<number | null>(null);
+  /** True during a silent (no-skeleton) refetch — e.g. switching to a city
+   *  whose cache we already painted. `loading` alone can't cover this: it
+   *  stays false so the cached content keeps showing, which used to leave
+   *  city changes with zero feedback that a fetch was even happening. */
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
   const lastFetchRef = useRef<number>(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -27,6 +32,7 @@ export function useWeatherFetch(commune: Commune, onBackgroundRefresh?: () => vo
     abortRef.current = controller;
 
     if (showSkeleton) setLoading(true);
+    else setRefreshing(true);
     setErrorMsg(null);
     try {
       const data = await fetchWeatherData(commune, controller.signal);
@@ -48,7 +54,10 @@ export function useWeatherFetch(commune: Commune, onBackgroundRefresh?: () => vo
         setErrorMsg('Impossible de charger les données météo. Veuillez réessayer.');
       }
     } finally {
-      if (!controller.signal.aborted && showSkeleton) setLoading(false);
+      if (!controller.signal.aborted) {
+        if (showSkeleton) setLoading(false);
+        else setRefreshing(false);
+      }
     }
   }, [commune, cacheKey]);
 
@@ -88,5 +97,5 @@ export function useWeatherFetch(commune: Commune, onBackgroundRefresh?: () => vo
     };
   }, [cacheKey, load]);
 
-  return { weather, setWeather, loading, errorMsg, setErrorMsg, staleSince };
+  return { weather, setWeather, loading, refreshing, errorMsg, setErrorMsg, staleSince };
 }

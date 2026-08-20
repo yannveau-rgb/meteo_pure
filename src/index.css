@@ -27,13 +27,25 @@
 
 @layer base {
   body {
-    background: linear-gradient(135deg, #123a5e 0%, #1e5a8a 45%, #3a86b8 75%, #0d2e4a 100%);
+    /* Same stops as the app shell's own gradient (App.tsx) — this used to be
+       defined twice with different colors/stops, so the body (visible during
+       iOS's elastic overscroll bounce, and before React hydrates) never
+       quite matched the app surface, and had no night variant at all: it
+       stayed on day colors after dark. App.tsx sets data-daytime on this
+       element once it knows the real sunrise/sunset for the location. */
+    --bg-day: linear-gradient(to bottom right, #123a5e, #2a72a8, #0d2e4a);
+    --bg-night: linear-gradient(to bottom right, #0a1f38, #123a5e, #081b2e);
+    background: var(--bg-day);
     min-height: 100vh;
     overflow-x: hidden;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     /* Inter ships proper optical sizing; enabling it keeps the 96px
        temperature elegant without thinning the 9px labels into mush. */
     font-optical-sizing: auto;
+  }
+
+  body[data-daytime="night"] {
+    background: var(--bg-night);
   }
 
   /* Tabular figures stop the temperature and clock from reflowing as digits
@@ -79,11 +91,14 @@
   box-shadow: 0 5px 8px rgba(147, 197, 253, 0.3);
 }
 
-/* Drips dripping down the main container */
+/* Drips dripping down the main container. Positioned in % of the container's
+   own height/width rather than fixed px, so it stays near the weather-icon
+   area it was tuned against instead of drifting onto unrelated content as
+   that container's height changes with the active tab or a taller forecast. */
 .liquid-drip-lone {
   position: absolute;
-  top: 360px;
-  right: 110px;
+  top: 38%;
+  right: 8%;
   width: 4px;
   height: 18px;
   background: linear-gradient(to bottom, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.15));
@@ -241,7 +256,10 @@
 
 /* Super premium frosting classes */
 .glass-premium {
-  background: linear-gradient(135deg, rgba(8, 20, 52, 0.55) 0%, rgba(255, 255, 255, 0.12) 100%);
+  /* Light corner darkened from 0.12 to 0.06: at the busiest part of the
+     gradient, text at 50% white opacity dropped to a ~2.2:1 contrast ratio
+     against it — under half the WCAG AA floor for body text (4.5:1). */
+  background: linear-gradient(135deg, rgba(8, 20, 52, 0.55) 0%, rgba(255, 255, 255, 0.06) 100%);
   backdrop-filter: blur(40px) saturate(170%);
   -webkit-backdrop-filter: blur(40px) saturate(170%);
   border: 1.5px solid rgba(255, 255, 255, 0.32);
@@ -254,7 +272,12 @@
 }
 
 /* One-shot diagonal light sweep played once when a glass card mounts —
-   deliberately not looping so a screen full of cards doesn't feel busy. */
+   deliberately not looping so a screen full of cards doesn't feel busy.
+   Scoped to :root:not(.sheen-seen): AnimatePresence remounts the active
+   tab's cards every time you switch tabs, which used to replay the sweep
+   across every card simultaneously — exactly the "busy" effect this was
+   meant to avoid. main.tsx adds `.sheen-seen` to <html> shortly after the
+   first load, so this only ever plays once per visit. */
 .glass-premium::before {
   content: '';
   position: absolute;
@@ -267,16 +290,55 @@
   z-index: 1;
 }
 
+:root.sheen-seen .glass-premium::before {
+  animation: none;
+  transform: translateX(120%);
+}
+
 @keyframes glass-sheen {
   to {
     transform: translateX(120%);
   }
 }
 
+/* Subtle lift for small uppercase section titles sitting directly on the
+   glass-premium gradient, whose lighter corner can wash out light text. */
+.header-shadow {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 0.35s ease-out both;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+.animate-shake {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .glass-premium::before {
     animation: none;
     display: none;
+  }
+
+  .animate-fade-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .animate-shake {
+    animation: none;
   }
 
   /* Purely decorative loops are removed outright rather than slowed —

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Play, Pause, Radio } from 'lucide-react';
+import { Play, Pause, Radio, CloudOff } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 interface RainRadarProps {
@@ -22,10 +22,15 @@ function formatFrameLabel(frame: RadarFrame): string {
   return `il y a ${Math.abs(diffMin)} min`;
 }
 
-export default function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
+function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
-  const layerRef = useRef<any>(null);
+  // One persistent tile layer per radar frame, created once and left on the
+  // map at opacity 0 — showFrame() below only flips opacities. This used to
+  // removeLayer()+create a brand new L.tileLayer on every animation tick
+  // (every 550ms, ~110/min while auto-playing), re-requesting tiles from
+  // RainViewer each time and causing a visible flicker between frames.
+  const layersRef = useRef<any[]>([]);
   const LRef = useRef<any>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -44,14 +49,6 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
       try {
         const L = (await import('leaflet')).default;
         LRef.current = L;
-
-        // Fix default icon path broken by Vite bundling
-        delete (L.Icon.Default.prototype as any)._getIconUrl;
-        L.Icon.Default.mergeOptions({
-          iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        });
 
         if (cancelled || !containerRef.current) return;
 
@@ -99,16 +96,22 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
         const lastPastIdx = (data.radar.past?.length ?? 1) - 1;
         const initIdx = Math.max(0, lastPastIdx);
 
-        const radarLayer = L.tileLayer(
-          `https://tilecache.rainviewer.com${allFrames[initIdx].path}/256/{z}/{x}/{y}/6/1_1.png`,
-          { opacity: 0.8, maxZoom: 12, tileSize: 256 }
-        ).addTo(map);
-        layerRef.current = radarLayer;
+        // Create every frame's tile layer once, up front, all at opacity 0
+        // except the one being shown. showFrame() then only toggles opacity.
+        layersRef.current = allFrames.map((f, i) =>
+          L.tileLayer(
+            `https://tilecache.rainviewer.com${f.path}/256/{z}/{x}/{y}/6/1_1.png`,
+            { opacity: i === initIdx ? 0.8 : 0, maxZoom: 12, tileSize: 256 }
+          ).addTo(map)
+        );
 
         setFrameIdx(initIdx);
         setIsLoading(false);
-      } catch (e) {
-        if (!cancelled) setError(true);
+      } catch {
+        if (!cancelled) {
+          setError(true);
+          setIsLoading(false);
+        }
       }
     })();
 
@@ -121,20 +124,13 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
     };
   }, [latitude, longitude, cityName]);
 
-  // Update radar tile layer when frame changes
+  // Switch the visible radar frame by toggling opacity on the pre-built
+  // layers — no layer creation/removal, so no re-fetch and no flicker.
   const showFrame = useCallback((idx: number) => {
-    const L = LRef.current;
-    const map = mapRef.current;
-    if (!L || !map || frames.length === 0) return;
-    const frame = frames[idx];
-    if (layerRef.current) {
-      map.removeLayer(layerRef.current);
-    }
-    layerRef.current = L.tileLayer(
-      `https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/6/1_1.png`,
-      { opacity: 0.75, maxZoom: 18, tileSize: 256 }
-    ).addTo(map);
-  }, [frames]);
+    const layers = layersRef.current;
+    if (layers.length === 0) return;
+    layers.forEach((layer, i) => layer.setOpacity(i === idx ? 0.8 : 0));
+  }, []);
 
   useEffect(() => {
     showFrame(frameIdx);
@@ -191,12 +187,15 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
             </div>
           </div>
         )}
-        {error && (
-          <div className="flex items-center justify-center h-52 text-white/40 text-xs">
-            Radar indisponible
+        {error ? (
+          <div className="flex flex-col items-center justify-center text-center p-8 h-[240px] bg-white/10 border-y border-white/20">
+            <CloudOff className="w-10 h-10 text-white mb-2" />
+            <p className="text-sm text-white font-semibold">Radar indisponible.</p>
+            <p className="text-[11px] text-white/60 mt-1">RainViewer ne répond pas pour le moment.</p>
           </div>
+        ) : (
+          <div ref={containerRef} style={{ height: '240px' }} className="w-full" />
         )}
-        <div ref={containerRef} style={{ height: '240px' }} className="w-full" />
       </div>
 
       {/* Timeline scrubber */}
@@ -211,7 +210,7 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
             className="w-full h-1 accent-sky-400 cursor-pointer"
             aria-label="Curseur radar"
           />
-          <div className="flex justify-between text-[8px] text-white/35 font-bold">
+          <div className="flex justify-between text-[9px] text-white/60 font-bold">
             <span>Passé</span>
             <span className="text-amber-400/70">◆ Nowcast ({frames.length - pastCount} pas)</span>
             <span>+30 min</span>
@@ -221,3 +220,5 @@ export default function RainRadar({ latitude, longitude, cityName }: RainRadarPr
     </div>
   );
 }
+
+export default React.memo(RainRadar);

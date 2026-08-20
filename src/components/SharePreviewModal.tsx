@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Copy, Download, Check, AlertCircle, Share2 } from 'lucide-react';
 import { shareImageNative } from '../utils/shareUtils';
+import { useModalA11y } from '../hooks/useModalA11y';
 
 interface SharePreviewModalProps {
   isOpen: boolean;
@@ -44,6 +45,8 @@ export default function SharePreviewModal({
     }
   };
 
+  const modalRef = useModalA11y(isOpen, onClose);
+
   return createPortal(
     <AnimatePresence>
       {isOpen && (
@@ -59,15 +62,20 @@ export default function SharePreviewModal({
 
           {/* Modal Content Container */}
           <motion.div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-modal-title"
+            tabIndex={-1}
             initial={{ scale: 0.95, y: 15, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 15, opacity: 0 }}
             transition={{ type: 'spring', duration: 0.4 }}
-            className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-slate-900 border border-white/10 shadow-2xl flex flex-col max-h-[90vh]"
+            className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl glass-premium border border-white/20 shadow-2xl flex flex-col max-h-[90vh] focus:outline-none focus:ring-2 focus:ring-sky-400/60"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/15">
-              <h3 className="text-sm font-bold text-sky-200 tracking-wider uppercase">
+              <h3 id="share-modal-title" className="text-sm font-bold text-sky-200 tracking-wider uppercase">
                 {title}
               </h3>
               <button
@@ -116,7 +124,7 @@ export default function SharePreviewModal({
                     <div className="space-y-0.5 animate-fade-in">
                       <h4 className="text-xs font-bold text-sky-200">Conseil de partage</h4>
                       <p className="text-[11px] text-white/70 leading-relaxed">
-                        Si votre navigateur ou l'iframe bloque la copie automatique, vous pouvez toujours **faire un clic droit** ou **un appui long** sur l'image ci-dessus pour la copier/enregistrer, ou cliquer sur **"Télécharger"** ci-dessous !
+                        Si la copie automatique ne fonctionne pas, vous pouvez toujours <strong>faire un clic droit</strong> ou <strong>un appui long</strong> sur l'image ci-dessus pour la copier ou l'enregistrer, ou cliquer sur <strong>« Télécharger »</strong> ci-dessous !
                       </p>
                     </div>
                   </div>

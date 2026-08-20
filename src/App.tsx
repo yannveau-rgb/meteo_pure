@@ -1,41 +1,25 @@
-import React, { lazy, Suspense, useState, useEffect } from 'react';
-import { 
-  MapPin, 
-  Search, 
-  X, 
-  CloudSun, 
-  Map, 
-  ArrowRightLeft,
-  Bell, 
-  Loader2, 
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
+import {
+  MapPin,
+  Search,
+  X,
+  Bell,
+  Loader2,
   Navigation,
   CloudLightning,
   AlertCircle,
-  HelpCircle,
   Clock,
-  Volume2,
-  VolumeX,
-  User,
-  Settings,
-  Trash2,
-  Flame,
   ShieldAlert,
   Sparkles,
-  Smile,
   AlertTriangle,
   Sunrise,
   Sunset,
   Share2,
-  Check,
-  CheckCircle2,
   CloudRain,
-  Star,
-  MessageSquare
+  Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Commune, WeatherData } from './types';
-import { getCommuneByCoords } from './utils/weatherApi';
-import { getWeatherUI, getMoonPhase, getNext7DaysMoonPhases, calculateCurrentUv, isNightTime, isHourNight } from './utils/weatherUtils';
+import { getWeatherUI, getMoonPhase, calculateCurrentUv, isNightTime } from './utils/weatherUtils';
 import { getSaintDuJour } from './utils/ephemeris';
 import { formatCacheTime } from './utils/weatherCache';
 import {
@@ -50,7 +34,6 @@ import {
   updateLastAlertTime,
   syncPushSubscription,
   refreshPushSubscription,
-  HumorLevel,
   NotificationLog,
   NotificationSettings,
   NotificationIntensity,
@@ -68,6 +51,7 @@ import { useMorningBrief } from './hooks/useMorningBrief';
 import { useAirQuality } from './hooks/useAirQuality';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { useShareImage } from './hooks/useShareImage';
+import { useGeolocation } from './hooks/useGeolocation';
 
 // Modular child components
 import RainForecast from './components/RainForecast';
@@ -81,6 +65,13 @@ import ClimateComparison from './components/ClimateComparison';
 const RainRadar = lazy(() => import('./components/RainRadar'));
 import TiltCard from './components/TiltCard';
 import PrivacyPolicy from './components/PrivacyPolicy';
+import Toggle from './components/ui/Toggle';
+import InfoBadge from './components/ui/InfoBadge';
+import BottomNav from './components/BottomNav';
+import MoonPhasesModal from './components/modals/MoonPhasesModal';
+import MorningBriefModal from './components/modals/MorningBriefModal';
+import WelcomePrompt from './components/modals/WelcomePrompt';
+import Toast, { ToastData } from './components/Toast';
 
 // Lazy-loaded: only fetched when their tab/modal is opened
 const CityComparison = lazy(() => import('./components/CityComparison'));
@@ -117,9 +108,6 @@ export default function App() {
     showSearchList, setShowSearchList,
   } = useCitySearch();
 
-  // Geolocation active indicators
-  const [geoLocating, setGeoLocating] = useState(false);
-
   // Date + clock in French (updated every 10s)
   const { frenchDate, currentTime } = useFrenchClock();
 
@@ -133,22 +121,20 @@ export default function App() {
   const [notifSettings, setNotifSettings] = useState<NotificationSettings>(() => loadNotificationSettings());
   const [notifLogs, setNotifLogs] = useState<NotificationLog[]>(() => loadNotificationLogs());
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
-  const [activeToast, setActiveToast] = useState<{
-    id: string;
-    title: string;
-    message: string;
-    intensity: NotificationIntensity;
-  } | null>(null);
+  const [activeToast, setActiveToast] = useState<ToastData | null>(null);
   const [testingPush, setTestingPush] = useState<boolean>(false);
   const [testingCron, setTestingCron] = useState<boolean>(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState<boolean>(false);
 
   // Weather data (fetch + 10-min refresh)
-  const { weather, setWeather, loading, errorMsg, setErrorMsg, staleSince } = useWeatherFetch(currentCommune, () => {
+  const { weather, loading, refreshing, errorMsg, setErrorMsg, staleSince } = useWeatherFetch(currentCommune, () => {
     if (notifSettings.systemEnabled) {
       checkAndFireFullMoonNotification(notifSettings.humorLevel);
     }
   });
+
+  // Geolocation active indicator + handler
+  const { geoLocating, handleGeolocation } = useGeolocation(setCurrentCommune, setActiveTab, setErrorMsg);
 
   // Reset selected forecast day whenever commune changes
   useEffect(() => { setSelectedDayIndex(0); }, [currentCommune]);
@@ -190,13 +176,21 @@ export default function App() {
     }
   }, [notifSettings.systemEnabled, notifSettings.humorLevel]);
 
+  // `weather` gets a new object identity on every 10-min refresh even when
+  // nothing meaningful changed, so it's tracked in a ref rather than an
+  // effect dependency below — putting the object itself in the deps array
+  // used to re-run this sync (and re-POST /api/subscribe) every 10 minutes
+  // for all ~11 subscribers, for no behavioral gain.
+  const weatherRef = useRef(weather);
+  useEffect(() => { weatherRef.current = weather; }, [weather]);
+
   // Synchronize Background push subscription with server for unattended background notifications
   useEffect(() => {
     syncPushSubscription(
       notifSettings.systemEnabled,
       currentCommune,
       notifSettings.humorLevel,
-      weather,
+      weatherRef.current,
       notifSettings.birthDate,
       {
         rainNotificationsEnabled: notifSettings.rainNotificationsEnabled,
@@ -205,7 +199,7 @@ export default function App() {
         minMinutesBetweenAlerts: notifSettings.minMinutesBetweenAlerts
       }
     );
-  }, [notifSettings.systemEnabled, currentCommune, notifSettings.humorLevel, weather, notifSettings.birthDate, notifSettings.rainNotificationsEnabled, notifSettings.stormNotificationsEnabled, notifSettings.alertNotificationsEnabled, notifSettings.minMinutesBetweenAlerts]);
+  }, [notifSettings.systemEnabled, currentCommune, notifSettings.humorLevel, notifSettings.birthDate, notifSettings.rainNotificationsEnabled, notifSettings.stormNotificationsEnabled, notifSettings.alertNotificationsEnabled, notifSettings.minMinutesBetweenAlerts]);
 
   const handleOpenMorningBrief = () =>
     openMorningBrief(
@@ -215,6 +209,71 @@ export default function App() {
       currentCommune?.nom || 'Inconnu',
       weather
     );
+
+  // Toggling the master Web Push switch: requests OS/browser permission when
+  // turning on, and — the first time it's enabled with no category picked
+  // yet — turns all 3 categories on so the toggle isn't a silent no-op.
+  const handleToggleSystemNotifications = async () => {
+    const enabled = !notifSettings.systemEnabled;
+    if (enabled && 'Notification' in window) {
+      try {
+        const res = await Notification.requestPermission();
+        if (res !== 'granted') {
+          setActiveToast({
+            id: Math.random().toString(),
+            title: "Autorisation Requise",
+            message: "Veuillez autoriser les notifications dans les réglages de votre système/navigateur.",
+            intensity: "alert_yellow"
+          });
+        }
+      } catch (e) {
+        console.warn("RequestPermission error:", e);
+      }
+    } else if (enabled && !('Notification' in window)) {
+      setActiveToast({
+        id: Math.random().toString(),
+        title: "Non Supporté",
+        message: "Notifications non supportées par ce navigateur.",
+        intensity: "alert_orange"
+      });
+    }
+    const updated = {
+      ...notifSettings,
+      systemEnabled: enabled
+    };
+    // Si l'utilisateur active le bouton global et qu'aucune catégorie n'était cochée, on les active toutes par défaut pour l'aider.
+    // Sinon, on préserve strictement les choix spécifiques de l'utilisateur !
+    const hasAnySettingEnabled =
+      notifSettings.rainNotificationsEnabled !== false ||
+      notifSettings.stormNotificationsEnabled !== false ||
+      notifSettings.alertNotificationsEnabled !== false;
+
+    if (enabled && !hasAnySettingEnabled) {
+      updated.rainNotificationsEnabled = true;
+      updated.stormNotificationsEnabled = true;
+      updated.alertNotificationsEnabled = true;
+    }
+    setNotifSettings(updated);
+    saveNotificationSettings(updated);
+  };
+
+  const handleToggleRainNotifications = () => {
+    const updated = { ...notifSettings, rainNotificationsEnabled: notifSettings.rainNotificationsEnabled !== false ? false : true };
+    setNotifSettings(updated);
+    saveNotificationSettings(updated);
+  };
+
+  const handleToggleStormNotifications = () => {
+    const updated = { ...notifSettings, stormNotificationsEnabled: notifSettings.stormNotificationsEnabled !== false ? false : true };
+    setNotifSettings(updated);
+    saveNotificationSettings(updated);
+  };
+
+  const handleToggleAlertNotifications = () => {
+    const updated = { ...notifSettings, alertNotificationsEnabled: notifSettings.alertNotificationsEnabled !== false ? false : true };
+    setNotifSettings(updated);
+    saveNotificationSettings(updated);
+  };
 
   // Master controller for sending hilarious customized rain/storm notifications
   const triggerFunnyNotification = (intensity: NotificationIntensity, bypassSpam = false) => {
@@ -297,43 +356,12 @@ export default function App() {
         minMinutesBetweenAlerts: notifSettings.minMinutesBetweenAlerts
       }
     );
+    // Intentionally narrow: only re-run on city change, not on every 10-min
+    // weather refresh or settings tweak (that's handled by the sync effect above).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weather?.city]);
 
   // Handle Dynamic Geolocation Pin search
-  const handleGeolocation = () => {
-    if (!navigator.geolocation) {
-      setErrorMsg("La géolocalisation n'est pas supportée par votre navigateur.");
-      return;
-    }
-
-    setGeoLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          const nearestCommune = await getCommuneByCoords(latitude, longitude);
-          if (nearestCommune) {
-            setCurrentCommune(nearestCommune);
-            setActiveTab('meteo');
-          } else {
-            setErrorMsg("Aucune commune française correspondante trouvée.");
-          }
-        } catch (err) {
-          console.error(err);
-          setErrorMsg("Échec de la recherche de commune locale.");
-        } finally {
-          setGeoLocating(false);
-        }
-      },
-      (geoError) => {
-        console.warn(geoError);
-        setGeoLocating(false);
-        setErrorMsg("La géolocalisation a échoué (accès refusé ou bloqué). Si vous êtes sur Safari/iPhone, essayez d'ouvrir l'application en plein écran, ou recherchez votre ville manuellement.");
-      },
-      { enableHighAccuracy: true, timeout: 5000 }
-    );
-  };
-
   // GDPR: delete all user data (local + server)
   const handleDeleteAllData = async () => {
     try {
@@ -364,22 +392,6 @@ export default function App() {
     });
   };
 
-  // Direct City pin click on the weather map
-  const selectCityFromMap = (cityName: string, coords: [number, number]) => {
-    // Generate dummy commune object format for trigger
-    const matchedCommune: Commune = {
-      nom: cityName,
-      code: 'custom',
-      codesPostaux: [],
-      centre: {
-        type: 'Point',
-        coordinates: coords
-      },
-      codeDepartement: '00'
-    };
-    setCurrentCommune(matchedCommune);
-    setActiveTab('meteo');
-  };
 
   // Resolve background style from WMO code of active weather
   const currentCode = weather?.current.weatherCode ?? 0;
@@ -389,6 +401,16 @@ export default function App() {
   const weatherStyle = getWeatherUI(currentCode, isNightTimeNow);
   const ActiveWeatherIcon = weatherStyle.icon;
 
+  // Keeps <body>'s background (index.css) and the status bar's theme-color
+  // in sync with the same day/night call this component already makes for
+  // the app shell itself — both used to be hardcoded to day colors, visible
+  // during iOS's overscroll bounce and in the installed PWA's status bar.
+  useEffect(() => {
+    document.body.dataset.daytime = isNightTimeNow ? 'night' : 'day';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', isNightTimeNow ? '#0a1f38' : '#123a5e');
+  }, [isNightTimeNow]);
+
   return (
     <div className={`min-h-screen w-full flex justify-center items-center p-0 sm:p-6 text-white antialiased overflow-x-hidden bg-gradient-to-br ${isNightTimeNow ? 'from-[#0a1f38] via-[#123a5e] to-[#081b2e]' : 'from-[#123a5e] via-[#2a72a8] to-[#0d2e4a]'}`}>
       
@@ -397,210 +419,47 @@ export default function App() {
         Aller au contenu principal
       </a>
 
+      {/* The 4 tabs are views within one single-page app, not separate
+          pages, so there is exactly one h1 for the whole document — every
+          tab's own heading (including the city name below) is an h2. This
+          used to be split: the Météo tab's city name was itself an h1,
+          while the other 3 tabs started at h2, an inconsistent hierarchy
+          for equivalent content. */}
+      <h1 className="sr-only">Météo Pure</h1>
+
       {/* Container Principal (Mobile-First responsive frame) */}
-      <main 
+      <main
         id="applet-main-frame"
-        role="main"
         className="relative w-full max-w-md min-h-screen sm:min-h-[880px] sm:max-h-[920px] sm:rounded-[40px] shadow-2xl overflow-hidden bg-white/5 backdrop-blur-[45px] border border-white/20 flex flex-col justify-between pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] px-6 sm:p-6"
       >
         
         {/* MOON PHASES MODAL */}
-        <AnimatePresence>
-          {showMoonModal && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-[#06102b]/90 backdrop-blur-md px-6 cursor-pointer"
-              onClick={() => setShowMoonModal(false)}
-            >
-              <div 
-                className="glass-premium p-6 rounded-[32px] border border-white/20 shadow-2xl flex flex-col items-center w-full max-w-sm"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex justify-between items-center w-full mb-6 relative">
-                  <h2 className="text-xl font-bold text-white tracking-wide">Cycles Lunaires</h2>
-                  <button onClick={() => setShowMoonModal(false)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400/60">
-                    &times;
-                  </button>
-                </div>
-
-                <div className="flex flex-col gap-3 w-full">
-                  {getNext7DaysMoonPhases().map((moon, index) => (
-                    <div key={index} className="flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-colors">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">{moon.emoji}</span>
-                        <div className="flex flex-col">
-                          <span className="text-xs text-white/50 font-bold uppercase tracking-wider">
-                            {index === 0 ? "Aujourd'hui" : index === 1 ? "Demain" : moon.date.toLocaleDateString('fr-FR', { weekday: 'long' })}
-                          </span>
-                          <span className="text-sm text-white font-medium capitalize">{moon.name}</span>
-                        </div>
-                      </div>
-                      <div className="text-[10px] text-white/40 font-mono">
-                        {Math.round(moon.phase * 100)}%
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <MoonPhasesModal isOpen={showMoonModal} onClose={() => setShowMoonModal(false)} />
 
         {/* MORNING BRIEF MODAL */}
-        <AnimatePresence>
-          {showMorningBriefModal && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-[#06102b]/95 backdrop-blur-md px-6 cursor-pointer"
-              onClick={() => setShowMorningBriefModal(false)}
-            >
-              <div 
-                className="glass-premium p-6 rounded-[32px] border border-white/20 shadow-2xl flex flex-col items-center w-full max-w-sm relative overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none transform rotate-12 scale-150">
-                  <span className="text-6xl">🔮</span>
-                </div>
-                <div className="flex justify-between items-center w-full mb-6 z-10 relative">
-                  <h2 className="text-lg font-bold text-white tracking-wide">Brief Matinal</h2>
-                  <button onClick={() => setShowMorningBriefModal(false)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400/60">
-                    &times;
-                  </button>
-                </div>
-                
-                <div className="flex flex-col gap-3 w-full text-white/90 z-10 relative">
-                  {loadingBrief ? (
-                    <div className="flex flex-col items-center justify-center py-8 gap-3">
-                      <Loader2 className="w-8 h-8 animate-spin text-sky-400" />
-                      <p className="text-xs text-white/70 animate-pulse text-center">
-                        L'IA interroge les constellations et la météo de {currentCommune?.nom || "ta ville"}...
-                      </p>
-                    </div>
-                  ) : aiBrief ? (
-                    <>
-                      <div className="flex items-center justify-between gap-2">
-                        <h3 className="font-bold text-sky-400 text-[11px] uppercase tracking-[0.2em] flex items-center gap-2">
-                          {aiBrief.title}
-                          {aiBrief.ai !== false && (
-                            <span className="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.5 rounded font-mono font-bold tracking-normal uppercase">
-                              IA
-                            </span>
-                          )}
-                        </h3>
-                        {briefSpeech.isSupported && (
-                          <button
-                            onClick={() => {
-                              if (briefSpeech.isSpeaking) {
-                                briefSpeech.stop();
-                              } else {
-                                // Pause between the two layers so the spoken
-                                // version keeps the same fact-then-joke rhythm.
-                                briefSpeech.speak(`${aiBrief.anchor}. ${aiBrief.punchline}`);
-                              }
-                            }}
-                            aria-label={briefSpeech.isSpeaking ? "Arrêter la lecture" : "Écouter le brief"}
-                            title={briefSpeech.isSpeaking ? "Arrêter la lecture" : "Écouter le brief"}
-                            className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full border transition-all active:scale-95 ${
-                              briefSpeech.isSpeaking
-                                ? 'bg-sky-500/25 border-sky-400/50 text-sky-300 animate-pulse'
-                                : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20'
-                            }`}
-                          >
-                            {briefSpeech.isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Layer 1 — the facts. Readable at a glance, half-awake. */}
-                      <p className="text-[15px] font-medium text-white leading-snug">
-                        {aiBrief.anchor.split(' · ').map((seg, i, arr) => (
-                          <span key={i}>
-                            {seg}
-                            {i < arr.length - 1 && <span className="text-white/40 mx-1.5">·</span>}
-                          </span>
-                        ))}
-                      </p>
-
-                      {/* Layer 2 — the joke, visibly secondary. */}
-                      <p className="text-[13px] italic text-white/70 leading-relaxed border-l-2 border-sky-400/40 pl-3">
-                        {aiBrief.punchline}
-                      </p>
-                    </>
-                  ) : !notifSettings.birthDate ? (
-                    <div className="flex flex-col items-center gap-4 text-center">
-                      <span className="text-4xl animate-pulse">🤫</span>
-                      <p className="italic opacity-80 text-sm">
-                        Pour lire ton astro-brief quotidien personnalisé par l'IA, renseigne d'abord ta date de naissance.
-                      </p>
-                      <button
-                        onClick={() => {
-                          setShowMorningBriefModal(false);
-                          setActiveTab('reglages');
-                        }}
-                        className="mt-2 bg-white/10 hover:bg-white/20 border border-white/20 px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all shadow-lg active:scale-95"
-                      >
-                        Ouvrir les Réglages
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="text-center italic opacity-70">Données météo manquantes pour le brief.</p>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <MorningBriefModal
+          isOpen={showMorningBriefModal}
+          onClose={() => setShowMorningBriefModal(false)}
+          cityName={currentCommune?.nom}
+          loadingBrief={loadingBrief}
+          aiBrief={aiBrief}
+          hasBirthDate={Boolean(notifSettings.birthDate)}
+          onOpenSettings={() => {
+            setShowMorningBriefModal(false);
+            setActiveTab('reglages');
+          }}
+          briefSpeech={briefSpeech}
+        />
 
         {/* WELCOME GEOLOCATION PROMPT */}
-        <AnimatePresence>
-          {showWelcomePrompt && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-[#06102b]/90 backdrop-blur-md px-6 text-center"
-            >
-              <div className="glass-premium p-8 rounded-[36px] border border-white/20 shadow-2xl flex flex-col items-center max-w-sm w-full mx-auto relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-sky-400/20 blur-3xl rounded-full translate-x-12 -translate-y-12"></div>
-                <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/20 blur-3xl rounded-full -translate-x-12 translate-y-12"></div>
-                
-                <div className="bg-white/10 p-5 rounded-full mb-6 z-10 border border-white/10">
-                  <MapPin className="w-10 h-10 text-sky-300" />
-                </div>
-                
-                <h2 className="text-2xl font-bold text-white mb-3 z-10">Météo Locale</h2>
-                <p className="text-white/70 text-sm font-medium mb-8 z-10 leading-relaxed">
-                  Souhaitez-vous utiliser votre position actuelle pour afficher immédiatement la météo de votre ville ?
-                </p>
-                
-                <div className="flex flex-col gap-3 w-full z-10">
-                  <button 
-                    onClick={() => {
-                      setShowWelcomePrompt(false);
-                      handleGeolocation();
-                    }}
-                    className="w-full bg-gradient-to-r from-sky-400 to-indigo-500 hover:from-sky-300 hover:to-indigo-400 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-[0_0_20px_rgba(56,189,248,0.3)] hover:shadow-[0_0_25px_rgba(56,189,248,0.5)] active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    <MapPin className="w-5 h-5" />
-                    Utiliser ma position
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setShowWelcomePrompt(false);
-                    }}
-                    className="w-full bg-white/10 hover:bg-white/15 text-white/90 font-semibold py-3.5 px-6 rounded-2xl transition-all border border-white/10 active:scale-95"
-                  >
-                    Chercher manuellement
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <WelcomePrompt
+          isOpen={showWelcomePrompt}
+          onDismiss={() => setShowWelcomePrompt(false)}
+          onUseLocation={() => {
+            setShowWelcomePrompt(false);
+            handleGeolocation();
+          }}
+        />
 
         {/* PRIVACY POLICY MODAL */}
         <AnimatePresence>
@@ -614,75 +473,7 @@ export default function App() {
         </AnimatePresence>
 
         {/* FLOATING FUNNY TOAST NOTIFICATION */}
-        <AnimatePresence>
-          {activeToast && (
-            <motion.div
-              initial={{ opacity: 0, y: -45, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 150, damping: 18 }}
-              className="absolute top-[calc(env(safe-area-inset-top,0px)+1rem)] sm:top-4 left-4 right-4 z-50 pointer-events-auto"
-            >
-              <div className={`glass-premium p-4 rounded-2xl shadow-2xl border flex flex-col gap-1.5 relative overflow-hidden backdrop-blur-2xl ${
-                activeToast.intensity === 'heavy' ? 'border-red-500/40 bg-red-950/75 text-red-100' : 
-                activeToast.intensity === 'moderate' ? 'border-amber-500/40 bg-amber-950/75 text-amber-100' : 
-                activeToast.intensity === 'thunderstorm' ? 'border-purple-500/50 bg-indigo-950/75 text-indigo-100 shadow-[0_0_15px_rgba(168,85,247,0.35)]' :
-                activeToast.intensity === 'heatwave' ? 'border-orange-500/50 bg-orange-950/75 text-orange-100 shadow-[0_0_15px_rgba(249,115,22,0.35)]' :
-                'border-sky-500/40 bg-sky-950/75 text-sky-100'
-              }`}>
-                {/* Visual Timer Progress Bar */}
-                <motion.div 
-                  initial={{ width: "100%" }}
-                  animate={{ width: "0%" }}
-                  transition={{ duration: 6, ease: 'linear' }}
-                  onAnimationComplete={() => setActiveToast(null)}
-                  className={`absolute bottom-0 left-0 h-1 ${
-                    activeToast.intensity === 'heavy' ? 'bg-red-500' :
-                    activeToast.intensity === 'moderate' ? 'bg-amber-400' :
-                    activeToast.intensity === 'thunderstorm' ? 'bg-purple-500' :
-                    activeToast.intensity === 'heatwave' ? 'bg-orange-500' :
-                    'bg-sky-400'
-                  }`}
-                />
-                
-                <div className="flex justify-between items-start gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm select-none">
-                      {activeToast.intensity === 'heavy' ? '🤬' :
-                       activeToast.intensity === 'moderate' ? '☔' : 
-                       activeToast.intensity === 'thunderstorm' ? '⚡' : 
-                       activeToast.intensity === 'heatwave' ? '🌡️' : '💧'}
-                    </span>
-                    <h4 className="font-extrabold text-[11px] tracking-wider uppercase">
-                      {activeToast.title}
-                    </h4>
-                  </div>
-                  
-                  <button 
-                    onClick={() => setActiveToast(null)}
-                    className="p-1 rounded-full hover:bg-white/10 active:scale-95 transition-all text-white/50 hover:text-white"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                
-                <p className="text-[11px] font-bold leading-relaxed pl-0.5 text-white/95 mt-0.5">
-                  "{activeToast.message}"
-                </p>
-                
-                <div className="flex justify-between items-center text-[9px] text-white/50 font-extrabold pl-0.5 mt-1 uppercase select-none tracking-widest">
-                  <span>Météo à {currentCommune.nom}</span>
-                  <span className="bg-white/15 px-1.5 py-0.5 rounded-full text-[8px] text-white/90">
-                    {activeToast.intensity === 'heavy' ? 'Averse forte' :
-                     activeToast.intensity === 'moderate' ? 'Pluie soutenue' : 
-                     activeToast.intensity === 'thunderstorm' ? 'Orage électrique !' : 
-                     activeToast.intensity === 'heatwave' ? 'Chaleur Intense !' : 'Petite bruine'}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <Toast toast={activeToast} cityName={currentCommune.nom} onDismiss={() => setActiveToast(null)} />
         
         {/* Animated decorative 3D liquid waves and drop overlays matching mockup design perfectly */}
         <div className="liquid-wave-top" />
@@ -698,6 +489,11 @@ export default function App() {
                 <Search className="w-4 h-4 text-white/85 mr-2 flex-shrink-0" />
                 <input
                   type="text"
+                  role="combobox"
+                  aria-expanded={showSearchList && searchResults.length > 0}
+                  aria-controls="city-search-listbox"
+                  aria-autocomplete="list"
+                  aria-label="Rechercher une ville"
                   placeholder="Rechercher une ville..."
                   value={searchQuery}
                   onChange={(e) => {
@@ -728,15 +524,20 @@ export default function App() {
               {/* Autocomplete list dropdown popup */}
               <AnimatePresence>
                 {showSearchList && searchResults.length > 0 && (
-                  <motion.div 
+                  <motion.div
+                    id="city-search-listbox"
+                    role="listbox"
+                    aria-label="Résultats de recherche"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute top-12 left-0 right-0 max-h-56 overflow-y-auto bg-white/95 backdrop-blur-xl border border-slate-205 shadow-2xl rounded-2xl z-40 no-scrollbar text-slate-800"
+                    className="absolute top-12 left-0 right-0 max-h-56 overflow-y-auto bg-white/95 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-2xl z-40 no-scrollbar text-slate-800"
                   >
                     {searchResults.map((commune, index) => (
                       <button
                         key={`${commune.code}-${index}`}
+                        role="option"
+                        aria-selected={false}
                         onClick={() => {
                           setCurrentCommune(commune);
                           setSearchQuery('');
@@ -790,7 +591,7 @@ export default function App() {
                   >
                     <button
                       onClick={() => setCurrentCommune(fav)}
-                      className="cursor-pointer text-left focus:outline-none"
+                      className="cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-sky-400/60 rounded"
                     >
                       {fav.nom}
                     </button>
@@ -800,7 +601,7 @@ export default function App() {
                         setFavorites(favorites.filter(f => f.code !== fav.code));
                       }}
                       aria-label={`Retirer ${fav.nom} des favoris`}
-                      className="text-white/40 hover:text-rose-300 hover:scale-110 transition-transform cursor-pointer focus:outline-none p-1 -m-0.5"
+                      className="text-white/60 hover:text-rose-300 hover:scale-110 transition-transform cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400/60 rounded p-1 -m-0.5"
                       title="Retirer des favoris"
                     >
                       <X className="w-3 h-3" />
@@ -814,7 +615,7 @@ export default function App() {
 
         {/* ERROR DISPLAY SYSTEM */}
         {errorMsg && (
-          <div className="z-10 mt-4 p-3 rounded-2xl bg-rose-500/25 backdrop-blur-md border border-rose-500/40 text-white text-xs font-bold flex items-center gap-2">
+          <div role="alert" className="z-10 mt-4 p-3 rounded-2xl bg-rose-500/25 backdrop-blur-md border border-rose-500/40 text-white text-xs font-bold flex items-center gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-200" />
             <span>{errorMsg}</span>
           </div>
@@ -826,13 +627,17 @@ export default function App() {
             
             {/* SCREEN 1: METEO VIEW */}
             {activeTab === 'meteo' && (
-              <motion.div 
+              <motion.div
                 key="meteo-tab-screen"
+                id="panel-meteo"
+                role="tabpanel"
+                aria-labelledby="tab-meteo"
+                tabIndex={0}
                 initial={{ opacity: 0, x: -15 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 15 }}
                 transition={{ duration: 0.3 }}
-                className="relative w-full flex flex-col"
+                className="relative w-full flex flex-col focus:outline-none"
               >
                 {/* Dynamic live weather ambient atmospheric animation */}
                 <AmbientWeatherBackground weatherCode={currentCode} />
@@ -847,9 +652,9 @@ export default function App() {
                         {/* Serif here is the one editorial note in an otherwise
                             technical interface — it makes the place feel named
                             rather than merely queried. */}
-                        <h1 className="font-display text-[38px] font-normal tracking-tight leading-none" id="city-name">
+                        <h2 className="font-display text-[38px] font-normal tracking-tight leading-none" id="city-name">
                           {currentCommune.nom}
-                        </h1>
+                        </h2>
                         <button
                           onClick={() => toggleFavorite(currentCommune)}
                           aria-label={favorites.some(fav => fav.code === currentCommune.code) ? "Retirer des favoris" : "Ajouter aux favoris"}
@@ -878,7 +683,7 @@ export default function App() {
                         <span>{frenchDate || 'Aujourd\'hui'}</span>
                         {saintDuJour && (
                           <>
-                            <span className="text-white/30 text-xs font-light">•</span>
+                            <span className="text-white/60 text-xs font-light">•</span>
                             <span className="text-[12px] text-white/60 font-medium bg-white/5 border border-white/10 px-2 py-0.5 rounded-full" title="Saint(e) du jour">
                               ✨ Fête : {saintDuJour}
                             </span>
@@ -893,6 +698,20 @@ export default function App() {
                         {staleSince && (
                           <span className="normal-case tracking-normal text-[10px] font-semibold text-amber-300/90 bg-amber-500/15 border border-amber-400/30 rounded-full px-2 py-0.5">
                             Hors-ligne · relevé de {formatCacheTime(staleSince)}
+                          </span>
+                        )}
+                        {/* Cached data paints instantly on a city change, then
+                            revalidates silently — without this, that revalidation
+                            was invisible: nothing on screen said a fetch was even
+                            happening. */}
+                        {refreshing && !staleSince && (
+                          <span
+                            className="flex items-center gap-1 normal-case tracking-normal text-[10px] font-semibold text-white/50"
+                            role="status"
+                            aria-live="polite"
+                          >
+                            <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+                            Actualisation…
                           </span>
                         )}
                       </p>
@@ -967,9 +786,9 @@ export default function App() {
                               {/* A measured temperature and a forecast one look identical on
                                   screen, so name the difference. Measurement wins the slot. */}
                               {weather.current.observed ? (
-                                <span
+                                <InfoBadge
                                   className="-mt-1 ml-1 px-2 py-0.5 rounded-full bg-emerald-400/25 text-[11px] font-medium text-white/95 whitespace-nowrap"
-                                  title={
+                                  label={
                                     `Relevé de la station ${weather.current.observed.station}, à ${weather.current.observed.distanceKm} km` +
                                     (weather.current.observed.lapseCorrected
                                       ? `, ajusté de ${weather.current.observed.altitudeDeltaM} m de dénivelé`
@@ -979,16 +798,16 @@ export default function App() {
                                   }
                                 >
                                   Relevé · {weather.current.observed.distanceKm} km
-                                </span>
+                                </InfoBadge>
                               ) : weather.current.confidence === 'low' && weather.current.modelSpread !== undefined ? (
                                 /* No station in range: it is a forecast, and the models disagree
                                    by more than 3°C on this very hour. Say so. */
-                                <span
+                                <InfoBadge
                                   className="-mt-1 ml-1 px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-medium text-white/90 whitespace-nowrap"
-                                  title={`Prévision. Les trois modèles s'écartent de ${weather.current.modelSpread} °C sur cette heure ; la valeur affichée est leur médiane.`}
+                                  label={`Prévision. Les trois modèles s'écartent de ${weather.current.modelSpread} °C sur cette heure ; la valeur affichée est leur médiane.`}
                                 >
                                   ± {Math.round(weather.current.modelSpread / 2)}°
-                                </span>
+                                </InfoBadge>
                               ) : null}
                             </div>
 
@@ -1052,11 +871,11 @@ export default function App() {
 
                       {/* 4. Prévisions de la semaine (Météo-France) */}
                       <TiltCard>
-                        <DailyForecast 
-                          dailyData={weather.daily} 
-                          cityName={weather.city} 
+                        <DailyForecast
+                          dailyData={weather.daily}
+                          cityName={weather.city}
                           selectedDayIndex={selectedDayIndex}
-                          onSelectDay={(index) => setSelectedDayIndex(index)}
+                          onSelectDay={setSelectedDayIndex}
                         />
                       </TiltCard>
 
@@ -1167,13 +986,17 @@ export default function App() {
 
             {/* SCREEN 2: CARTES VIEW (NOW COMPARISON VIEW) */}
             {activeTab === 'cartes' && (
-              <motion.div 
+              <motion.div
                 key="cartes-tab-screen"
+                id="panel-cartes"
+                role="tabpanel"
+                aria-labelledby="tab-cartes"
+                tabIndex={0}
                 initial={{ opacity: 0, x: 15 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -15 }}
                 transition={{ duration: 0.3 }}
-                className="flex-1 flex flex-col justify-between text-white"
+                className="flex-1 flex flex-col justify-between text-white focus:outline-none"
               >
                 {weather ? (
                   <Suspense fallback={<LazyFallback />}>
@@ -1193,13 +1016,17 @@ export default function App() {
 
             {/* SCREEN 3: ALERTS VIEW */}
             {activeTab === 'alertes' && (
-              <motion.div 
+              <motion.div
                 key="alertes-tab-screen"
+                id="panel-alertes"
+                role="tabpanel"
+                aria-labelledby="tab-alertes"
+                tabIndex={0}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3 }}
-                className="flex-1 flex flex-col justify-between text-white"
+                className="flex-1 flex flex-col justify-between text-white focus:outline-none"
               >
                 <Suspense fallback={<LazyFallback />}>
                   <AlertsView
@@ -1216,13 +1043,17 @@ export default function App() {
 
             {/* SCREEN 4: RÉGLAGES SIMULATION & PREFERENCES */}
             {activeTab === 'reglages' && (
-              <motion.div 
+              <motion.div
                 key="reglages-tab-screen"
+                id="panel-reglages"
+                role="tabpanel"
+                aria-labelledby="tab-reglages"
+                tabIndex={0}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 15 }}
                 transition={{ duration: 0.3 }}
-                className="flex-1 flex flex-col text-white space-y-4 pb-6"
+                className="flex-1 flex flex-col text-white space-y-4 pb-6 focus:outline-none"
               >
                 {/* Unified Alert Settings Panel */}
                 <div className="glass-premium rounded-3xl p-5 shadow-lg space-y-4 overflow-hidden relative">
@@ -1249,66 +1080,15 @@ export default function App() {
                             Recevez des alertes automatiques d'ironie météo même lorsque votre téléphone est verrouillé ou que l'application est totalement fermée !
                           </p>
                         </div>
-                        <button
-                          onClick={async () => {
-                            const enabled = !notifSettings.systemEnabled;
-                            if (enabled && 'Notification' in window) {
-                              try {
-                                const res = await Notification.requestPermission();
-                                if (res !== 'granted') {
-                                  setActiveToast({
-                                    id: Math.random().toString(),
-                                    title: "Autorisation Requise",
-                                    message: "Veuillez autoriser les notifications dans les réglages de votre système/navigateur.",
-                                    intensity: "alert_yellow"
-                                  });
-                                }
-                              } catch (e) {
-                                console.warn("RequestPermission error:", e);
-                              }
-                            } else if (enabled && !('Notification' in window)) {
-                              setActiveToast({
-                                id: Math.random().toString(),
-                                title: "Non Supporté",
-                                message: "Notifications non supportées par ce navigateur.",
-                                intensity: "alert_orange"
-                              });
-                            }
-                            const updated = { 
-                              ...notifSettings, 
-                              systemEnabled: enabled
-                            };
-                            // Si l'utilisateur active le bouton global et qu'aucune catégorie n'était cochée, on les active toutes par défaut pour l'aider.
-                            // Sinon, on préserve strictement les choix spécifiques de l'utilisateur !
-                            const hasAnySettingEnabled = 
-                              notifSettings.rainNotificationsEnabled !== false || 
-                              notifSettings.stormNotificationsEnabled !== false || 
-                              notifSettings.alertNotificationsEnabled !== false;
-
-                            if (enabled && !hasAnySettingEnabled) {
-                              updated.rainNotificationsEnabled = true;
-                              updated.stormNotificationsEnabled = true;
-                              updated.alertNotificationsEnabled = true;
-                            }
-                            setNotifSettings(updated);
-                            saveNotificationSettings(updated);
-                          }}
-                          role="switch"
-                          aria-checked={notifSettings.systemEnabled}
-                          aria-label="Notifications en arrière-plan"
-                          className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-                            notifSettings.systemEnabled ? 'bg-sky-500' : 'bg-white/10 border border-white/10'
-                          }`}
-                          type="button"
-                        >
-                          <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 relative z-10 ${
-                            notifSettings.systemEnabled ? 'translate-x-6' : 'translate-x-0'
-                          }`} />
-                        </button>
+                        <Toggle
+                          checked={notifSettings.systemEnabled}
+                          onChange={handleToggleSystemNotifications}
+                          label="Notifications en arrière-plan"
+                        />
                       </div>
 
                       {/* Informative helper tips for bulletproof push notifications */}
-                      <div className="bg-black/30 p-2.5 rounded-xl border border-white/5 space-y-1.5 text-[8.5px] text-white/60 leading-normal">
+                      <div className="bg-black/30 p-2.5 rounded-xl border border-white/5 space-y-1.5 text-[9px] text-white/60 leading-normal">
                         <div className="flex items-start gap-1.5">
                           <div className="w-1.5 h-1.5 rounded-full bg-sky-400 mt-1 shrink-0" />
                           <p>
@@ -1345,12 +1125,12 @@ export default function App() {
                           <p className="text-[9.5px] text-white/80 leading-relaxed mt-1">
                             Recevez chaque matin à 8h00 un récapitulatif ultra-personnalisé mêlant sarcasme météo et prédictions astrales croustillantes liées à votre signe astrologique !
                           </p>
-                          <p className="text-[8.5px] text-white/50 leading-relaxed mt-1.5 italic">
+                          <p className="text-[9px] text-white/50 leading-relaxed mt-1.5 italic">
                             Pour activer cette fonctionnalité, veuillez renseigner votre date de naissance complète ci-dessous :
                           </p>
                         </div>
                         {notifSettings.birthDate && (
-                          <span className="text-[8px] bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded-md font-black tracking-wider uppercase shrink-0">
+                          <span className="text-[9px] bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded-md font-black tracking-wider uppercase shrink-0">
                             ACTIF
                           </span>
                         )}
@@ -1388,27 +1168,11 @@ export default function App() {
                           {!notifSettings.systemEnabled ? 'Inactive car globale coupée' : 'Crachins, déluges & accalmies'}
                         </p>
                       </div>
-                      <button
-                        onClick={() => {
-                          const updated = { 
-                            ...notifSettings, 
-                            rainNotificationsEnabled: notifSettings.rainNotificationsEnabled !== false ? false : true 
-                          };
-                          setNotifSettings(updated);
-                          saveNotificationSettings(updated);
-                        }}
-                        role="switch"
-                        aria-checked={notifSettings.rainNotificationsEnabled !== false}
-                        aria-label="Notifications pluie"
-                        className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-                          notifSettings.rainNotificationsEnabled !== false ? 'bg-sky-500' : 'bg-white/10 border border-white/10'
-                        }`}
-                        type="button"
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 relative z-10 ${
-                          notifSettings.rainNotificationsEnabled !== false ? 'translate-x-6' : 'translate-x-0'
-                        }`} />
-                      </button>
+                      <Toggle
+                        checked={notifSettings.rainNotificationsEnabled !== false}
+                        onChange={handleToggleRainNotifications}
+                        label="Notifications pluie"
+                      />
                     </div>
 
                     {/* 4. Thunderstorm / Storm choice toggle */}
@@ -1423,27 +1187,12 @@ export default function App() {
                           {!notifSettings.systemEnabled ? 'Inactive car globale coupée' : 'Impacts de foudre & fin d\'orage'}
                         </p>
                       </div>
-                      <button
-                        onClick={() => {
-                          const updated = { 
-                            ...notifSettings, 
-                            stormNotificationsEnabled: notifSettings.stormNotificationsEnabled !== false ? false : true 
-                          };
-                          setNotifSettings(updated);
-                          saveNotificationSettings(updated);
-                        }}
-                        role="switch"
-                        aria-checked={notifSettings.stormNotificationsEnabled !== false}
-                        aria-label="Notifications orages"
-                        className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-                          notifSettings.stormNotificationsEnabled !== false ? 'bg-amber-500' : 'bg-white/10 border border-white/10'
-                        }`}
-                        type="button"
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 relative z-10 ${
-                          notifSettings.stormNotificationsEnabled !== false ? 'translate-x-6' : 'translate-x-0'
-                        }`} />
-                      </button>
+                      <Toggle
+                        checked={notifSettings.stormNotificationsEnabled !== false}
+                        onChange={handleToggleStormNotifications}
+                        label="Notifications orages"
+                        activeColorClass="bg-amber-500"
+                      />
                     </div>
 
                     {/* 5. Vigilance Alert choice toggle */}
@@ -1458,27 +1207,12 @@ export default function App() {
                           {!notifSettings.systemEnabled ? 'Inactive car globale coupée' : 'Vigilances Locales (Météo-France)'}
                         </p>
                       </div>
-                      <button
-                        onClick={() => {
-                          const updated = { 
-                            ...notifSettings, 
-                            alertNotificationsEnabled: notifSettings.alertNotificationsEnabled !== false ? false : true 
-                          };
-                          setNotifSettings(updated);
-                          saveNotificationSettings(updated);
-                        }}
-                        role="switch"
-                        aria-checked={notifSettings.alertNotificationsEnabled !== false}
-                        aria-label="Notifications vigilance"
-                        className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-                          notifSettings.alertNotificationsEnabled !== false ? 'bg-rose-500' : 'bg-white/10 border border-white/10'
-                        }`}
-                        type="button"
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 relative z-10 ${
-                          notifSettings.alertNotificationsEnabled !== false ? 'translate-x-6' : 'translate-x-0'
-                        }`} />
-                      </button>
+                      <Toggle
+                        checked={notifSettings.alertNotificationsEnabled !== false}
+                        onChange={handleToggleAlertNotifications}
+                        label="Notifications vigilance"
+                        activeColorClass="bg-rose-500"
+                      />
                     </div>
                   </div>
                 </div>
@@ -1548,7 +1282,7 @@ export default function App() {
                               intensity: "alert_orange"
                             });
                           }
-                        } catch (err) {
+                        } catch {
                           setActiveToast({
                             id: Math.random().toString(),
                             title: "Erreur de Connexion",
@@ -1601,7 +1335,7 @@ export default function App() {
                               intensity: "alert_orange"
                             });
                           }
-                        } catch (err) {
+                        } catch {
                           setActiveToast({
                             id: Math.random().toString(),
                             title: "Erreur Serveur",
@@ -1656,7 +1390,7 @@ export default function App() {
 
                 {/* Dev / Application information */}
                 <div className="text-center py-1">
-                  <span className="text-[9px] text-white/30 font-bold uppercase tracking-widest">
+                  <span className="text-[9px] text-white/60 font-bold uppercase tracking-widest">
                     Météo Pure v3.0
                   </span>
                 </div>
@@ -1667,75 +1401,11 @@ export default function App() {
         </div>
 
         {/* BOTTOM GLASS NAVIGATION BAR - PERFECT 4-COL PILL DOCK STYLE */}
-        <nav 
-          id="tab-navigation-panel"
-          className="relative z-10 mt-6 bg-white/15 backdrop-blur-md border border-white/20 rounded-full p-1.5 flex justify-around items-center shadow-lg"
-        >
-          {/* TAB 1: Météo */}
-          <button
-            onClick={() => setActiveTab('meteo')}
-            aria-label="Météo"
-            aria-current={activeTab === 'meteo' ? 'page' : undefined}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-              activeTab === 'meteo'
-                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
-                : 'text-white/60 hover:text-white/90 font-medium'
-            }`}
-          >
-            <CloudSun className="w-5 h-5" />
-            <span className="text-[9px]">Météo</span>
-          </button>
-
-          {/* TAB 2: Comparer */}
-          <button
-            onClick={() => setActiveTab('cartes')}
-            aria-label="Comparer les villes"
-            aria-current={activeTab === 'cartes' ? 'page' : undefined}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-              activeTab === 'cartes'
-                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
-                : 'text-white/60 hover:text-white/90 font-medium'
-            }`}
-          >
-            <ArrowRightLeft className={`w-5 h-5 rotate-45 ${activeTab === 'cartes' ? 'text-sky-400' : ''}`} />
-            <span className="text-[9px]">Comparer</span>
-          </button>
-
-          {/* TAB 3: Alertes */}
-          <button
-            onClick={() => setActiveTab('alertes')}
-            aria-label="Alertes et vigilance"
-            aria-current={activeTab === 'alertes' ? 'page' : undefined}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-              activeTab === 'alertes'
-                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
-                : 'text-white/60 hover:text-white/90 font-medium'
-            }`}
-          >
-            <div className="relative">
-              <Bell className="w-5 h-5" />
-              {weather && weather.vigilance.globalLevel !== 'green' && (
-                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400 ring-1 ring-white/60" />
-              )}
-            </div>
-            <span className="text-[9px]">Alertes</span>
-          </button>
-
-          {/* TAB 4: Réglages */}
-          <button
-            onClick={() => setActiveTab('reglages')}
-            aria-label="Réglages"
-            aria-current={activeTab === 'reglages' ? 'page' : undefined}
-            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-              activeTab === 'reglages'
-                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
-                : 'text-white/60 hover:text-white/90 font-medium'
-            }`}
-          >
-            <Settings className="w-5 h-5" />
-            <span className="text-[9px]">Réglages</span>
-          </button>
-        </nav>
+        <BottomNav
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          hasActiveVigilance={Boolean(weather && weather.vigilance.globalLevel !== 'green')}
+        />
 
       </main>
 

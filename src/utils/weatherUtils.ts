@@ -1,22 +1,14 @@
-import { 
-  Sun, 
-  CloudSun, 
-  Cloud, 
-  CloudRain, 
-  CloudSnow, 
-  CloudDrizzle, 
-  CloudLightning, 
-  CloudFog, 
-  Wind, 
-  Thermometer, 
-  Droplets,
-  AlertTriangle,
-  Flame,
-  Snowflake,
-  ShieldAlert,
+import {
+  Sun,
+  CloudSun,
+  Cloud,
+  CloudRain,
+  CloudSnow,
+  CloudDrizzle,
+  CloudLightning,
+  CloudFog,
   Moon,
-  CloudMoon,
-  Waves
+  CloudMoon
 } from 'lucide-react';
 import React from 'react';
 import { RainInTheHour, VigilanceStatus, VigilanceCategory } from '../types';
@@ -185,7 +177,7 @@ export function getWeatherUI(code: number, isNight = false): WeatherUI {
         label: 'Bruine légère',
         icon: CloudDrizzle,
         colorClass: 'text-sky-300',
-        bgGradient: 'from-sky-300 via-slate-300 to-sky-150'
+        bgGradient: 'from-sky-300 via-slate-300 to-sky-100'
       };
     case 56:
     case 57:
@@ -201,8 +193,8 @@ export function getWeatherUI(code: number, isNight = false): WeatherUI {
       return {
         label: 'Pluie faible',
         icon: CloudRain,
-        colorClass: 'text-sky-350',
-        bgGradient: 'from-sky-450 via-indigo-200 to-indigo-100'
+        colorClass: 'text-sky-400',
+        bgGradient: 'from-sky-400 via-indigo-200 to-indigo-100'
       };
     case 63:
     case 65:

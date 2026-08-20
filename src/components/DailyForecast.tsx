@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { DailyForecastItem } from '../types';
 import { getWeatherUI } from '../utils/weatherUtils';
 import { CONFIDENCE_LABELS } from '../utils/forecastConfidence';
-import { Calendar, Share2, Check } from 'lucide-react';
+import { Calendar, Share2 } from 'lucide-react';
 import { generateElementDataUrl, copyDataUrlToClipboard, downloadDataUrl } from '../utils/shareUtils';
 
 const SharePreviewModal = lazy(() => import('./SharePreviewModal'));
@@ -15,7 +15,7 @@ interface DailyForecastProps {
   onSelectDay: (index: number) => void;
 }
 
-export default function DailyForecast({ dailyData, cityName, selectedDayIndex, onSelectDay }: DailyForecastProps) {
+function DailyForecast({ dailyData, cityName, selectedDayIndex, onSelectDay }: DailyForecastProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -112,14 +112,16 @@ export default function DailyForecast({ dailyData, cityName, selectedDayIndex, o
           const barWidth = Math.max(8, maxRightPercentage - minLeftPercentage);
 
           return (
-            <motion.div
+            <motion.button
+              type="button"
               key={index}
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.4), ease: 'easeOut' }}
               whileTap={{ scale: 0.97 }}
               onClick={() => onSelectDay(index)}
-              className={`flex items-center justify-between text-xs font-semibold cursor-pointer p-2 rounded-2xl transition-colors duration-200 hover:bg-white/10 ${
+              aria-pressed={selectedDayIndex === index}
+              className={`w-full flex items-center justify-between text-xs font-semibold cursor-pointer p-2 rounded-2xl transition-colors duration-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
                 selectedDayIndex === index
                   ? 'bg-white/15 border-l-4 border-sky-400 pl-3 pr-2 shadow-sm'
                   : 'border-l-4 border-transparent pl-3 pr-2 hover:border-l-white/20'
@@ -170,7 +172,7 @@ export default function DailyForecast({ dailyData, cityName, selectedDayIndex, o
                   />
                 )}
               </span>
-            </motion.div>
+            </motion.button>
           );
         })}
       </div>
@@ -178,7 +180,7 @@ export default function DailyForecast({ dailyData, cityName, selectedDayIndex, o
       <div className="text-[10px] text-white/50 border-t border-white/10 pt-2 text-center font-semibold space-y-1">
         <p>Modèles Météo-France à maille fine (AROME / ARPEGE)</p>
         {dailyData.some(d => d.confidence && d.confidence !== 'high') && (
-          <p className="flex items-center justify-center gap-1.5 text-white/35 font-medium normal-case">
+          <p className="flex items-center justify-center gap-1.5 text-white/60 font-medium normal-case">
             <span className="w-1.5 h-1.5 rounded-full bg-orange-400/80" />
             Les modèles divergent sur ces jours
           </p>
@@ -201,3 +203,5 @@ export default function DailyForecast({ dailyData, cityName, selectedDayIndex, o
     </>
   );
 }
+
+export default React.memo(DailyForecast);

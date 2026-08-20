@@ -3,8 +3,21 @@ import { calculateVigilance } from '../../src/utils/weatherUtils.js';
 import { getFunnyRainMessage, getSarcasticChristmasCountdownMessage, getMonthlyChristmasCountdown } from '../../src/utils/notificationService.js';
 import { generateAiMorningBrief } from './gemini.js';
 import { analyzeRainTiming, MorningAnchorInput } from '../../src/utils/morningAnchor.js';
-import { getSubscriptions, saveSubscriptions } from './storage.js';
+import { getSubscriptions, withSubscriptionsLock } from './storage.js';
 import { configureVapid } from './vapid.js';
+import { decideTransition } from '../../src/utils/transitionDecision.js';
+
+// Fields this cron run is allowed to overwrite when it saves. Everything
+// else on a subscription (commune, humorLevel, notification prefs...) is
+// re-read fresh at save time and left untouched, so a subscribe/unsubscribe
+// that happened during this run's ~11-subscriber loop of weather fetches
+// and pushes (which can take a while — this doesn't hold the write lock)
+// never gets clobbered by this run's now-stale copy of those fields.
+const CRON_OWNED_FIELDS = [
+  'prevHot', 'prevRain', 'prevStorm', 'prevVigilance', 'updatedAt',
+  'lastBriefDate', 'lastMonthlyXmasDate', 'lastChristmasDate',
+  'lastTransitionPushAt', 'lastMsgIndexByIntensity',
+] as const;
 
 export async function checkAllSubscriptions(): Promise<{ checked: number; sent: number }> {
   configureVapid();
@@ -12,6 +25,11 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
   if (subs.length === 0) return { checked: 0, sent: 0 };
 
   let sent = 0;
+  // Collected here instead of saved immediately: the loop's final
+  // `saveSubscriptions(subs)` (below) used to overwrite an in-place removal
+  // with the original, still-including-the-dead-entry `subs` array, so the
+  // cleanup never actually stuck.
+  const deadIds = new Set<string>();
 
   for (const sub of subs) {
     try {
@@ -144,24 +162,25 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
         }
       }
 
-      // Transition alerts
-      let shouldTrigger = false;
-      let transitionType: any = null;
+      // Transition alerts — decision logic lives in the pure, unit-tested
+      // decideTransition() (vigilance priority, per-category opt-out, quiet
+      // hours, cooldown) so it's testable without mocking Open-Meteo/web-push/Redis.
       const prevVigilance = sub.prevVigilance || 'green';
-      if (currentVigilance !== prevVigilance && currentVigilance !== 'green') {
-        transitionType = currentVigilance === 'red' ? 'alert_red' : currentVigilance === 'orange' ? 'alert_orange' : 'alert_yellow';
-        shouldTrigger = true;
-      }
-      if (!shouldTrigger) {
-        // "end_rain" / "end_storm" deliberately no longer notify. Telling
-        // someone it stopped raining prompts no action — they can see out of a
-        // window — while mechanically doubling the notification count of every
-        // single rain episode. They remain tracked as state (below) so the
-        // *start* of the next episode is still detected correctly.
-        if (isStormingNow && !sub.prevStorm) { transitionType = 'thunderstorm'; shouldTrigger = true; }
-        else if (isRainingNow && !sub.prevRain && !isStormingNow) { transitionType = 'moderate'; shouldTrigger = true; }
-        else if (isHotNow && !sub.prevHot) { transitionType = 'heatwave'; shouldTrigger = true; }
-      }
+      const { shouldTrigger, transitionType } = decideTransition({
+        currentVigilance,
+        prevVigilance,
+        isRainingNow,
+        isStormingNow,
+        isHotNow,
+        prevRain: !!sub.prevRain,
+        prevStorm: !!sub.prevStorm,
+        prevHot: !!sub.prevHot,
+        rainNotificationsEnabled: sub.rainNotificationsEnabled,
+        stormNotificationsEnabled: sub.stormNotificationsEnabled,
+        alertNotificationsEnabled: sub.alertNotificationsEnabled,
+        minMinutesBetweenAlerts: sub.minMinutesBetweenAlerts,
+        lastTransitionPushAt: sub.lastTransitionPushAt,
+      }, new Date());
 
       sub.prevHot = isHotNow;
       sub.prevRain = isRainingNow;
@@ -169,46 +188,9 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
       sub.prevVigilance = currentVigilance;
       sub.updatedAt = new Date().toISOString();
 
-      // Respect the per-category toggles the user set in Réglages — these used
-      // to only be enforced client-side, so the server pushed every category
-      // to everyone regardless of their preferences. This was a major source
-      // of "too many notifications" complaints once the cron started running
-      // reliably every 10 min.
-      if (shouldTrigger) {
-        const isAlertType = ['alert_yellow', 'alert_orange', 'alert_red', 'heatwave'].includes(transitionType);
-        const isStormType = ['thunderstorm', 'end_storm'].includes(transitionType);
-        const isRainType = ['moderate', 'light', 'heavy', 'end_rain'].includes(transitionType);
-        if (isAlertType && sub.alertNotificationsEnabled === false) shouldTrigger = false;
-        else if (isStormType && sub.stormNotificationsEnabled === false) shouldTrigger = false;
-        else if (isRainType && sub.rainNotificationsEnabled === false) shouldTrigger = false;
-      }
-
-      // Quiet hours: nothing routine wakes anyone between 22h and 7h Paris.
-      // Orange/red vigilance is exempt — a violent storm at 3am is precisely
-      // when a notification earns its keep.
-      const isSafetyCritical = transitionType === 'alert_orange' || transitionType === 'alert_red';
-      if (shouldTrigger && !isSafetyCritical) {
-        const hourNow = parseInt(
-          new Date().toLocaleTimeString('en-US', { timeZone: 'Europe/Paris', hour: '2-digit', hour12: false }),
-          10
-        );
-        if (hourNow >= 22 || hourNow < 7) shouldTrigger = false;
-      }
-
-      // Cooldown between routine pushes to the same person, so a borderline
-      // value flip-flopping across checks (e.g. precipitation hovering right
-      // at 0mm) can't fire a burst of alerts. Orange/red vigilance bypasses
-      // it — those are safety-relevant and should never be suppressed.
-      if (shouldTrigger && transitionType !== 'alert_orange' && transitionType !== 'alert_red') {
-        const cooldownMin = typeof sub.minMinutesBetweenAlerts === 'number' ? sub.minMinutesBetweenAlerts : 30;
-        if (sub.lastTransitionPushAt) {
-          const elapsedMin = (Date.now() - new Date(sub.lastTransitionPushAt).getTime()) / 60000;
-          if (elapsedMin < cooldownMin) shouldTrigger = false;
-        }
-      }
-
       if (shouldTrigger && transitionType) {
-        const msg = getFunnyRainMessage(transitionType, sub.humorLevel as any);
+        const prevMsgIndex = sub.lastMsgIndexByIntensity?.[transitionType];
+        const msg = getFunnyRainMessage(transitionType, sub.humorLevel as any, prevMsgIndex);
         try {
           await webPush.sendNotification(sub.subscription, JSON.stringify({
             title: msg.title,
@@ -217,12 +199,12 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
             city: sub.commune.nom
           }), { urgency: 'high', TTL: 3600 });
           sub.lastTransitionPushAt = new Date().toISOString();
+          sub.lastMsgIndexByIntensity = { ...(sub.lastMsgIndexByIntensity || {}), [transitionType]: msg.messageIndex };
           sent++;
         } catch (err: any) {
           console.error('[PUSH] alert failed:', sub.id, err.statusCode);
           if (err.statusCode === 410 || err.statusCode === 404) {
-            const fresh = await getSubscriptions();
-            await saveSubscriptions(fresh.filter(s => s.id !== sub.id));
+            deadIds.add(sub.id);
           }
         }
       }
@@ -231,6 +213,20 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
     }
   }
 
-  await saveSubscriptions(subs);
+  // Merge our processed fields onto a freshly-read copy rather than saving
+  // this run's now-stale `subs` wholesale — see CRON_OWNED_FIELDS above.
+  await withSubscriptionsLock(async (freshSubs) => {
+    const byId = new Map(freshSubs.map((s) => [s.id, s]));
+    for (const processed of subs) {
+      if (deadIds.has(processed.id)) continue;
+      const current = byId.get(processed.id);
+      if (!current) continue; // unsubscribed while this run was in flight
+      for (const field of CRON_OWNED_FIELDS) {
+        (current as any)[field] = (processed as any)[field];
+      }
+    }
+    return { subs: freshSubs.filter((s) => !deadIds.has(s.id)), result: undefined };
+  });
+
   return { checked: subs.length, sent };
 }

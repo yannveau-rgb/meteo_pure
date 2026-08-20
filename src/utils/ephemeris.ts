@@ -412,7 +412,7 @@ export function getSaintDuJour(date: Date = new Date()): string {
     });
 
     return ephemeris[month]?.[day] || '';
-  } catch (e) {
+  } catch {
     // fallback
     const m = date.getMonth() + 1;
     const d = date.getDate();

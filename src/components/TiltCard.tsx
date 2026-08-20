@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
+import React, { useRef } from 'react';
+import { motion, useMotionValue, useSpring, useTransform, useReducedMotion } from 'motion/react';
 
 interface TiltCardProps {
   children: React.ReactNode;
@@ -8,9 +8,9 @@ interface TiltCardProps {
   onClick?: () => void;
 }
 
-export default function TiltCard({ children, className = '', id, onClick }: TiltCardProps) {
+function TiltCard({ children, className = '', id, onClick }: TiltCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
   // Framer Motion values for relative coordinates (-0.5 to 0.5)
   const x = useMotionValue(0);
@@ -24,12 +24,11 @@ export default function TiltCard({ children, className = '', id, onClick }: Tilt
   const rotateY = useTransform(springX, [-0.5, 0.5], [10, -10]);
   const rotateX = useTransform(springY, [-0.5, 0.5], [-10, 10]);
 
-  // Map coordinates to spot glare position percentage
-  const glareX = useTransform(springX, [-0.5, 0.5], [20, 80]);
-  const glareY = useTransform(springY, [-0.5, 0.5], [20, 80]);
-  const glareOpacity = useSpring(useTransform(springX, [-0.5, 0.5], [0.15, 0.35]), { damping: 20 });
-
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Touch scrolling fires pointermove too — without this guard, scrolling
+    // past these cards on mobile (the app's primary surface) made all of
+    // them tilt in 3D mid-scroll, an effect only meant for a mouse.
+    if (e.pointerType !== 'mouse') return;
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
     const width = rect.width;
@@ -44,13 +43,27 @@ export default function TiltCard({ children, className = '', id, onClick }: Tilt
   };
 
   const handlePointerLeave = () => {
-    setIsHovered(false);
     x.set(0);
     y.set(0);
   };
 
+  // Parallax rotation is exactly the kind of motion prefers-reduced-motion
+  // exists for — render the card flat instead of skipping the tilt logic
+  // conditionally, so the hook order above stays stable either way.
+  if (prefersReducedMotion) {
+    return (
+      <div
+        id={id}
+        onClick={onClick}
+        className={`relative ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      >
+        {children}
+      </div>
+    );
+  }
+
   return (
-    <div 
+    <div
       className="perspective-[1000px] select-none"
       style={{ perspective: 1000 }}
     >
@@ -59,7 +72,6 @@ export default function TiltCard({ children, className = '', id, onClick }: Tilt
         id={id}
         onClick={onClick}
         onPointerMove={handlePointerMove}
-        onPointerEnter={() => setIsHovered(true)}
         onPointerLeave={handlePointerLeave}
         style={{
           rotateX: rotateX,
@@ -75,3 +87,5 @@ export default function TiltCard({ children, className = '', id, onClick }: Tilt
     </div>
   );
 }
+
+export default React.memo(TiltCard);

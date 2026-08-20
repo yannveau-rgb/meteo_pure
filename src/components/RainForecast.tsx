@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { RainInTheHour } from '../types';
 import { motion } from 'motion/react';
-import { Droplets, Info } from 'lucide-react';
 
 interface RainForecastProps {
   rainData: RainInTheHour[];
+  // Kept in the props contract even though this component doesn't read it —
+  // the parent computes it for a sibling component and passing it here too
+  // costs nothing to keep the call site simple.
   precipitationProbability: number;
 }
 
-export default function RainForecast({ rainData, precipitationProbability }: RainForecastProps) {
+export default function RainForecast({ rainData }: RainForecastProps) {
   const [selectedBar, setSelectedBar] = useState<number | null>(null);
 
   const getIntensityLabel = (intensity: string) => {
@@ -17,15 +19,6 @@ export default function RainForecast({ rainData, precipitationProbability }: Rai
       case 'moderate': return 'Pluie modérée';
       case 'light': return 'Pluie faible / Bruine';
       default: return 'Pas de pluie';
-    }
-  };
-
-  const getIntensityColor = (intensity: string) => {
-    switch (intensity) {
-      case 'heavy': return 'bg-sky-600';
-      case 'moderate': return 'bg-sky-400';
-      case 'light': return 'bg-sky-300';
-      default: return 'bg-slate-300/35';
     }
   };
 
@@ -58,9 +51,12 @@ export default function RainForecast({ rainData, precipitationProbability }: Rai
       {/* Rain Graphique with beautiful vertical tube styled cylinders and water drop icons */}
       <div className="flex items-end justify-between h-14 mt-3 px-1 gap-2 select-none">
         {rainData.slice(0, 7).map((item, index) => ( // Show first 7 intervals beautifully in the grid
-          <div 
-            key={index} 
-            className="flex-1 flex flex-col items-center group cursor-pointer"
+          <button
+            type="button"
+            key={index}
+            className="flex-1 flex flex-col items-center group cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400/60 rounded-lg"
+            aria-pressed={selectedBar === index}
+            aria-label={`+${item.minutes} min : ${getIntensityLabel(item.intensity)}`}
             onClick={() => setSelectedBar(selectedBar === index ? null : index)}
             onMouseEnter={() => setSelectedBar(index)}
             onMouseLeave={() => setSelectedBar(null)}
@@ -78,17 +74,17 @@ export default function RainForecast({ rainData, precipitationProbability }: Rai
             {/* Drops & Labels below cylinders mimicking screenshot */}
             <div className="flex flex-col items-center mt-1 space-y-0.5">
               <svg 
-                className={`w-1.5 h-1.5 transition-colors ${item.percentage > 10 ? 'text-sky-300' : 'text-white/40'}`} 
+                className={`w-1.5 h-1.5 transition-colors ${item.percentage > 10 ? 'text-sky-300' : 'text-white/60'}`} 
                 fill="currentColor" 
                 viewBox="0 0 24 24"
               >
                 <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
               </svg>
-              <span className="text-[8px] text-white/50 font-bold leading-none">
+              <span className="text-[9px] text-white/50 font-bold leading-none">
                 +{item.minutes}m
               </span>
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
