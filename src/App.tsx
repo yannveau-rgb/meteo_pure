@@ -57,6 +57,7 @@ import { useMorningBrief } from './hooks/useMorningBrief';
 import { useAirQuality } from './hooks/useAirQuality';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { useShareImage } from './hooks/useShareImage';
+import { useModalA11y } from './hooks/useModalA11y';
 
 // Modular child components
 import RainForecast from './components/RainForecast';
@@ -150,6 +151,13 @@ export default function App() {
     loadingBrief,
     openMorningBrief,
   } = useMorningBrief();
+
+  // Modal accessibility: focus trap + Escape-to-close + focus restore.
+  // The welcome prompt has no backdrop-click/close-X by design (it forces a
+  // choice between the two buttons), so Escape is disabled for it.
+  const moonModalRef = useModalA11y(showMoonModal, () => setShowMoonModal(false));
+  const morningBriefModalRef = useModalA11y(showMorningBriefModal, () => setShowMorningBriefModal(false));
+  const welcomePromptRef = useModalA11y(showWelcomePrompt, () => setShowWelcomePrompt(false), { closeOnEscape: false });
 
   // Air quality & pollen — supplementary, never blocks the forecast
   const airQuality = useAirQuality(weather?.latitude, weather?.longitude);
@@ -391,10 +399,17 @@ export default function App() {
         Aller au contenu principal
       </a>
 
+      {/* The 4 tabs are views within one single-page app, not separate
+          pages, so there is exactly one h1 for the whole document — every
+          tab's own heading (including the city name below) is an h2. This
+          used to be split: the Météo tab's city name was itself an h1,
+          while the other 3 tabs started at h2, an inconsistent hierarchy
+          for equivalent content. */}
+      <h1 className="sr-only">Météo Pure</h1>
+
       {/* Container Principal (Mobile-First responsive frame) */}
-      <main 
+      <main
         id="applet-main-frame"
-        role="main"
         className="relative w-full max-w-md min-h-screen sm:min-h-[880px] sm:max-h-[920px] sm:rounded-[40px] shadow-2xl overflow-hidden bg-white/5 backdrop-blur-[45px] border border-white/20 flex flex-col justify-between pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] px-6 sm:p-6"
       >
         
@@ -408,12 +423,17 @@ export default function App() {
               className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-[#06102b]/90 backdrop-blur-md px-6 cursor-pointer"
               onClick={() => setShowMoonModal(false)}
             >
-              <div 
-                className="glass-premium p-6 rounded-[32px] border border-white/20 shadow-2xl flex flex-col items-center w-full max-w-sm"
+              <div
+                ref={moonModalRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="moon-modal-title"
+                tabIndex={-1}
+                className="glass-premium p-6 rounded-[32px] border border-white/20 shadow-2xl flex flex-col items-center w-full max-w-sm focus:outline-none focus:ring-2 focus:ring-sky-400/60"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex justify-between items-center w-full mb-6 relative">
-                  <h2 className="text-xl font-bold text-white tracking-wide">Cycles Lunaires</h2>
+                  <h2 id="moon-modal-title" className="text-xl font-bold text-white tracking-wide">Cycles Lunaires</h2>
                   <button onClick={() => setShowMoonModal(false)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400/60">
                     &times;
                   </button>
@@ -452,15 +472,20 @@ export default function App() {
               className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-[#06102b]/95 backdrop-blur-md px-6 cursor-pointer"
               onClick={() => setShowMorningBriefModal(false)}
             >
-              <div 
-                className="glass-premium p-6 rounded-[32px] border border-white/20 shadow-2xl flex flex-col items-center w-full max-w-sm relative overflow-hidden"
+              <div
+                ref={morningBriefModalRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="morning-brief-modal-title"
+                tabIndex={-1}
+                className="glass-premium p-6 rounded-[32px] border border-white/20 shadow-2xl flex flex-col items-center w-full max-w-sm relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none transform rotate-12 scale-150">
                   <span className="text-6xl">🔮</span>
                 </div>
                 <div className="flex justify-between items-center w-full mb-6 z-10 relative">
-                  <h2 className="text-lg font-bold text-white tracking-wide">Brief Matinal</h2>
+                  <h2 id="morning-brief-modal-title" className="text-lg font-bold text-white tracking-wide">Brief Matinal</h2>
                   <button onClick={() => setShowMorningBriefModal(false)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400/60">
                     &times;
                   </button>
@@ -558,15 +583,22 @@ export default function App() {
               exit={{ opacity: 0, scale: 1.05 }}
               className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-[#06102b]/90 backdrop-blur-md px-6 text-center"
             >
-              <div className="glass-premium p-8 rounded-[36px] border border-white/20 shadow-2xl flex flex-col items-center max-w-sm w-full mx-auto relative overflow-hidden">
+              <div
+                ref={welcomePromptRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="welcome-prompt-title"
+                tabIndex={-1}
+                className="glass-premium p-8 rounded-[36px] border border-white/20 shadow-2xl flex flex-col items-center max-w-sm w-full mx-auto relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60"
+              >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-sky-400/20 blur-3xl rounded-full translate-x-12 -translate-y-12"></div>
                 <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/20 blur-3xl rounded-full -translate-x-12 translate-y-12"></div>
-                
+
                 <div className="bg-white/10 p-5 rounded-full mb-6 z-10 border border-white/10">
                   <MapPin className="w-10 h-10 text-sky-300" />
                 </div>
-                
-                <h2 className="text-2xl font-bold text-white mb-3 z-10">Météo Locale</h2>
+
+                <h2 id="welcome-prompt-title" className="text-2xl font-bold text-white mb-3 z-10">Météo Locale</h2>
                 <p className="text-white/70 text-sm font-medium mb-8 z-10 leading-relaxed">
                   Souhaitez-vous utiliser votre position actuelle pour afficher immédiatement la météo de votre ville ?
                 </p>
@@ -615,6 +647,8 @@ export default function App() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 150, damping: 18 }}
+              role="status"
+              aria-live="polite"
               className="absolute top-[calc(env(safe-area-inset-top,0px)+1rem)] sm:top-4 left-4 right-4 z-50 pointer-events-auto"
             >
               <div className={`glass-premium p-4 rounded-2xl shadow-2xl border flex flex-col gap-1.5 relative overflow-hidden backdrop-blur-2xl ${
@@ -704,6 +738,11 @@ export default function App() {
                 <Search className="w-4 h-4 text-white/85 mr-2 flex-shrink-0" />
                 <input
                   type="text"
+                  role="combobox"
+                  aria-expanded={showSearchList && searchResults.length > 0}
+                  aria-controls="city-search-listbox"
+                  aria-autocomplete="list"
+                  aria-label="Rechercher une ville"
                   placeholder="Rechercher une ville..."
                   value={searchQuery}
                   onChange={(e) => {
@@ -734,7 +773,10 @@ export default function App() {
               {/* Autocomplete list dropdown popup */}
               <AnimatePresence>
                 {showSearchList && searchResults.length > 0 && (
-                  <motion.div 
+                  <motion.div
+                    id="city-search-listbox"
+                    role="listbox"
+                    aria-label="Résultats de recherche"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
@@ -743,6 +785,8 @@ export default function App() {
                     {searchResults.map((commune, index) => (
                       <button
                         key={`${commune.code}-${index}`}
+                        role="option"
+                        aria-selected={false}
                         onClick={() => {
                           setCurrentCommune(commune);
                           setSearchQuery('');
@@ -796,7 +840,7 @@ export default function App() {
                   >
                     <button
                       onClick={() => setCurrentCommune(fav)}
-                      className="cursor-pointer text-left focus:outline-none"
+                      className="cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-sky-400/60 rounded"
                     >
                       {fav.nom}
                     </button>
@@ -806,7 +850,7 @@ export default function App() {
                         setFavorites(favorites.filter(f => f.code !== fav.code));
                       }}
                       aria-label={`Retirer ${fav.nom} des favoris`}
-                      className="text-white/60 hover:text-rose-300 hover:scale-110 transition-transform cursor-pointer focus:outline-none p-1 -m-0.5"
+                      className="text-white/60 hover:text-rose-300 hover:scale-110 transition-transform cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400/60 rounded p-1 -m-0.5"
                       title="Retirer des favoris"
                     >
                       <X className="w-3 h-3" />
@@ -820,7 +864,7 @@ export default function App() {
 
         {/* ERROR DISPLAY SYSTEM */}
         {errorMsg && (
-          <div className="z-10 mt-4 p-3 rounded-2xl bg-rose-500/25 backdrop-blur-md border border-rose-500/40 text-white text-xs font-bold flex items-center gap-2">
+          <div role="alert" className="z-10 mt-4 p-3 rounded-2xl bg-rose-500/25 backdrop-blur-md border border-rose-500/40 text-white text-xs font-bold flex items-center gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-200" />
             <span>{errorMsg}</span>
           </div>
@@ -832,13 +876,17 @@ export default function App() {
             
             {/* SCREEN 1: METEO VIEW */}
             {activeTab === 'meteo' && (
-              <motion.div 
+              <motion.div
                 key="meteo-tab-screen"
+                id="panel-meteo"
+                role="tabpanel"
+                aria-labelledby="tab-meteo"
+                tabIndex={0}
                 initial={{ opacity: 0, x: -15 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 15 }}
                 transition={{ duration: 0.3 }}
-                className="relative w-full flex flex-col"
+                className="relative w-full flex flex-col focus:outline-none"
               >
                 {/* Dynamic live weather ambient atmospheric animation */}
                 <AmbientWeatherBackground weatherCode={currentCode} />
@@ -853,9 +901,9 @@ export default function App() {
                         {/* Serif here is the one editorial note in an otherwise
                             technical interface — it makes the place feel named
                             rather than merely queried. */}
-                        <h1 className="font-display text-[38px] font-normal tracking-tight leading-none" id="city-name">
+                        <h2 className="font-display text-[38px] font-normal tracking-tight leading-none" id="city-name">
                           {currentCommune.nom}
-                        </h1>
+                        </h2>
                         <button
                           onClick={() => toggleFavorite(currentCommune)}
                           aria-label={favorites.some(fav => fav.code === currentCommune.code) ? "Retirer des favoris" : "Ajouter aux favoris"}
@@ -1173,13 +1221,17 @@ export default function App() {
 
             {/* SCREEN 2: CARTES VIEW (NOW COMPARISON VIEW) */}
             {activeTab === 'cartes' && (
-              <motion.div 
+              <motion.div
                 key="cartes-tab-screen"
+                id="panel-cartes"
+                role="tabpanel"
+                aria-labelledby="tab-cartes"
+                tabIndex={0}
                 initial={{ opacity: 0, x: 15 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -15 }}
                 transition={{ duration: 0.3 }}
-                className="flex-1 flex flex-col justify-between text-white"
+                className="flex-1 flex flex-col justify-between text-white focus:outline-none"
               >
                 {weather ? (
                   <Suspense fallback={<LazyFallback />}>
@@ -1199,13 +1251,17 @@ export default function App() {
 
             {/* SCREEN 3: ALERTS VIEW */}
             {activeTab === 'alertes' && (
-              <motion.div 
+              <motion.div
                 key="alertes-tab-screen"
+                id="panel-alertes"
+                role="tabpanel"
+                aria-labelledby="tab-alertes"
+                tabIndex={0}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3 }}
-                className="flex-1 flex flex-col justify-between text-white"
+                className="flex-1 flex flex-col justify-between text-white focus:outline-none"
               >
                 <Suspense fallback={<LazyFallback />}>
                   <AlertsView
@@ -1222,13 +1278,17 @@ export default function App() {
 
             {/* SCREEN 4: RÉGLAGES SIMULATION & PREFERENCES */}
             {activeTab === 'reglages' && (
-              <motion.div 
+              <motion.div
                 key="reglages-tab-screen"
+                id="panel-reglages"
+                role="tabpanel"
+                aria-labelledby="tab-reglages"
+                tabIndex={0}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 15 }}
                 transition={{ duration: 0.3 }}
-                className="flex-1 flex flex-col text-white space-y-4 pb-6"
+                className="flex-1 flex flex-col text-white space-y-4 pb-6 focus:outline-none"
               >
                 {/* Unified Alert Settings Panel */}
                 <div className="glass-premium rounded-3xl p-5 shadow-lg space-y-4 overflow-hidden relative">
@@ -1673,15 +1733,20 @@ export default function App() {
         </div>
 
         {/* BOTTOM GLASS NAVIGATION BAR - PERFECT 4-COL PILL DOCK STYLE */}
-        <nav 
+        <nav
           id="tab-navigation-panel"
+          role="tablist"
+          aria-label="Sections de l'application"
           className="relative z-10 mt-6 bg-white/15 backdrop-blur-md border border-white/20 rounded-full p-1.5 flex justify-around items-center shadow-lg"
         >
           {/* TAB 1: Météo */}
           <button
+            id="tab-meteo"
+            role="tab"
+            aria-selected={activeTab === 'meteo'}
+            aria-controls="panel-meteo"
             onClick={() => setActiveTab('meteo')}
             aria-label="Météo"
-            aria-current={activeTab === 'meteo' ? 'page' : undefined}
             className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
               activeTab === 'meteo'
                 ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
@@ -1694,9 +1759,12 @@ export default function App() {
 
           {/* TAB 2: Comparer */}
           <button
+            id="tab-cartes"
+            role="tab"
+            aria-selected={activeTab === 'cartes'}
+            aria-controls="panel-cartes"
             onClick={() => setActiveTab('cartes')}
             aria-label="Comparer les villes"
-            aria-current={activeTab === 'cartes' ? 'page' : undefined}
             className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
               activeTab === 'cartes'
                 ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
@@ -1709,9 +1777,12 @@ export default function App() {
 
           {/* TAB 3: Alertes */}
           <button
+            id="tab-alertes"
+            role="tab"
+            aria-selected={activeTab === 'alertes'}
+            aria-controls="panel-alertes"
             onClick={() => setActiveTab('alertes')}
             aria-label="Alertes et vigilance"
-            aria-current={activeTab === 'alertes' ? 'page' : undefined}
             className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
               activeTab === 'alertes'
                 ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
@@ -1729,9 +1800,12 @@ export default function App() {
 
           {/* TAB 4: Réglages */}
           <button
+            id="tab-reglages"
+            role="tab"
+            aria-selected={activeTab === 'reglages'}
+            aria-controls="panel-reglages"
             onClick={() => setActiveTab('reglages')}
             aria-label="Réglages"
-            aria-current={activeTab === 'reglages' ? 'page' : undefined}
             className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
               activeTab === 'reglages'
                 ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'

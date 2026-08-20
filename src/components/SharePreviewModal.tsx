@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Copy, Download, Check, AlertCircle, Share2 } from 'lucide-react';
 import { shareImageNative } from '../utils/shareUtils';
+import { useModalA11y } from '../hooks/useModalA11y';
 
 interface SharePreviewModalProps {
   isOpen: boolean;
@@ -44,6 +45,8 @@ export default function SharePreviewModal({
     }
   };
 
+  const modalRef = useModalA11y(isOpen, onClose);
+
   return createPortal(
     <AnimatePresence>
       {isOpen && (
@@ -59,15 +62,20 @@ export default function SharePreviewModal({
 
           {/* Modal Content Container */}
           <motion.div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-modal-title"
+            tabIndex={-1}
             initial={{ scale: 0.95, y: 15, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 15, opacity: 0 }}
             transition={{ type: 'spring', duration: 0.4 }}
-            className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-slate-900 border border-white/10 shadow-2xl flex flex-col max-h-[90vh]"
+            className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl glass-premium border border-white/20 shadow-2xl flex flex-col max-h-[90vh] focus:outline-none focus:ring-2 focus:ring-sky-400/60"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/15">
-              <h3 className="text-sm font-bold text-sky-200 tracking-wider uppercase">
+              <h3 id="share-modal-title" className="text-sm font-bold text-sky-200 tracking-wider uppercase">
                 {title}
               </h3>
               <button

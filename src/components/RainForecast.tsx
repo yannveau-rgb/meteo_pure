@@ -51,9 +51,12 @@ export default function RainForecast({ rainData }: RainForecastProps) {
       {/* Rain Graphique with beautiful vertical tube styled cylinders and water drop icons */}
       <div className="flex items-end justify-between h-14 mt-3 px-1 gap-2 select-none">
         {rainData.slice(0, 7).map((item, index) => ( // Show first 7 intervals beautifully in the grid
-          <div 
-            key={index} 
-            className="flex-1 flex flex-col items-center group cursor-pointer"
+          <button
+            type="button"
+            key={index}
+            className="flex-1 flex flex-col items-center group cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400/60 rounded-lg"
+            aria-pressed={selectedBar === index}
+            aria-label={`+${item.minutes} min : ${getIntensityLabel(item.intensity)}`}
             onClick={() => setSelectedBar(selectedBar === index ? null : index)}
             onMouseEnter={() => setSelectedBar(index)}
             onMouseLeave={() => setSelectedBar(null)}
@@ -81,7 +84,7 @@ export default function RainForecast({ rainData }: RainForecastProps) {
                 +{item.minutes}m
               </span>
             </div>
-          </div>
+          </button>
         ))}
       </div>
 

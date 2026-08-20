@@ -1,5 +1,6 @@
 import { Shield, FileText, Trash2, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useModalA11y } from '../hooks/useModalA11y';
 
 interface PrivacyPolicyProps {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface PrivacyPolicyProps {
 }
 
 export default function PrivacyPolicy({ isOpen, onClose, onDeleteAllData }: PrivacyPolicyProps) {
+  const modalRef = useModalA11y(isOpen, onClose);
   if (!isOpen) return null;
 
   return (
@@ -19,11 +21,16 @@ export default function PrivacyPolicy({ isOpen, onClose, onDeleteAllData }: Priv
       onClick={onClose}
     >
       <div
-        className="glass-premium p-6 rounded-[32px] border border-white/20 shadow-2xl flex flex-col w-full max-w-sm overflow-y-auto max-h-[80vh] cursor-default"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="privacy-modal-title"
+        tabIndex={-1}
+        className="glass-premium p-6 rounded-[32px] border border-white/20 shadow-2xl flex flex-col w-full max-w-sm overflow-y-auto max-h-[80vh] cursor-default focus:outline-none focus:ring-2 focus:ring-sky-400/60"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center w-full mb-4">
-          <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
+          <h2 id="privacy-modal-title" className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
             <Shield className="w-5 h-5 text-sky-400" />
             Confidentialité & Mentions légales
           </h2>

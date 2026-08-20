@@ -112,14 +112,16 @@ export default function DailyForecast({ dailyData, cityName, selectedDayIndex, o
           const barWidth = Math.max(8, maxRightPercentage - minLeftPercentage);
 
           return (
-            <motion.div
+            <motion.button
+              type="button"
               key={index}
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.4), ease: 'easeOut' }}
               whileTap={{ scale: 0.97 }}
               onClick={() => onSelectDay(index)}
-              className={`flex items-center justify-between text-xs font-semibold cursor-pointer p-2 rounded-2xl transition-colors duration-200 hover:bg-white/10 ${
+              aria-pressed={selectedDayIndex === index}
+              className={`w-full flex items-center justify-between text-xs font-semibold cursor-pointer p-2 rounded-2xl transition-colors duration-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
                 selectedDayIndex === index
                   ? 'bg-white/15 border-l-4 border-sky-400 pl-3 pr-2 shadow-sm'
                   : 'border-l-4 border-transparent pl-3 pr-2 hover:border-l-white/20'
@@ -170,7 +172,7 @@ export default function DailyForecast({ dailyData, cityName, selectedDayIndex, o
                   />
                 )}
               </span>
-            </motion.div>
+            </motion.button>
           );
         })}
       </div>

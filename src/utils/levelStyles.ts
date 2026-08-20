@@ -26,8 +26,6 @@ export interface LevelStyle {
   badge: string;
   /** Solid-ish alert banner (bg/25, white text, border/40) for a prominent status bar. */
   banner: string;
-  /** Light background block for the modal's white content area (bg-50, border-100, text-900). */
-  lightBlock: string;
 }
 
 const LEVEL_STYLES: Record<VigilanceLevel, LevelStyle> = {
@@ -39,7 +37,6 @@ const LEVEL_STYLES: Record<VigilanceLevel, LevelStyle> = {
     outline: 'border-emerald-500/30 bg-emerald-500/5',
     badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
     banner: 'bg-emerald-500/25 text-white border-emerald-500/40',
-    lightBlock: 'bg-emerald-50 border-emerald-100 text-emerald-900',
   },
   yellow: {
     label: 'Jaune',
@@ -49,7 +46,6 @@ const LEVEL_STYLES: Record<VigilanceLevel, LevelStyle> = {
     outline: 'border-yellow-400/30 bg-yellow-400/5',
     badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
     banner: 'bg-yellow-500/25 text-white border-yellow-500/40',
-    lightBlock: 'bg-yellow-50/70 border-yellow-100 text-yellow-900',
   },
   orange: {
     label: 'Orange',
@@ -59,7 +55,6 @@ const LEVEL_STYLES: Record<VigilanceLevel, LevelStyle> = {
     outline: 'border-amber-500/30 bg-amber-500/5',
     badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     banner: 'bg-amber-500/25 text-white border-amber-500/40',
-    lightBlock: 'bg-amber-50 border-amber-100 text-amber-900',
   },
   red: {
     label: 'Rouge',
@@ -69,7 +64,6 @@ const LEVEL_STYLES: Record<VigilanceLevel, LevelStyle> = {
     outline: 'border-rose-500/30 bg-rose-500/5',
     badge: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
     banner: 'bg-rose-500/25 text-white border-rose-500/40',
-    lightBlock: 'bg-rose-50 border-rose-100 text-rose-900',
   },
 };
 
