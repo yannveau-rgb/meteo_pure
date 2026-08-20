@@ -3,17 +3,12 @@ import {
   MapPin,
   Search,
   X,
-  CloudSun,
-  ArrowRightLeft,
   Bell,
   Loader2,
   Navigation,
   CloudLightning,
   AlertCircle,
   Clock,
-  Volume2,
-  VolumeX,
-  Settings,
   ShieldAlert,
   Sparkles,
   AlertTriangle,
@@ -25,7 +20,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getCommuneByCoords } from './utils/weatherApi';
-import { getWeatherUI, getMoonPhase, getNext7DaysMoonPhases, calculateCurrentUv, isNightTime } from './utils/weatherUtils';
+import { getWeatherUI, getMoonPhase, calculateCurrentUv, isNightTime } from './utils/weatherUtils';
 import { getSaintDuJour } from './utils/ephemeris';
 import { formatCacheTime } from './utils/weatherCache';
 import {
@@ -57,7 +52,6 @@ import { useMorningBrief } from './hooks/useMorningBrief';
 import { useAirQuality } from './hooks/useAirQuality';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { useShareImage } from './hooks/useShareImage';
-import { useModalA11y } from './hooks/useModalA11y';
 
 // Modular child components
 import RainForecast from './components/RainForecast';
@@ -71,6 +65,11 @@ import ClimateComparison from './components/ClimateComparison';
 const RainRadar = lazy(() => import('./components/RainRadar'));
 import TiltCard from './components/TiltCard';
 import PrivacyPolicy from './components/PrivacyPolicy';
+import Toggle from './components/ui/Toggle';
+import BottomNav from './components/BottomNav';
+import MoonPhasesModal from './components/modals/MoonPhasesModal';
+import MorningBriefModal from './components/modals/MorningBriefModal';
+import WelcomePrompt from './components/modals/WelcomePrompt';
 
 // Lazy-loaded: only fetched when their tab/modal is opened
 const CityComparison = lazy(() => import('./components/CityComparison'));
@@ -152,13 +151,6 @@ export default function App() {
     openMorningBrief,
   } = useMorningBrief();
 
-  // Modal accessibility: focus trap + Escape-to-close + focus restore.
-  // The welcome prompt has no backdrop-click/close-X by design (it forces a
-  // choice between the two buttons), so Escape is disabled for it.
-  const moonModalRef = useModalA11y(showMoonModal, () => setShowMoonModal(false));
-  const morningBriefModalRef = useModalA11y(showMorningBriefModal, () => setShowMorningBriefModal(false));
-  const welcomePromptRef = useModalA11y(showWelcomePrompt, () => setShowWelcomePrompt(false), { closeOnEscape: false });
-
   // Air quality & pollen — supplementary, never blocks the forecast
   const airQuality = useAirQuality(weather?.latitude, weather?.longitude);
 
@@ -220,6 +212,71 @@ export default function App() {
       currentCommune?.nom || 'Inconnu',
       weather
     );
+
+  // Toggling the master Web Push switch: requests OS/browser permission when
+  // turning on, and — the first time it's enabled with no category picked
+  // yet — turns all 3 categories on so the toggle isn't a silent no-op.
+  const handleToggleSystemNotifications = async () => {
+    const enabled = !notifSettings.systemEnabled;
+    if (enabled && 'Notification' in window) {
+      try {
+        const res = await Notification.requestPermission();
+        if (res !== 'granted') {
+          setActiveToast({
+            id: Math.random().toString(),
+            title: "Autorisation Requise",
+            message: "Veuillez autoriser les notifications dans les réglages de votre système/navigateur.",
+            intensity: "alert_yellow"
+          });
+        }
+      } catch (e) {
+        console.warn("RequestPermission error:", e);
+      }
+    } else if (enabled && !('Notification' in window)) {
+      setActiveToast({
+        id: Math.random().toString(),
+        title: "Non Supporté",
+        message: "Notifications non supportées par ce navigateur.",
+        intensity: "alert_orange"
+      });
+    }
+    const updated = {
+      ...notifSettings,
+      systemEnabled: enabled
+    };
+    // Si l'utilisateur active le bouton global et qu'aucune catégorie n'était cochée, on les active toutes par défaut pour l'aider.
+    // Sinon, on préserve strictement les choix spécifiques de l'utilisateur !
+    const hasAnySettingEnabled =
+      notifSettings.rainNotificationsEnabled !== false ||
+      notifSettings.stormNotificationsEnabled !== false ||
+      notifSettings.alertNotificationsEnabled !== false;
+
+    if (enabled && !hasAnySettingEnabled) {
+      updated.rainNotificationsEnabled = true;
+      updated.stormNotificationsEnabled = true;
+      updated.alertNotificationsEnabled = true;
+    }
+    setNotifSettings(updated);
+    saveNotificationSettings(updated);
+  };
+
+  const handleToggleRainNotifications = () => {
+    const updated = { ...notifSettings, rainNotificationsEnabled: notifSettings.rainNotificationsEnabled !== false ? false : true };
+    setNotifSettings(updated);
+    saveNotificationSettings(updated);
+  };
+
+  const handleToggleStormNotifications = () => {
+    const updated = { ...notifSettings, stormNotificationsEnabled: notifSettings.stormNotificationsEnabled !== false ? false : true };
+    setNotifSettings(updated);
+    saveNotificationSettings(updated);
+  };
+
+  const handleToggleAlertNotifications = () => {
+    const updated = { ...notifSettings, alertNotificationsEnabled: notifSettings.alertNotificationsEnabled !== false ? false : true };
+    setNotifSettings(updated);
+    saveNotificationSettings(updated);
+  };
 
   // Master controller for sending hilarious customized rain/storm notifications
   const triggerFunnyNotification = (intensity: NotificationIntensity, bypassSpam = false) => {
@@ -414,219 +471,32 @@ export default function App() {
       >
         
         {/* MOON PHASES MODAL */}
-        <AnimatePresence>
-          {showMoonModal && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-[#06102b]/90 backdrop-blur-md px-6 cursor-pointer"
-              onClick={() => setShowMoonModal(false)}
-            >
-              <div
-                ref={moonModalRef}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="moon-modal-title"
-                tabIndex={-1}
-                className="glass-premium p-6 rounded-[32px] border border-white/20 shadow-2xl flex flex-col items-center w-full max-w-sm focus:outline-none focus:ring-2 focus:ring-sky-400/60"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex justify-between items-center w-full mb-6 relative">
-                  <h2 id="moon-modal-title" className="text-xl font-bold text-white tracking-wide">Cycles Lunaires</h2>
-                  <button onClick={() => setShowMoonModal(false)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400/60">
-                    &times;
-                  </button>
-                </div>
-
-                <div className="flex flex-col gap-3 w-full">
-                  {getNext7DaysMoonPhases().map((moon, index) => (
-                    <div key={index} className="flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-colors">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">{moon.emoji}</span>
-                        <div className="flex flex-col">
-                          <span className="text-xs text-white/50 font-bold uppercase tracking-wider">
-                            {index === 0 ? "Aujourd'hui" : index === 1 ? "Demain" : moon.date.toLocaleDateString('fr-FR', { weekday: 'long' })}
-                          </span>
-                          <span className="text-sm text-white font-medium capitalize">{moon.name}</span>
-                        </div>
-                      </div>
-                      <div className="text-[10px] text-white/60 font-mono">
-                        {Math.round(moon.phase * 100)}%
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <MoonPhasesModal isOpen={showMoonModal} onClose={() => setShowMoonModal(false)} />
 
         {/* MORNING BRIEF MODAL */}
-        <AnimatePresence>
-          {showMorningBriefModal && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-[#06102b]/95 backdrop-blur-md px-6 cursor-pointer"
-              onClick={() => setShowMorningBriefModal(false)}
-            >
-              <div
-                ref={morningBriefModalRef}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="morning-brief-modal-title"
-                tabIndex={-1}
-                className="glass-premium p-6 rounded-[32px] border border-white/20 shadow-2xl flex flex-col items-center w-full max-w-sm relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none transform rotate-12 scale-150">
-                  <span className="text-6xl">🔮</span>
-                </div>
-                <div className="flex justify-between items-center w-full mb-6 z-10 relative">
-                  <h2 id="morning-brief-modal-title" className="text-lg font-bold text-white tracking-wide">Brief Matinal</h2>
-                  <button onClick={() => setShowMorningBriefModal(false)} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400/60">
-                    &times;
-                  </button>
-                </div>
-                
-                <div className="flex flex-col gap-3 w-full text-white/90 z-10 relative">
-                  {loadingBrief ? (
-                    <div className="flex flex-col items-center justify-center py-8 gap-3">
-                      <Loader2 className="w-8 h-8 animate-spin text-sky-400" />
-                      <p className="text-xs text-white/70 animate-pulse text-center">
-                        L'IA interroge les constellations et la météo de {currentCommune?.nom || "ta ville"}...
-                      </p>
-                    </div>
-                  ) : aiBrief ? (
-                    <>
-                      <div className="flex items-center justify-between gap-2">
-                        <h3 className="font-bold text-sky-400 text-[11px] uppercase tracking-[0.2em] flex items-center gap-2">
-                          {aiBrief.title}
-                          {aiBrief.ai !== false && (
-                            <span className="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.5 rounded font-mono font-bold tracking-normal uppercase">
-                              IA
-                            </span>
-                          )}
-                        </h3>
-                        {briefSpeech.isSupported && (
-                          <button
-                            onClick={() => {
-                              if (briefSpeech.isSpeaking) {
-                                briefSpeech.stop();
-                              } else {
-                                // Pause between the two layers so the spoken
-                                // version keeps the same fact-then-joke rhythm.
-                                briefSpeech.speak(`${aiBrief.anchor}. ${aiBrief.punchline}`);
-                              }
-                            }}
-                            aria-label={briefSpeech.isSpeaking ? "Arrêter la lecture" : "Écouter le brief"}
-                            title={briefSpeech.isSpeaking ? "Arrêter la lecture" : "Écouter le brief"}
-                            className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full border transition-all active:scale-95 ${
-                              briefSpeech.isSpeaking
-                                ? 'bg-sky-500/25 border-sky-400/50 text-sky-300 animate-pulse'
-                                : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20'
-                            }`}
-                          >
-                            {briefSpeech.isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Layer 1 — the facts. Readable at a glance, half-awake. */}
-                      <p className="text-[15px] font-medium text-white leading-snug">
-                        {aiBrief.anchor.split(' · ').map((seg, i, arr) => (
-                          <span key={i}>
-                            {seg}
-                            {i < arr.length - 1 && <span className="text-white/60 mx-1.5">·</span>}
-                          </span>
-                        ))}
-                      </p>
-
-                      {/* Layer 2 — the joke, visibly secondary. */}
-                      <p className="text-[13px] italic text-white/70 leading-relaxed border-l-2 border-sky-400/40 pl-3">
-                        {aiBrief.punchline}
-                      </p>
-                    </>
-                  ) : !notifSettings.birthDate ? (
-                    <div className="flex flex-col items-center gap-4 text-center">
-                      <span className="text-4xl animate-pulse">🤫</span>
-                      <p className="italic opacity-80 text-sm">
-                        Pour lire ton astro-brief quotidien personnalisé par l'IA, renseigne d'abord ta date de naissance.
-                      </p>
-                      <button
-                        onClick={() => {
-                          setShowMorningBriefModal(false);
-                          setActiveTab('reglages');
-                        }}
-                        className="mt-2 bg-white/10 hover:bg-white/20 border border-white/20 px-5 py-2.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all shadow-lg active:scale-95"
-                      >
-                        Ouvrir les Réglages
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="text-center italic opacity-70">Données météo manquantes pour le brief.</p>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <MorningBriefModal
+          isOpen={showMorningBriefModal}
+          onClose={() => setShowMorningBriefModal(false)}
+          cityName={currentCommune?.nom}
+          loadingBrief={loadingBrief}
+          aiBrief={aiBrief}
+          hasBirthDate={Boolean(notifSettings.birthDate)}
+          onOpenSettings={() => {
+            setShowMorningBriefModal(false);
+            setActiveTab('reglages');
+          }}
+          briefSpeech={briefSpeech}
+        />
 
         {/* WELCOME GEOLOCATION PROMPT */}
-        <AnimatePresence>
-          {showWelcomePrompt && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-[#06102b]/90 backdrop-blur-md px-6 text-center"
-            >
-              <div
-                ref={welcomePromptRef}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="welcome-prompt-title"
-                tabIndex={-1}
-                className="glass-premium p-8 rounded-[36px] border border-white/20 shadow-2xl flex flex-col items-center max-w-sm w-full mx-auto relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-sky-400/20 blur-3xl rounded-full translate-x-12 -translate-y-12"></div>
-                <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/20 blur-3xl rounded-full -translate-x-12 translate-y-12"></div>
-
-                <div className="bg-white/10 p-5 rounded-full mb-6 z-10 border border-white/10">
-                  <MapPin className="w-10 h-10 text-sky-300" />
-                </div>
-
-                <h2 id="welcome-prompt-title" className="text-2xl font-bold text-white mb-3 z-10">Météo Locale</h2>
-                <p className="text-white/70 text-sm font-medium mb-8 z-10 leading-relaxed">
-                  Souhaitez-vous utiliser votre position actuelle pour afficher immédiatement la météo de votre ville ?
-                </p>
-                
-                <div className="flex flex-col gap-3 w-full z-10">
-                  <button 
-                    onClick={() => {
-                      setShowWelcomePrompt(false);
-                      handleGeolocation();
-                    }}
-                    className="w-full bg-gradient-to-r from-sky-400 to-indigo-500 hover:from-sky-300 hover:to-indigo-400 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-[0_0_20px_rgba(56,189,248,0.3)] hover:shadow-[0_0_25px_rgba(56,189,248,0.5)] active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    <MapPin className="w-5 h-5" />
-                    Utiliser ma position
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setShowWelcomePrompt(false);
-                    }}
-                    className="w-full bg-white/10 hover:bg-white/15 text-white/90 font-semibold py-3.5 px-6 rounded-2xl transition-all border border-white/10 active:scale-95"
-                  >
-                    Chercher manuellement
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <WelcomePrompt
+          isOpen={showWelcomePrompt}
+          onDismiss={() => setShowWelcomePrompt(false)}
+          onUseLocation={() => {
+            setShowWelcomePrompt(false);
+            handleGeolocation();
+          }}
+        />
 
         {/* PRIVACY POLICY MODAL */}
         <AnimatePresence>
@@ -1315,62 +1185,11 @@ export default function App() {
                             Recevez des alertes automatiques d'ironie météo même lorsque votre téléphone est verrouillé ou que l'application est totalement fermée !
                           </p>
                         </div>
-                        <button
-                          onClick={async () => {
-                            const enabled = !notifSettings.systemEnabled;
-                            if (enabled && 'Notification' in window) {
-                              try {
-                                const res = await Notification.requestPermission();
-                                if (res !== 'granted') {
-                                  setActiveToast({
-                                    id: Math.random().toString(),
-                                    title: "Autorisation Requise",
-                                    message: "Veuillez autoriser les notifications dans les réglages de votre système/navigateur.",
-                                    intensity: "alert_yellow"
-                                  });
-                                }
-                              } catch (e) {
-                                console.warn("RequestPermission error:", e);
-                              }
-                            } else if (enabled && !('Notification' in window)) {
-                              setActiveToast({
-                                id: Math.random().toString(),
-                                title: "Non Supporté",
-                                message: "Notifications non supportées par ce navigateur.",
-                                intensity: "alert_orange"
-                              });
-                            }
-                            const updated = { 
-                              ...notifSettings, 
-                              systemEnabled: enabled
-                            };
-                            // Si l'utilisateur active le bouton global et qu'aucune catégorie n'était cochée, on les active toutes par défaut pour l'aider.
-                            // Sinon, on préserve strictement les choix spécifiques de l'utilisateur !
-                            const hasAnySettingEnabled = 
-                              notifSettings.rainNotificationsEnabled !== false || 
-                              notifSettings.stormNotificationsEnabled !== false || 
-                              notifSettings.alertNotificationsEnabled !== false;
-
-                            if (enabled && !hasAnySettingEnabled) {
-                              updated.rainNotificationsEnabled = true;
-                              updated.stormNotificationsEnabled = true;
-                              updated.alertNotificationsEnabled = true;
-                            }
-                            setNotifSettings(updated);
-                            saveNotificationSettings(updated);
-                          }}
-                          role="switch"
-                          aria-checked={notifSettings.systemEnabled}
-                          aria-label="Notifications en arrière-plan"
-                          className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-                            notifSettings.systemEnabled ? 'bg-sky-500' : 'bg-white/10 border border-white/10'
-                          }`}
-                          type="button"
-                        >
-                          <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 relative z-10 ${
-                            notifSettings.systemEnabled ? 'translate-x-6' : 'translate-x-0'
-                          }`} />
-                        </button>
+                        <Toggle
+                          checked={notifSettings.systemEnabled}
+                          onChange={handleToggleSystemNotifications}
+                          label="Notifications en arrière-plan"
+                        />
                       </div>
 
                       {/* Informative helper tips for bulletproof push notifications */}
@@ -1454,27 +1273,11 @@ export default function App() {
                           {!notifSettings.systemEnabled ? 'Inactive car globale coupée' : 'Crachins, déluges & accalmies'}
                         </p>
                       </div>
-                      <button
-                        onClick={() => {
-                          const updated = { 
-                            ...notifSettings, 
-                            rainNotificationsEnabled: notifSettings.rainNotificationsEnabled !== false ? false : true 
-                          };
-                          setNotifSettings(updated);
-                          saveNotificationSettings(updated);
-                        }}
-                        role="switch"
-                        aria-checked={notifSettings.rainNotificationsEnabled !== false}
-                        aria-label="Notifications pluie"
-                        className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-                          notifSettings.rainNotificationsEnabled !== false ? 'bg-sky-500' : 'bg-white/10 border border-white/10'
-                        }`}
-                        type="button"
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 relative z-10 ${
-                          notifSettings.rainNotificationsEnabled !== false ? 'translate-x-6' : 'translate-x-0'
-                        }`} />
-                      </button>
+                      <Toggle
+                        checked={notifSettings.rainNotificationsEnabled !== false}
+                        onChange={handleToggleRainNotifications}
+                        label="Notifications pluie"
+                      />
                     </div>
 
                     {/* 4. Thunderstorm / Storm choice toggle */}
@@ -1489,27 +1292,12 @@ export default function App() {
                           {!notifSettings.systemEnabled ? 'Inactive car globale coupée' : 'Impacts de foudre & fin d\'orage'}
                         </p>
                       </div>
-                      <button
-                        onClick={() => {
-                          const updated = { 
-                            ...notifSettings, 
-                            stormNotificationsEnabled: notifSettings.stormNotificationsEnabled !== false ? false : true 
-                          };
-                          setNotifSettings(updated);
-                          saveNotificationSettings(updated);
-                        }}
-                        role="switch"
-                        aria-checked={notifSettings.stormNotificationsEnabled !== false}
-                        aria-label="Notifications orages"
-                        className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-                          notifSettings.stormNotificationsEnabled !== false ? 'bg-amber-500' : 'bg-white/10 border border-white/10'
-                        }`}
-                        type="button"
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 relative z-10 ${
-                          notifSettings.stormNotificationsEnabled !== false ? 'translate-x-6' : 'translate-x-0'
-                        }`} />
-                      </button>
+                      <Toggle
+                        checked={notifSettings.stormNotificationsEnabled !== false}
+                        onChange={handleToggleStormNotifications}
+                        label="Notifications orages"
+                        activeColorClass="bg-amber-500"
+                      />
                     </div>
 
                     {/* 5. Vigilance Alert choice toggle */}
@@ -1524,27 +1312,12 @@ export default function App() {
                           {!notifSettings.systemEnabled ? 'Inactive car globale coupée' : 'Vigilances Locales (Météo-France)'}
                         </p>
                       </div>
-                      <button
-                        onClick={() => {
-                          const updated = { 
-                            ...notifSettings, 
-                            alertNotificationsEnabled: notifSettings.alertNotificationsEnabled !== false ? false : true 
-                          };
-                          setNotifSettings(updated);
-                          saveNotificationSettings(updated);
-                        }}
-                        role="switch"
-                        aria-checked={notifSettings.alertNotificationsEnabled !== false}
-                        aria-label="Notifications vigilance"
-                        className={`relative w-12 h-6 flex items-center rounded-full cursor-pointer transition-colors duration-300 p-0.5 shrink-0 shadow-inner overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-                          notifSettings.alertNotificationsEnabled !== false ? 'bg-rose-500' : 'bg-white/10 border border-white/10'
-                        }`}
-                        type="button"
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 relative z-10 ${
-                          notifSettings.alertNotificationsEnabled !== false ? 'translate-x-6' : 'translate-x-0'
-                        }`} />
-                      </button>
+                      <Toggle
+                        checked={notifSettings.alertNotificationsEnabled !== false}
+                        onChange={handleToggleAlertNotifications}
+                        label="Notifications vigilance"
+                        activeColorClass="bg-rose-500"
+                      />
                     </div>
                   </div>
                 </div>
@@ -1733,89 +1506,11 @@ export default function App() {
         </div>
 
         {/* BOTTOM GLASS NAVIGATION BAR - PERFECT 4-COL PILL DOCK STYLE */}
-        <nav
-          id="tab-navigation-panel"
-          role="tablist"
-          aria-label="Sections de l'application"
-          className="relative z-10 mt-6 bg-white/15 backdrop-blur-md border border-white/20 rounded-full p-1.5 flex justify-around items-center shadow-lg"
-        >
-          {/* TAB 1: Météo */}
-          <button
-            id="tab-meteo"
-            role="tab"
-            aria-selected={activeTab === 'meteo'}
-            aria-controls="panel-meteo"
-            onClick={() => setActiveTab('meteo')}
-            aria-label="Météo"
-            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-              activeTab === 'meteo'
-                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
-                : 'text-white/60 hover:text-white/90 font-medium'
-            }`}
-          >
-            <CloudSun className="w-5 h-5" />
-            <span className="text-[9px]">Météo</span>
-          </button>
-
-          {/* TAB 2: Comparer */}
-          <button
-            id="tab-cartes"
-            role="tab"
-            aria-selected={activeTab === 'cartes'}
-            aria-controls="panel-cartes"
-            onClick={() => setActiveTab('cartes')}
-            aria-label="Comparer les villes"
-            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-              activeTab === 'cartes'
-                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
-                : 'text-white/60 hover:text-white/90 font-medium'
-            }`}
-          >
-            <ArrowRightLeft className={`w-5 h-5 rotate-45 ${activeTab === 'cartes' ? 'text-sky-400' : ''}`} />
-            <span className="text-[9px]">Comparer</span>
-          </button>
-
-          {/* TAB 3: Alertes */}
-          <button
-            id="tab-alertes"
-            role="tab"
-            aria-selected={activeTab === 'alertes'}
-            aria-controls="panel-alertes"
-            onClick={() => setActiveTab('alertes')}
-            aria-label="Alertes et vigilance"
-            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-              activeTab === 'alertes'
-                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
-                : 'text-white/60 hover:text-white/90 font-medium'
-            }`}
-          >
-            <div className="relative">
-              <Bell className="w-5 h-5" />
-              {weather && weather.vigilance.globalLevel !== 'green' && (
-                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400 ring-1 ring-white/60" />
-              )}
-            </div>
-            <span className="text-[9px]">Alertes</span>
-          </button>
-
-          {/* TAB 4: Réglages */}
-          <button
-            id="tab-reglages"
-            role="tab"
-            aria-selected={activeTab === 'reglages'}
-            aria-controls="panel-reglages"
-            onClick={() => setActiveTab('reglages')}
-            aria-label="Réglages"
-            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-              activeTab === 'reglages'
-                ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
-                : 'text-white/60 hover:text-white/90 font-medium'
-            }`}
-          >
-            <Settings className="w-5 h-5" />
-            <span className="text-[9px]">Réglages</span>
-          </button>
-        </nav>
+        <BottomNav
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          hasActiveVigilance={Boolean(weather && weather.vigilance.globalLevel !== 'green')}
+        />
 
       </main>
 
