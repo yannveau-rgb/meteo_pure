@@ -26,6 +26,14 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// The glass-premium sheen (index.css) is meant to play once per visit, not
+// on every tab switch — AnimatePresence remounts the active tab's cards, so
+// without this it replayed across every card each time. 2s comfortably
+// covers the ~1.55s animation on the first screen before disabling it.
+window.setTimeout(() => {
+  document.documentElement.classList.add('sheen-seen');
+}, 2000);
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

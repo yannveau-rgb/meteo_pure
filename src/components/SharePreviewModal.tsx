@@ -116,7 +116,7 @@ export default function SharePreviewModal({
                     <div className="space-y-0.5 animate-fade-in">
                       <h4 className="text-xs font-bold text-sky-200">Conseil de partage</h4>
                       <p className="text-[11px] text-white/70 leading-relaxed">
-                        Si votre navigateur ou l'iframe bloque la copie automatique, vous pouvez toujours **faire un clic droit** ou **un appui long** sur l'image ci-dessus pour la copier/enregistrer, ou cliquer sur **"Télécharger"** ci-dessous !
+                        Si la copie automatique ne fonctionne pas, vous pouvez toujours <strong>faire un clic droit</strong> ou <strong>un appui long</strong> sur l'image ci-dessus pour la copier ou l'enregistrer, ou cliquer sur <strong>« Télécharger »</strong> ci-dessous !
                       </p>
                     </div>
                   </div>

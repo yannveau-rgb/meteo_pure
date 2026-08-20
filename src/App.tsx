@@ -373,6 +373,16 @@ export default function App() {
   const weatherStyle = getWeatherUI(currentCode, isNightTimeNow);
   const ActiveWeatherIcon = weatherStyle.icon;
 
+  // Keeps <body>'s background (index.css) and the status bar's theme-color
+  // in sync with the same day/night call this component already makes for
+  // the app shell itself — both used to be hardcoded to day colors, visible
+  // during iOS's overscroll bounce and in the installed PWA's status bar.
+  useEffect(() => {
+    document.body.dataset.daytime = isNightTimeNow ? 'night' : 'day';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', isNightTimeNow ? '#0a1f38' : '#123a5e');
+  }, [isNightTimeNow]);
+
   return (
     <div className={`min-h-screen w-full flex justify-center items-center p-0 sm:p-6 text-white antialiased overflow-x-hidden bg-gradient-to-br ${isNightTimeNow ? 'from-[#0a1f38] via-[#123a5e] to-[#081b2e]' : 'from-[#123a5e] via-[#2a72a8] to-[#0d2e4a]'}`}>
       
