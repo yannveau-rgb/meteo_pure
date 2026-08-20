@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { VigilanceStatus } from '../types';
-import { ShieldAlert, X, HelpCircle, Info, ChevronRight, Sun } from 'lucide-react';
+import { ShieldAlert, X, Sun } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface VigilanceCardProps {

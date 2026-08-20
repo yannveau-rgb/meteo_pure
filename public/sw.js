@@ -101,7 +101,7 @@ self.addEventListener('push', (event) => {
   if (event.data) {
     try {
       data = { ...data, ...event.data.json() };
-    } catch (e) {
+    } catch {
       data = { ...data, message: event.data.text() };
     }
   }
@@ -197,7 +197,9 @@ self.addEventListener('notificationclick', (event) => {
           if (clientOrigin === self.location.origin && 'focus' in client) {
             return client.focus();
           }
-        } catch {}
+        } catch {
+          // client.url wasn't a parseable URL — skip it, try the next client
+        }
       }
       if (self.clients.openWindow) {
         return self.clients.openWindow(targetUrl);

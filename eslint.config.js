@@ -17,7 +17,10 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      // Bumped from 'warn' to 'error': the codebase had accumulated 61
+      // unused-var warnings over time because nothing enforced cleaning
+      // them up. Now zero, kept that way by making new ones fail lint.
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/no-empty-object-type': 'off',
       'no-empty': ['warn', { allowEmptyCatch: true }],
       'no-useless-escape': 'warn',

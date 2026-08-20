@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { RainInTheHour } from '../types';
 import { motion } from 'motion/react';
-import { Droplets, Info } from 'lucide-react';
 
 interface RainForecastProps {
   rainData: RainInTheHour[];
+  // Kept in the props contract even though this component doesn't read it —
+  // the parent computes it for a sibling component and passing it here too
+  // costs nothing to keep the call site simple.
   precipitationProbability: number;
 }
 
-export default function RainForecast({ rainData, precipitationProbability }: RainForecastProps) {
+export default function RainForecast({ rainData }: RainForecastProps) {
   const [selectedBar, setSelectedBar] = useState<number | null>(null);
 
   const getIntensityLabel = (intensity: string) => {
@@ -17,15 +19,6 @@ export default function RainForecast({ rainData, precipitationProbability }: Rai
       case 'moderate': return 'Pluie modérée';
       case 'light': return 'Pluie faible / Bruine';
       default: return 'Pas de pluie';
-    }
-  };
-
-  const getIntensityColor = (intensity: string) => {
-    switch (intensity) {
-      case 'heavy': return 'bg-sky-600';
-      case 'moderate': return 'bg-sky-400';
-      case 'light': return 'bg-sky-300';
-      default: return 'bg-slate-300/35';
     }
   };
 

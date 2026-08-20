@@ -53,6 +53,10 @@ function AmbientWeatherBackground({ weatherCode }: AmbientWeatherBackgroundProps
   const type = useMemo(() => categorize(weatherCode), [weatherCode]);
   const prefersReducedMotion = useReducedMotion();
 
+  // `type` isn't read inside these factories — it's the memoization key, not
+  // an input, so the particles only regenerate when the weather category
+  // actually changes rather than on every render (see the class comment above).
+  /* eslint-disable react-hooks/exhaustive-deps */
   const rainDrops = useMemo(
     () => makeParticles(18, 7, { delayMax: 2.5, durMin: 1.2, durSpread: 0.8, sizeMin: 20, sizeSpread: 20 }),
     [type]
@@ -65,6 +69,7 @@ function AmbientWeatherBackground({ weatherCode }: AmbientWeatherBackgroundProps
     () => makeParticles(12, 10, { delayMax: 2, durMin: 1.0, durSpread: 0.5, sizeMin: 35, sizeSpread: 0 }),
     [type]
   );
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // Motion-sensitive users get the mood (tint, haze) without anything that moves.
   if (prefersReducedMotion) {

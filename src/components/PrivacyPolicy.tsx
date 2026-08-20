@@ -1,4 +1,4 @@
-import { Shield, FileText, Mail, Trash2, ExternalLink } from 'lucide-react';
+import { Shield, FileText, Trash2, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface PrivacyPolicyProps {

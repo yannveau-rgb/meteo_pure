@@ -1,22 +1,14 @@
-import { 
-  Sun, 
-  CloudSun, 
-  Cloud, 
-  CloudRain, 
-  CloudSnow, 
-  CloudDrizzle, 
-  CloudLightning, 
-  CloudFog, 
-  Wind, 
-  Thermometer, 
-  Droplets,
-  AlertTriangle,
-  Flame,
-  Snowflake,
-  ShieldAlert,
+import {
+  Sun,
+  CloudSun,
+  Cloud,
+  CloudRain,
+  CloudSnow,
+  CloudDrizzle,
+  CloudLightning,
+  CloudFog,
   Moon,
-  CloudMoon,
-  Waves
+  CloudMoon
 } from 'lucide-react';
 import React from 'react';
 import { RainInTheHour, VigilanceStatus, VigilanceCategory } from '../types';

@@ -1,6 +1,20 @@
 import { Redis } from '@upstash/redis';
+import fs from 'fs';
+import path from 'path';
 
 let redis: Redis | null = null;
+
+function hasUpstashCredentials(): boolean {
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL ||
+    process.env.UPSTASH_REDIS_REST_KV_REST_API_URL ||
+    process.env.KV_REST_API_URL;
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    process.env.UPSTASH_REDIS_REST_KV_REST_API_TOKEN ||
+    process.env.KV_REST_API_TOKEN;
+  return Boolean(url && token);
+}
 
 export function getRedis(): Redis {
   if (!redis) {
@@ -21,6 +35,28 @@ export function getRedis(): Redis {
 }
 
 const SUBS_KEY = 'meteo:subscriptions';
+
+// server.ts (local dev) never has Upstash credentials, and used to keep its
+// own hand-rolled subscribe/unsubscribe/cron logic to avoid depending on
+// Redis — which is exactly how it drifted from api/_lib/weatherCheck.ts
+// (no quiet hours, no cooldown, no category filters, still fires
+// end_rain/end_storm...). Falling back to a local JSON file here instead
+// lets server.ts reuse the *same* getSubscriptions/saveSubscriptions —
+// and therefore the same checkAllSubscriptions — as production.
+const LOCAL_FILE = path.join(process.cwd(), 'subscriptions.json');
+
+function readLocalFile(): StoredSubscription[] {
+  if (!fs.existsSync(LOCAL_FILE)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(LOCAL_FILE, 'utf-8'));
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalFile(subs: StoredSubscription[]): void {
+  fs.writeFileSync(LOCAL_FILE, JSON.stringify(subs, null, 2));
+}
 
 export interface StoredSubscription {
   id: string;
@@ -47,10 +83,12 @@ export interface StoredSubscription {
 }
 
 export async function getSubscriptions(): Promise<StoredSubscription[]> {
+  if (!hasUpstashCredentials()) return readLocalFile();
   const raw = await getRedis().get<StoredSubscription[]>(SUBS_KEY);
   return raw || [];
 }
 
 export async function saveSubscriptions(subs: StoredSubscription[]): Promise<void> {
+  if (!hasUpstashCredentials()) return writeLocalFile(subs);
   await getRedis().set(SUBS_KEY, subs);
 }

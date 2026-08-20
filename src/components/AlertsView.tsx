@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, ShieldAlert, PhoneCall, Info, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { Bell, ShieldAlert, PhoneCall, CheckCircle2 } from 'lucide-react';
 import { VigilanceStatus } from '../types';
 
 interface AlertsViewProps {

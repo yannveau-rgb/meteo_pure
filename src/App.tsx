@@ -1,41 +1,31 @@
-import React, { lazy, Suspense, useState, useEffect } from 'react';
-import { 
-  MapPin, 
-  Search, 
-  X, 
-  CloudSun, 
-  Map, 
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
+import {
+  MapPin,
+  Search,
+  X,
+  CloudSun,
   ArrowRightLeft,
-  Bell, 
-  Loader2, 
+  Bell,
+  Loader2,
   Navigation,
   CloudLightning,
   AlertCircle,
-  HelpCircle,
   Clock,
   Volume2,
   VolumeX,
-  User,
   Settings,
-  Trash2,
-  Flame,
   ShieldAlert,
   Sparkles,
-  Smile,
   AlertTriangle,
   Sunrise,
   Sunset,
   Share2,
-  Check,
-  CheckCircle2,
   CloudRain,
-  Star,
-  MessageSquare
+  Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Commune, WeatherData } from './types';
 import { getCommuneByCoords } from './utils/weatherApi';
-import { getWeatherUI, getMoonPhase, getNext7DaysMoonPhases, calculateCurrentUv, isNightTime, isHourNight } from './utils/weatherUtils';
+import { getWeatherUI, getMoonPhase, getNext7DaysMoonPhases, calculateCurrentUv, isNightTime } from './utils/weatherUtils';
 import { getSaintDuJour } from './utils/ephemeris';
 import { formatCacheTime } from './utils/weatherCache';
 import {
@@ -50,7 +40,6 @@ import {
   updateLastAlertTime,
   syncPushSubscription,
   refreshPushSubscription,
-  HumorLevel,
   NotificationLog,
   NotificationSettings,
   NotificationIntensity,
@@ -144,7 +133,7 @@ export default function App() {
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState<boolean>(false);
 
   // Weather data (fetch + 10-min refresh)
-  const { weather, setWeather, loading, errorMsg, setErrorMsg, staleSince } = useWeatherFetch(currentCommune, () => {
+  const { weather, loading, errorMsg, setErrorMsg, staleSince } = useWeatherFetch(currentCommune, () => {
     if (notifSettings.systemEnabled) {
       checkAndFireFullMoonNotification(notifSettings.humorLevel);
     }
@@ -190,13 +179,21 @@ export default function App() {
     }
   }, [notifSettings.systemEnabled, notifSettings.humorLevel]);
 
+  // `weather` gets a new object identity on every 10-min refresh even when
+  // nothing meaningful changed, so it's tracked in a ref rather than an
+  // effect dependency below — putting the object itself in the deps array
+  // used to re-run this sync (and re-POST /api/subscribe) every 10 minutes
+  // for all ~11 subscribers, for no behavioral gain.
+  const weatherRef = useRef(weather);
+  useEffect(() => { weatherRef.current = weather; }, [weather]);
+
   // Synchronize Background push subscription with server for unattended background notifications
   useEffect(() => {
     syncPushSubscription(
       notifSettings.systemEnabled,
       currentCommune,
       notifSettings.humorLevel,
-      weather,
+      weatherRef.current,
       notifSettings.birthDate,
       {
         rainNotificationsEnabled: notifSettings.rainNotificationsEnabled,
@@ -205,7 +202,7 @@ export default function App() {
         minMinutesBetweenAlerts: notifSettings.minMinutesBetweenAlerts
       }
     );
-  }, [notifSettings.systemEnabled, currentCommune, notifSettings.humorLevel, weather, notifSettings.birthDate, notifSettings.rainNotificationsEnabled, notifSettings.stormNotificationsEnabled, notifSettings.alertNotificationsEnabled, notifSettings.minMinutesBetweenAlerts]);
+  }, [notifSettings.systemEnabled, currentCommune, notifSettings.humorLevel, notifSettings.birthDate, notifSettings.rainNotificationsEnabled, notifSettings.stormNotificationsEnabled, notifSettings.alertNotificationsEnabled, notifSettings.minMinutesBetweenAlerts]);
 
   const handleOpenMorningBrief = () =>
     openMorningBrief(
@@ -297,6 +294,9 @@ export default function App() {
         minMinutesBetweenAlerts: notifSettings.minMinutesBetweenAlerts
       }
     );
+    // Intentionally narrow: only re-run on city change, not on every 10-min
+    // weather refresh or settings tweak (that's handled by the sync effect above).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weather?.city]);
 
   // Handle Dynamic Geolocation Pin search
@@ -364,22 +364,6 @@ export default function App() {
     });
   };
 
-  // Direct City pin click on the weather map
-  const selectCityFromMap = (cityName: string, coords: [number, number]) => {
-    // Generate dummy commune object format for trigger
-    const matchedCommune: Commune = {
-      nom: cityName,
-      code: 'custom',
-      codesPostaux: [],
-      centre: {
-        type: 'Point',
-        coordinates: coords
-      },
-      codeDepartement: '00'
-    };
-    setCurrentCommune(matchedCommune);
-    setActiveTab('meteo');
-  };
 
   // Resolve background style from WMO code of active weather
   const currentCode = weather?.current.weatherCode ?? 0;
@@ -1548,7 +1532,7 @@ export default function App() {
                               intensity: "alert_orange"
                             });
                           }
-                        } catch (err) {
+                        } catch {
                           setActiveToast({
                             id: Math.random().toString(),
                             title: "Erreur de Connexion",
@@ -1601,7 +1585,7 @@ export default function App() {
                               intensity: "alert_orange"
                             });
                           }
-                        } catch (err) {
+                        } catch {
                           setActiveToast({
                             id: Math.random().toString(),
                             title: "Erreur Serveur",

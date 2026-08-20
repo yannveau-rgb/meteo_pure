@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Smartphone, Download, Apple, Check, Globe, Share, Plus, HelpCircle, ArrowRight } from 'lucide-react';
+import { Smartphone, Download, Apple, Check, Globe, Share, Plus, HelpCircle } from 'lucide-react';
 
 interface PwaInstallWizardProps {
   deferredPrompt: any;
@@ -14,7 +14,6 @@ export default function PwaInstallWizard({
   onInstallTrigger,
 }: PwaInstallWizardProps) {
   const [platform, setPlatform] = useState<'ios' | 'android' | 'desktop'>('android');
-  const [showGuide, setShowGuide] = useState(false);
 
   // Automatically detect user environment
   useEffect(() => {

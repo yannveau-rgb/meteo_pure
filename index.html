@@ -22,7 +22,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
 
-    <!-- Service Worker Registration — register ASAP for push reliability -->
+    <!-- Service Worker Registration — register ASAP for push reliability.
+         This is the only registration call in the app; src/main.tsx only
+         reads back navigator.serviceWorker.ready to force an update check
+         and reload on activation, rather than registering a second time. -->
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js')

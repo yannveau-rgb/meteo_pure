@@ -1,20 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Search, 
-  ArrowRightLeft, 
-  Thermometer, 
-  Wind, 
-  Droplets, 
-  CloudRain, 
-  Sparkles, 
-  ThumbsUp, 
-  MapPin, 
+import {
+  Search,
+  ArrowRightLeft,
+  Thermometer,
+  Wind,
+  Droplets,
+  Sparkles,
+  ThumbsUp,
+  MapPin,
   Loader2,
   Building2,
-  Minimize2,
-  Zap,
-  Flame,
-  Snowflake
+  Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Commune, WeatherData } from '../types';

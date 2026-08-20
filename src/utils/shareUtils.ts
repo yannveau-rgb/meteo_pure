@@ -48,7 +48,7 @@ function oklchToRgb(lVal: string, cVal: string, hVal: string, aVal?: string): st
   let alpha = 1;
 
   if (aVal) {
-    const cleanA = aVal.trim().replace(/^[\/\s]+/, '');
+    const cleanA = aVal.trim().replace(/^[/\s]+/, '');
     if (cleanA.includes('var(')) {
       alpha = 1;
     } else {
@@ -98,7 +98,7 @@ function oklabToRgb(lVal: string, aValStr: string, bValStr: string, aVal?: strin
   let alpha = 1;
 
   if (aVal) {
-    const cleanA = aVal.trim().replace(/^[\/\s]+/, '');
+    const cleanA = aVal.trim().replace(/^[/\s]+/, '');
     if (cleanA.includes('var(')) {
       alpha = 1;
     } else {
@@ -148,7 +148,7 @@ function replaceOklchOklab(cssText: string): string {
         return oklchToRgb(parsed.values[0], parsed.values[1], parsed.values[2], parsed.alpha);
       }
       return 'rgba(255, 255, 255, 1)';
-    } catch (e) {
+    } catch {
       return 'rgba(255, 255, 255, 1)';
     }
   });
@@ -160,7 +160,7 @@ function replaceOklchOklab(cssText: string): string {
         return oklabToRgb(parsed.values[0], parsed.values[1], parsed.values[2], parsed.alpha);
       }
       return 'rgba(255, 255, 255, 1)';
-    } catch (e) {
+    } catch {
       return 'rgba(255, 255, 255, 1)';
     }
   });
@@ -207,7 +207,7 @@ export async function generateElementDataUrl(elementId: string): Promise<string>
   window.getComputedStyle = function(el, pseudoElt) {
     const style = originalGetComputedStyle.call(window, el, pseudoElt);
     return new Proxy(style, {
-      get(target, prop, receiver) {
+      get(target, prop) {
         if (prop === 'getPropertyValue') {
           return function(propertyName: string) {
             const val = target.getPropertyValue(propertyName);
@@ -291,7 +291,7 @@ export async function generateElementDataUrl(elementId: string): Promise<string>
                 combinedStyles += rules[j].cssText + '\n';
               }
             }
-          } catch (e) {
+          } catch {
             // Silently caught for foreign/cross-origin or unloaded styles
           }
         }

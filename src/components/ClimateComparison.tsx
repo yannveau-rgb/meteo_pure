@@ -1,6 +1,6 @@
 import React from 'react';
 import { getLocalClimatology } from '../utils/climatology';
-import { Thermometer, TrendingUp, TrendingDown, Info, Calendar } from 'lucide-react';
+import { Thermometer, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 
 interface ClimateComparisonProps {
   latitude: number;

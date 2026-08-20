@@ -21,14 +21,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     commune,
     humorLevel: humorLevel || 'spicy',
     birthDate: birthDate || '',
-    prevHot: currentConditions ? currentConditions.temperature >= 30 : false,
-    prevRain: currentConditions ? currentConditions.precipitation > 0 : false,
-    prevStorm: currentConditions ? [95, 96, 99].includes(currentConditions.weatherCode) : false,
+    // currentConditions is only sent on first subscribe (App.tsx's silent
+    // refresh omits it). Falling back to `false` here used to wipe the
+    // tracked state on every resync, making the next cron pass think rain/
+    // storm/heat had just *started* and re-fire a push for an episode
+    // already announced. Preserve the previous value instead.
+    prevHot: currentConditions ? currentConditions.temperature >= 30 : (idx >= 0 ? subs[idx].prevHot : false),
+    prevRain: currentConditions ? currentConditions.precipitation > 0 : (idx >= 0 ? subs[idx].prevRain : false),
+    prevStorm: currentConditions ? [95, 96, 99].includes(currentConditions.weatherCode) : (idx >= 0 ? subs[idx].prevStorm : false),
     prevVigilance: idx >= 0 ? (subs[idx].prevVigilance || 'green') : 'green',
     lastBriefDate: idx >= 0 ? (subs[idx].lastBriefDate || '') : '',
     lastChristmasDate: idx >= 0 ? (subs[idx].lastChristmasDate || '') : '',
     lastMonthlyXmasDate: idx >= 0 ? subs[idx].lastMonthlyXmasDate : undefined,
     lastTransitionPushAt: idx >= 0 ? subs[idx].lastTransitionPushAt : undefined,
+    lastMsgIndexByIntensity: idx >= 0 ? subs[idx].lastMsgIndexByIntensity : undefined,
     rainNotificationsEnabled: rainNotificationsEnabled !== false,
     stormNotificationsEnabled: stormNotificationsEnabled !== false,
     alertNotificationsEnabled: alertNotificationsEnabled !== false,

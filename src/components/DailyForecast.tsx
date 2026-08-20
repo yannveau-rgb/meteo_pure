@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { DailyForecastItem } from '../types';
 import { getWeatherUI } from '../utils/weatherUtils';
 import { CONFIDENCE_LABELS } from '../utils/forecastConfidence';
-import { Calendar, Share2, Check } from 'lucide-react';
+import { Calendar, Share2 } from 'lucide-react';
 import { generateElementDataUrl, copyDataUrlToClipboard, downloadDataUrl } from '../utils/shareUtils';
 
 const SharePreviewModal = lazy(() => import('./SharePreviewModal'));

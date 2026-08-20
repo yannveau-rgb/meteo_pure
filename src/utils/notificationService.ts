@@ -775,7 +775,6 @@ export function getMorningBriefContent(humorLevel: HumorLevel, birthDate: string
   const isSunny = [0, 1].includes(weatherCode);
   const weatherType = isStorming ? 'storm' : isRaining ? 'rain' : isSunny ? 'sun' : 'cloud';
 
-  const dayOfMonth = new Date().getDate();
   const dayOfWeek = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'][new Date().getDay()];
 
   const weatherPhrases: Record<string, Record<string, string[]>> = {
@@ -1093,7 +1092,7 @@ export async function fireSystemNotification(title: string, body: string): Promi
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding)
-    .replace(/\-/g, '+')
+    .replace(/-/g, '+')
     .replace(/_/g, '/');
 
   const rawData = window.atob(base64);
@@ -1200,6 +1199,12 @@ async function persistSubscriptionMeta(commune: any, humorLevel: HumorLevel, bir
  * Silent background re-sync: call on every app load when notifs are enabled.
  * Re-sends the existing push subscription to the server so the endpoint stays fresh.
  * If the subscription was rotated by the browser, creates a new one.
+ *
+ * This used to be a ~90%-identical copy of `syncPushSubscription` (same
+ * subscribe-or-create dance, same POST body). It's now a thin wrapper:
+ * `enabled: true` and no `weather` reproduces the exact previous behavior
+ * (no `currentConditions` in the POST body), without a second copy of the
+ * subscribe/POST logic to keep in sync.
  */
 export async function refreshPushSubscription(
   commune: any,
@@ -1208,40 +1213,7 @@ export async function refreshPushSubscription(
   prefs?: { rainNotificationsEnabled?: boolean; stormNotificationsEnabled?: boolean; alertNotificationsEnabled?: boolean; minMinutesBetweenAlerts?: number }
 ): Promise<void> {
   try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    if (Notification.permission !== 'granted') return;
-
-    const reg = await navigator.serviceWorker.ready;
-    if (!reg) return;
-
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      const keyRes = await fetch('/api/vapid-public-key');
-      if (!keyRes.ok) return;
-      const { publicKey } = await keyRes.json();
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey)
-      });
-    }
-
-    if (sub) {
-      await fetch('/api/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subscription: sub,
-          commune,
-          humorLevel,
-          birthDate,
-          rainNotificationsEnabled: prefs?.rainNotificationsEnabled,
-          stormNotificationsEnabled: prefs?.stormNotificationsEnabled,
-          alertNotificationsEnabled: prefs?.alertNotificationsEnabled,
-          minMinutesBetweenAlerts: prefs?.minMinutesBetweenAlerts
-        })
-      });
-      await persistSubscriptionMeta(commune, humorLevel, birthDate);
-    }
+    await syncPushSubscription(true, commune, humorLevel, null, birthDate, prefs);
   } catch (e) {
     console.warn('[PUSH] silent refresh failed:', e);
   }

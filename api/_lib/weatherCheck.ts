@@ -12,6 +12,11 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
   if (subs.length === 0) return { checked: 0, sent: 0 };
 
   let sent = 0;
+  // Collected here instead of saved immediately: the loop's final
+  // `saveSubscriptions(subs)` (below) used to overwrite an in-place removal
+  // with the original, still-including-the-dead-entry `subs` array, so the
+  // cleanup never actually stuck.
+  const deadIds = new Set<string>();
 
   for (const sub of subs) {
     try {
@@ -223,8 +228,7 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
         } catch (err: any) {
           console.error('[PUSH] alert failed:', sub.id, err.statusCode);
           if (err.statusCode === 410 || err.statusCode === 404) {
-            const fresh = await getSubscriptions();
-            await saveSubscriptions(fresh.filter(s => s.id !== sub.id));
+            deadIds.add(sub.id);
           }
         }
       }
@@ -233,6 +237,7 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
     }
   }
 
-  await saveSubscriptions(subs);
+  const survivors = deadIds.size > 0 ? subs.filter(s => !deadIds.has(s.id)) : subs;
+  await saveSubscriptions(survivors);
   return { checked: subs.length, sent };
 }
