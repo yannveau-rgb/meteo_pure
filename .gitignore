@@ -10,3 +10,4 @@ coverage/
 # Generated at runtime by server.ts - contains private VAPID key and user PII (push endpoints, birthdates)
 vapid.json
 subscriptions.json
+.claude/

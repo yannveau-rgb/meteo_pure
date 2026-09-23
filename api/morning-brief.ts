@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { generateAiMorningBrief } from './_lib/gemini.js';
+import { generateAiMorningBrief, generateAiHoroscope } from './_lib/gemini.js';
 import { rateLimit } from './_lib/rateLimit.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -10,16 +10,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!birthDate) return res.status(400).json({ error: 'birthDate is required' });
 
   try {
-    const brief = await generateAiMorningBrief(
-      birthDate,
-      Number(weatherCode) || 0,
-      humorLevel || 'spicy',
-      cityName || 'Inconnu',
-      anchorInput && typeof anchorInput === 'object'
-        ? { ...anchorInput, weatherCode: Number(weatherCode) || 0 }
-        : undefined
-    );
-    res.json(brief);
+    const [brief, horoscope] = await Promise.all([
+      generateAiMorningBrief(
+        birthDate,
+        Number(weatherCode) || 0,
+        humorLevel || 'safe',
+        cityName || 'Inconnu',
+        anchorInput && typeof anchorInput === 'object'
+          ? { ...anchorInput, weatherCode: Number(weatherCode) || 0 }
+          : undefined
+      ),
+      generateAiHoroscope(birthDate)
+    ]);
+
+    res.json({
+      ...brief,
+      horoscope
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

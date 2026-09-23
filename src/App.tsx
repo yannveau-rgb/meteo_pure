@@ -69,7 +69,7 @@ import Toggle from './components/ui/Toggle';
 import InfoBadge from './components/ui/InfoBadge';
 import BottomNav from './components/BottomNav';
 import MoonPhasesModal from './components/modals/MoonPhasesModal';
-import MorningBriefModal from './components/modals/MorningBriefModal';
+import HoroscopeModal from './components/HoroscopeModal';
 import WelcomePrompt from './components/modals/WelcomePrompt';
 import Toast, { ToastData } from './components/Toast';
 
@@ -436,19 +436,19 @@ export default function App() {
         {/* MOON PHASES MODAL */}
         <MoonPhasesModal isOpen={showMoonModal} onClose={() => setShowMoonModal(false)} />
 
-        {/* MORNING BRIEF MODAL */}
-        <MorningBriefModal
+        {/* HOROSCOPE MODAL */}
+        <HoroscopeModal
           isOpen={showMorningBriefModal}
           onClose={() => setShowMorningBriefModal(false)}
-          cityName={currentCommune?.nom}
-          loadingBrief={loadingBrief}
-          aiBrief={aiBrief}
+          loading={loadingBrief}
+          brief={aiBrief}
           hasBirthDate={Boolean(notifSettings.birthDate)}
           onOpenSettings={() => {
             setShowMorningBriefModal(false);
             setActiveTab('reglages');
           }}
-          briefSpeech={briefSpeech}
+          cityName={currentCommune?.nom}
+          speech={briefSpeech}
         />
 
         {/* WELCOME GEOLOCATION PROMPT */}
@@ -910,10 +910,10 @@ export default function App() {
                             <button
                               onClick={handleOpenMorningBrief}
                               className="flex flex-col items-center gap-1 px-3 hover:bg-sky-500/20 rounded-xl transition-colors active:scale-95 border border-transparent hover:border-sky-400/30 py-1 text-sky-200" 
-                              title="Ton Brief du Jour"
+                              title="Votre Horoscope du Jour"
                             >
-                              <span className="text-xl drop-shadow-[0_0_10px_rgba(14,165,233,0.4)]">🔮</span>
-                              <span className="text-[9px] font-bold tracking-wider uppercase opacity-90 truncate max-w-[70px]">Brief</span>
+                              <span className="text-xl drop-shadow-[0_0_10px_rgba(14,165,233,0.4)]">✨</span>
+                              <span className="text-[9px] font-bold tracking-wider uppercase opacity-90 truncate max-w-[70px]">Horoscope</span>
                             </button>
                           </div>
                         </div>
@@ -1123,7 +1123,7 @@ export default function App() {
                             ⭐ Brief & Horoscope Matinal (Astro-Météo)
                           </h5>
                           <p className="text-[9.5px] text-white/80 leading-relaxed mt-1">
-                            Recevez chaque matin à 8h00 un récapitulatif ultra-personnalisé mêlant sarcasme météo et prédictions astrales croustillantes liées à votre signe astrologique !
+                            Recevez chaque matin à 8h00 votre récapitulatif ultra-personnalisé mêlant les prévisions météo du jour et une touche d'inspiration positive !
                           </p>
                           <p className="text-[9px] text-white/50 leading-relaxed mt-1.5 italic">
                             Pour activer cette fonctionnalité, veuillez renseigner votre date de naissance complète ci-dessous :

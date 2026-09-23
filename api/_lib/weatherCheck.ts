@@ -92,11 +92,16 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
           );
           if (brief) {
             try {
-              // Title carries the facts so it's readable on a locked screen
-              // without expanding the notification; the joke goes in the body.
+              const pushTitle = brief.horoscope?.sign
+                ? `✨ Horoscope ${brief.horoscope.sign} · ${brief.title}`
+                : brief.anchor;
+              const pushBody = brief.horoscope
+                ? `${brief.horoscope.general} 💡 Conseil : ${brief.horoscope.advice}`
+                : brief.punchline;
+
               await webPush.sendNotification(sub.subscription, JSON.stringify({
-                title: brief.anchor,
-                message: brief.punchline,
+                title: pushTitle,
+                message: pushBody,
                 intensity: 'morning_brief',
                 city: sub.commune.nom
               }), { urgency: 'high', TTL: 3600 });

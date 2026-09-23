@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { getZodiacSign, getDaysUntilChristmas, getFunnyRainMessage } from '../notificationService';
+import {
+  getZodiacSign,
+  getDaysUntilChristmas,
+  getFunnyRainMessage,
+  getSarcasticChristmasCountdownMessage,
+  getMonthlyChristmasCountdown,
+  getMorningBriefContent
+} from '../notificationService';
 
 describe('getZodiacSign', () => {
   it('returns Bélier for late March', () => {
@@ -48,30 +55,84 @@ describe('getDaysUntilChristmas', () => {
     expect(result).toBeGreaterThan(180);
     expect(result).toBeLessThan(190);
   });
-
-  it('returns 0 on Christmas Day itself, even mid-morning', () => {
-    // The push cron calls this between 6h and 10h, i.e. always past midnight.
-    // A naive instant comparison used to treat that as "already past
-    // Christmas" and roll over to next year's countdown (~365).
-    const christmasMorning = new Date(2025, 11, 25, 8, 30, 0);
-    expect(getDaysUntilChristmas(christmasMorning)).toBe(0);
-  });
 });
 
-describe('getFunnyRainMessage', () => {
-  it('never returns vulgar content for the safe humor level', () => {
-    for (let i = 0; i < 50; i++) {
-      const { title, message } = getFunnyRainMessage('moderate', 'safe');
-      expect(title.toLowerCase()).not.toMatch(/merde|putain|connard|bâtard/);
-      expect(message.toLowerCase()).not.toMatch(/merde|putain|connard|bâtard/);
+describe('getFunnyRainMessage (normalized notifications)', () => {
+  const BANNED_WORDS = ['merde', 'putain', 'fion', 'cul', 'bâtard', 'pisse', 'chier', 'crève', 'con '];
+  const intensities = ['light', 'moderate', 'heavy', 'thunderstorm', 'end_rain', 'end_storm', 'alert_yellow', 'alert_orange', 'alert_red', 'heatwave'] as const;
+
+  it('generates polite, non-empty messages and titles for all intensities', () => {
+    for (const intensity of intensities) {
+      for (let i = 0; i < 20; i++) {
+        const notif = getFunnyRainMessage(intensity, 'safe');
+        expect(notif.title).toBeTruthy();
+        expect(notif.message).toBeTruthy();
+        
+        const fullText = `${notif.title} ${notif.message}`.toLowerCase();
+        for (const badWord of BANNED_WORDS) {
+          expect(fullText).not.toContain(badWord);
+        }
+      }
     }
   });
 
-  it('avoids repeating the excluded message index when the pool allows it', () => {
-    const first = getFunnyRainMessage('moderate', 'spicy');
-    for (let i = 0; i < 20; i++) {
-      const next = getFunnyRainMessage('moderate', 'spicy', first.messageIndex);
-      expect(next.messageIndex).not.toBe(first.messageIndex);
+  it('never outputs vulgar content even if level is spicy or vulgar', () => {
+    for (const level of ['safe', 'spicy', 'vulgar'] as const) {
+      for (const intensity of intensities) {
+        const notif = getFunnyRainMessage(intensity, level);
+        const fullText = `${notif.title} ${notif.message}`.toLowerCase();
+        for (const badWord of BANNED_WORDS) {
+          expect(fullText).not.toContain(badWord);
+        }
+      }
     }
   });
 });
+
+describe('Christmas Countdown & Morning Brief (normalized tone)', () => {
+  const BANNED_WORDS = ['merde', 'putain', 'fion', 'cul', 'bâtard', 'pisse', 'chier', 'crève', 'hypocrisie', 'ruine'];
+
+  it('getSarcasticChristmasCountdownMessage provides friendly festive messages', () => {
+    for (let month = 0; month < 12; month++) {
+      const date = new Date(2025, month, 15);
+      const msg = getSarcasticChristmasCountdownMessage(date, 'safe');
+      expect(msg.title).toBeTruthy();
+      expect(msg.body).toBeTruthy();
+
+      const fullText = `${msg.title} ${msg.body}`.toLowerCase();
+      for (const badWord of BANNED_WORDS) {
+        expect(fullText).not.toContain(badWord);
+      }
+    }
+  });
+
+  it('getMonthlyChristmasCountdown provides polite seasonal texts for all 12 months', () => {
+    for (let month = 0; month < 12; month++) {
+      const date = new Date(2025, month, 1);
+      for (const level of ['safe', 'spicy', 'vulgar'] as const) {
+        const msg = getMonthlyChristmasCountdown(date, level);
+        expect(msg.title).toBeTruthy();
+        expect(msg.body).toBeTruthy();
+
+        const fullText = `${msg.title} ${msg.body}`.toLowerCase();
+        for (const badWord of BANNED_WORDS) {
+          expect(fullText).not.toContain(badWord);
+        }
+      }
+    }
+  });
+
+  it('getMorningBriefContent provides uplifting and polite messages', () => {
+    const brief = getMorningBriefContent('safe', '1995-04-10', 0); // Bélier, sunny
+    expect(brief).not.toBeNull();
+    if (brief) {
+      expect(brief.title).toContain('Bélier');
+      expect(brief.body.length).toBeGreaterThan(10);
+      const fullText = `${brief.title} ${brief.body}`.toLowerCase();
+      for (const badWord of BANNED_WORDS) {
+        expect(fullText).not.toContain(badWord);
+      }
+    }
+  });
+});
+

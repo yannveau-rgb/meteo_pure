@@ -12,7 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   configureVapid();
   const { intensity, humorLevel } = req.body || {};
-  const level = humorLevel || 'spicy';
+  const level = humorLevel || 'safe';
   const type = intensity || 'moderate';
 
   const subs = await getSubscriptions();

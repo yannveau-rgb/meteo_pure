@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getMorningBriefContent, HumorLevel } from '../utils/notificationService';
 import { buildMorningAnchor, analyzeRainTiming, MorningAnchorInput } from '../utils/morningAnchor';
+import { getDailyHoroscope, HoroscopeData } from '../utils/horoscopeService';
 import { WeatherData } from '../types';
 
 export interface MorningBriefView {
@@ -8,6 +9,7 @@ export interface MorningBriefView {
   anchor: string;
   punchline: string;
   ai?: boolean;
+  horoscope?: HoroscopeData;
 }
 
 /**
@@ -64,10 +66,11 @@ export function useMorningBrief() {
     const fallback = (): MorningBriefView => {
       const fb = getMorningBriefContent(humorLevel, birthDate, weatherCode);
       return {
-        title: fb?.title ?? '🔮 Brief matinal',
+        title: fb?.title ?? '🔮 Horoscope du jour',
         anchor: localAnchor,
-        punchline: fb?.body ?? 'Journée ordinaire en perspective.',
+        punchline: fb?.body ?? 'Passez une excellente et radieuse journée.',
         ai: false,
+        horoscope: getDailyHoroscope(birthDate),
       };
     };
 
@@ -81,12 +84,10 @@ export function useMorningBrief() {
         const data = await res.json();
         setAiBrief({
           title: data.title,
-          // Prefer the locally computed anchor: the client always holds the
-          // full forecast, so it can never be less accurate than the server's
-          // — which only sees whatever anchorInput survived the round trip.
           anchor: anchorInput ? localAnchor : (data.anchor || localAnchor),
           punchline: data.punchline || data.body,
           ai: data.ai !== false,
+          horoscope: data.horoscope || getDailyHoroscope(birthDate),
         });
       } else {
         setAiBrief(fallback());
