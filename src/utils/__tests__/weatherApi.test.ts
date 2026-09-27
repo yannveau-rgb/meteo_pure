@@ -1,5 +1,45 @@
 import { describe, it, expect } from 'vitest';
-import { mergeSeries, PREFER_BLEND } from '../weatherApi';
+import { mergeSeries, PREFER_BLEND, consensus, skyCodeFromCloudCover } from '../weatherApi';
+
+describe('consensus', () => {
+  it('returns median for odd count of values', () => {
+    expect(consensus([100, 21, 30])).toBe(30);
+  });
+
+  it('ignores outliers and filters nulls/NaN', () => {
+    expect(consensus([100, null, 25, undefined, 20])).toBe(25);
+  });
+
+  it('returns null for empty array', () => {
+    expect(consensus([])).toBeNull();
+  });
+});
+
+describe('skyCodeFromCloudCover', () => {
+  it('maps standard okta thresholds correctly', () => {
+    expect(skyCodeFromCloudCover(0, 99)).toBe(0);   // Ensoleillé
+    expect(skyCodeFromCloudCover(15, 99)).toBe(0);  // Ensoleillé
+    expect(skyCodeFromCloudCover(25, 99)).toBe(1);  // Peu nuageux
+    expect(skyCodeFromCloudCover(45, 99)).toBe(1);  // Peu nuageux
+    expect(skyCodeFromCloudCover(60, 99)).toBe(2);  // Éclaircies
+    expect(skyCodeFromCloudCover(80, 99)).toBe(2);  // Éclaircies
+    expect(skyCodeFromCloudCover(95, 99)).toBe(3);  // Couvert (avec nuages bas standard)
+  });
+
+  it('caps at Éclaircies (2) when 100% cloud cover is only high cirrus veil', () => {
+    // 100% total cloud cover, but low clouds are 0% and mid clouds 10%
+    expect(skyCodeFromCloudCover(100, 99, 0, 10)).toBe(2);
+  });
+
+  it('keeps Couvert (3) when low clouds are present and dense', () => {
+    expect(skyCodeFromCloudCover(100, 99, 85, 90)).toBe(3);
+  });
+
+  it('uses fallback when cloud cover is undefined or NaN', () => {
+    expect(skyCodeFromCloudCover(undefined, 1)).toBe(1);
+    expect(skyCodeFromCloudCover(NaN, 2)).toBe(2);
+  });
+});
 
 describe('mergeSeries', () => {
   it('keeps a value already present in primary over secondary/tertiary', () => {

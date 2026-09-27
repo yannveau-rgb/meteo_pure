@@ -11,7 +11,7 @@ import { fetchObservation } from './observationApi';
  * and the blend 24.8), and an average would carry that outlier into the number
  * shown to the user. The median simply ignores it.
  */
-function consensus(values: Array<number | null | undefined>): number | null {
+export function consensus(values: Array<number | null | undefined>): number | null {
   const usable = values.filter((v): v is number => typeof v === 'number' && !Number.isNaN(v));
   if (usable.length === 0) return null;
   usable.sort((a, b) => a - b);
@@ -20,19 +20,34 @@ function consensus(values: Array<number | null | undefined>): number | null {
 }
 
 /**
- * Sky code derived from actual cloud cover.
+ * Sky code derived from actual cloud cover and cloud layers.
  *
  * Replaces the rule that promoted "Couvert" to "Peu nuageux" whenever rain
  * probability was low — cloudiness and rain probability are different physical
  * quantities, and that rule painted a near-clear sky over a 100%-overcast
  * afternoon. Thresholds follow the okta convention (clear / few / broken /
- * overcast). Falls back to the model's own code when cloud cover is missing.
+ * overcast).
+ *
+ * When total cloudiness is >= 85% but low clouds are nearly zero (< 20%) and
+ * mid clouds < 40%, the cloud layer is high-altitude cirrus (voile d'altitude):
+ * the sun shines through, so it is capped at code 2 (Éclaircies / ciel voilé)
+ * rather than code 3 (Couvert, completely grey cloud).
  */
-function skyCodeFromCloudCover(cloudCover: number | null | undefined, fallback: number): number {
+export function skyCodeFromCloudCover(
+  cloudCover: number | null | undefined,
+  fallback: number,
+  lowCloud?: number | null,
+  midCloud?: number | null
+): number {
   if (typeof cloudCover !== 'number' || Number.isNaN(cloudCover)) return fallback;
   if (cloudCover < 20) return 0; // Soleil
   if (cloudCover < 50) return 1; // Peu nuageux
   if (cloudCover < 85) return 2; // Éclaircies
+
+  if (typeof lowCloud === 'number' && lowCloud < 20 && (midCloud === undefined || midCloud === null || midCloud < 40)) {
+    return 2;
+  }
+
   return 3;                      // Couvert
 }
 
@@ -123,7 +138,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
   const [longitude, latitude] = commune.centre.coordinates;
 
   // Primary: Météo-France AROME model (1.3 km resolution over France — highest precision available)
-  const currentVars = 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,surface_pressure,visibility';
+  const currentVars = 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,surface_pressure,visibility';
   const hourlyVars  = 'temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,cape';
   const dailyVars   = 'weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max';
   const minuteVars  = 'precipitation,weather_code,lightning_potential';
@@ -147,8 +162,8 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
   // Per-model series, captured pre-merge. Model agreement can only be measured
   // against un-blended values, and the consensus median needs each model's own
   // number rather than the coalesced one.
-  type ModelSeries = { hourlyTemp: any[]; dailyMax: any[]; dailyMin: any[] };
-  const empty = (): ModelSeries => ({ hourlyTemp: [], dailyMax: [], dailyMin: [] });
+  type ModelSeries = { hourlyTemp: any[]; dailyMax: any[]; dailyMin: any[]; hourlyCloud: any[] };
+  const empty = (): ModelSeries => ({ hourlyTemp: [], dailyMax: [], dailyMin: [], hourlyCloud: [] });
   const models: { meteoFrance: ModelSeries; ecmwf: ModelSeries; blend: ModelSeries } = {
     meteoFrance: empty(), ecmwf: empty(), blend: empty(),
   };
@@ -188,11 +203,12 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       throw new Error('Échec de la connexion à l\'API météo. Veuillez vérifier votre connexion ou réessayer.');
     }
 
-    // Snapshot each model's own temperatures before the merge overwrites them.
+    // Snapshot each model's own temperatures and cloud covers before the merge overwrites them.
     const snapshot = (src: any): ModelSeries => ({
       hourlyTemp: Array.isArray(src?.hourly?.temperature_2m) ? [...src.hourly.temperature_2m] : [],
       dailyMax: Array.isArray(src?.daily?.temperature_2m_max) ? [...src.daily.temperature_2m_max] : [],
       dailyMin: Array.isArray(src?.daily?.temperature_2m_min) ? [...src.daily.temperature_2m_min] : [],
+      hourlyCloud: Array.isArray(src?.hourly?.cloud_cover) ? [...src.hourly.cloud_cover] : [],
     });
     // When Météo-France failed outright, `data` *is* the blend — counting it
     // twice would fake a perfect agreement between two identical series.
@@ -268,14 +284,21 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       currentCode = fallbackCurrentCode;
     }
 
-    // Cloud cover now drives every dry-sky code below, so resolve it once.
-    const currentCloudCover = rawCurrentMF.cloud_cover ?? rawCurrentStd.cloud_cover;
+    // Cloud cover: 3-model consensus (median) rather than Météo-France alone.
+    // A single regional run (AROME) can easily be 30-60 min early or late on a
+    // cloud front arrival (e.g. 100% overcast vs 21-30% in ECMWF/blend).
+    const cloudMF = typeof rawCurrentMF.cloud_cover === 'number' ? rawCurrentMF.cloud_cover : null;
+    const cloudStd = typeof rawCurrentStd.cloud_cover === 'number' ? rawCurrentStd.cloud_cover : null;
+    const cloudEcmwf = models.ecmwf.hourlyCloud[startIdx] ?? null;
+    const currentCloudCover = consensus([cloudMF, cloudStd, cloudEcmwf]) ?? rawCurrentMF.cloud_cover ?? rawCurrentStd.cloud_cover;
+    const lowCloud = rawCurrentMF.cloud_cover_low ?? rawCurrentStd.cloud_cover_low;
+    const midCloud = rawCurrentMF.cloud_cover_mid ?? rawCurrentStd.cloud_cover_mid;
 
     // 2. Fix false drizzle (Meteo-France bug where code is 51-69 but precipitation is 0.0)
     if ((currentCode >= 50 && currentCode <= 59) || (currentCode >= 60 && currentCode <= 69)) {
        const currentPrecip = rawCurrentMF.precipitation ?? rawCurrentStd.precipitation ?? 0;
        if (currentPrecip === 0) {
-          currentCode = skyCodeFromCloudCover(currentCloudCover, 3);
+          currentCode = skyCodeFromCloudCover(currentCloudCover, 3, lowCloud, midCloud);
        }
     }
 
@@ -321,7 +344,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
     // This used to key off precipitation probability, which turned a 100%
     // overcast sky into "Peu nuageux" whenever rain was unlikely.
     if (currentCode < 50) {
-      currentCode = skyCodeFromCloudCover(currentCloudCover, currentCode);
+      currentCode = skyCodeFromCloudCover(currentCloudCover, currentCode, lowCloud, midCloud);
     }
 
     // A real measurement beats every model, and this is the whole point of the
@@ -374,7 +397,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       windSpeed: observed?.windSpeed ?? rawCurrentMF.wind_speed_10m ?? rawCurrentStd.wind_speed_10m ?? 0,
       windGusts: observed?.windGusts ?? rawCurrentMF.wind_gusts_10m ?? rawCurrentStd.wind_gusts_10m,
       windDirection: rawCurrentMF.wind_direction_10m ?? rawCurrentStd.wind_direction_10m,
-      cloudCover: rawCurrentMF.cloud_cover ?? rawCurrentStd.cloud_cover,
+      cloudCover: currentCloudCover ?? rawCurrentMF.cloud_cover ?? rawCurrentStd.cloud_cover,
       pressure: rawCurrentMF.surface_pressure ?? rawCurrentStd.surface_pressure,
       visibility: rawCurrentMF.visibility ?? rawCurrentStd.visibility,
       weatherCode: currentCode,
@@ -413,6 +436,14 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
         models.blend.hourlyTemp[idx],
       ]) ?? hourlyTemps[idx] ?? 15;
 
+    /** Consensus cloud cover for one hourly index, across the three models. */
+    const hourlyConsensusCloud = (idx: number): number =>
+      consensus([
+        models.meteoFrance.hourlyCloud[idx],
+        models.ecmwf.hourlyCloud[idx],
+        models.blend.hourlyCloud[idx],
+      ]) ?? hourlyCloud[idx] ?? fallbackData?.hourly?.cloud_cover?.[idx] ?? 0;
+
     for (let j = 0; j < 12; j++) {
       const idx = startIdx + j;
       if (idx < hourlyTimes.length) {
@@ -434,7 +465,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
         
         // 2. Fix false drizzle
         const precip = hourlyPrecip[idx] ?? fallbackData?.hourly?.precipitation?.[idx] ?? 0;
-        const cloud = hourlyCloud[idx] ?? fallbackData?.hourly?.cloud_cover?.[idx];
+        const cloud = hourlyConsensusCloud(idx);
         if ((code >= 50 && code <= 59) || (code >= 60 && code <= 69)) {
           if (precip === 0) {
             code = skyCodeFromCloudCover(cloud, 3);
@@ -535,7 +566,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
 
           // 2. Fix false drizzle
           const hPrecip = hourlyPrecip[idx] ?? fallbackData?.hourly?.precipitation?.[idx] ?? 0;
-          const hCloud = hourlyCloud[idx] ?? fallbackData?.hourly?.cloud_cover?.[idx];
+          const hCloud = hourlyConsensusCloud(idx);
           if ((hCode >= 50 && hCode <= 59) || (hCode >= 60 && hCode <= 69)) {
             if (hPrecip === 0) {
               hCode = skyCodeFromCloudCover(hCloud, 3);
