@@ -51,6 +51,84 @@ export function skyCodeFromCloudCover(
   return 3;                      // Couvert
 }
 
+/**
+ * Computes a representative weather code for a 24h day forecast.
+ *
+ * Ensures full consistency between the daily card icon and the hourly forecast:
+ * 1. Priority to Storm (95) if storm is predicted in any model and confirmed by hourly data or high rain prob (>= 35%).
+ * 2. Priority to Snow if snow hours are present, or daily snow code with measurable precipitation (>= 0.2mm).
+ * 3. Priority to Rain if rain hours are present, or daily rain code with measurable precipitation (>= 0.2mm).
+ * 4. If no measurable precipitation (totalPrecip < 0.2mm and dayPrecipSum < 0.2mm) and no rain hours,
+ *    demote to dominant daytime sky (Soleil, Peu nuageux, Éclaircies, Couvert) to avoid showing a rain cloud
+ *    icon on days where every hour shows 0 mm and dry sky.
+ */
+export function computeRepresentativeDailyCode(params: {
+  apiDailyCode: number;
+  daytimeHours: Array<{ weatherCode: number; precipitation: number; precipitationProbability: number }>;
+  fallbackDailyCode?: number;
+  dayPrecipSum?: number;
+}): number {
+  const { apiDailyCode, daytimeHours, fallbackDailyCode = 0, dayPrecipSum = 0 } = params;
+  if (!daytimeHours || daytimeHours.length === 0) {
+    return apiDailyCode;
+  }
+
+  // Priority 1: High-impact storm events
+  const stormHours = daytimeHours.filter(h => h.weatherCode === 95 || h.weatherCode === 96 || h.weatherCode === 99);
+  const isStormInAnyModel = (apiDailyCode === 95 || apiDailyCode === 96 || apiDailyCode === 99 ||
+                             fallbackDailyCode === 95 || fallbackDailyCode === 96 || fallbackDailyCode === 99);
+  const maxRainProb = Math.max(...daytimeHours.map(h => h.precipitationProbability), 0);
+
+  if (isStormInAnyModel && (stormHours.length > 0 || maxRainProb >= 35)) {
+    return 95;
+  }
+
+  // Priority 2: Snow
+  const hasDailySnowCode = (apiDailyCode >= 71 && apiDailyCode <= 77) || apiDailyCode === 85 || apiDailyCode === 86;
+  const snowHours = daytimeHours.filter(h =>
+    (h.weatherCode >= 71 && h.weatherCode <= 77) || h.weatherCode === 85 || h.weatherCode === 86
+  );
+
+  // Priority 3: Rain/drizzle
+  const hasDailyRainCode = (apiDailyCode >= 50 && apiDailyCode <= 69) || (apiDailyCode >= 80 && apiDailyCode <= 84);
+  const heavyRainHours = daytimeHours.filter(h =>
+    (h.weatherCode === 63 || h.weatherCode === 65 || h.weatherCode === 81 || h.weatherCode === 82)
+  );
+  const lightRainHours = daytimeHours.filter(h =>
+    (h.weatherCode === 61 || h.weatherCode === 80 || h.weatherCode === 51 || h.weatherCode === 53 || h.weatherCode === 55)
+  );
+
+  const totalPrecip = daytimeHours.reduce((sum, h) => sum + h.precipitation, 0);
+  const hasMeasurablePrecip = totalPrecip >= 0.2 || dayPrecipSum >= 0.2;
+
+  if (snowHours.length > 0) {
+    return snowHours[0].weatherCode;
+  }
+  if (hasDailySnowCode && hasMeasurablePrecip) {
+    return apiDailyCode;
+  }
+  if (heavyRainHours.length > 0) {
+    return heavyRainHours[0].weatherCode;
+  }
+  if (lightRainHours.length > 0) {
+    return lightRainHours[0].weatherCode;
+  }
+  if (hasDailyRainCode && hasMeasurablePrecip) {
+    return apiDailyCode;
+  }
+
+  // Dry day or negligible virga/trace:
+  // Daytime hourly codes are already derived from cloud cover and filtered for false drizzle.
+  // The day's icon is the dominant sky over daytime hours (0=Soleil, 1=Peu nuageux, 2=Éclaircies, 3=Couvert).
+  const counts = [0, 1, 2, 3].map(c => daytimeHours.filter(h => h.weatherCode === c).length);
+  const maxCount = Math.max(...counts);
+  if (maxCount > 0) {
+    return counts.indexOf(maxCount);
+  }
+
+  return daytimeHours[0]?.weatherCode ?? apiDailyCode;
+}
+
 // Météo-France returns precipitation_probability as null for all 240 hours on
 // /v1/meteofrance, so this field is always somebody else's. Take it from the
 // GFS/ICON blend, whose probability is calibrated, rather than from ECMWF —
@@ -619,67 +697,12 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
         });
 
         if (daytimeHours.length > 0) {
-          // Check for high-impact storm or rain events during daytime
-          const stormHours = daytimeHours.filter(h => h.weatherCode === 95 || h.weatherCode === 96 || h.weatherCode === 99);
-          const fallbackDailyCode = fallbackData?.daily?.weather_code?.[k] ?? 0;
-          const isStormInAnyModel = (apiDailyCode === 95 || apiDailyCode === 96 || apiDailyCode === 99 ||
-                                     fallbackDailyCode === 95 || fallbackDailyCode === 96 || fallbackDailyCode === 99);
-          const maxRainProb = Math.max(...daytimeHours.map(h => h.precipitationProbability), 0);
-
-          if (isStormInAnyModel && (stormHours.length > 0 || maxRainProb >= 35)) {
-            // Priority 1: If daily code is storm in either model, and we have storm hours or significant probability, display Storm (Orageux)
-            representativeCode = 95;
-          } else {
-            // Priority 2: If daily code is rain/drizzle or we have rain hours
-            const hasDailyRainCode = (apiDailyCode >= 50 && apiDailyCode <= 69) || (apiDailyCode >= 80 && apiDailyCode <= 84);
-            const heavyRainHours = daytimeHours.filter(h => 
-              (h.weatherCode === 63 || h.weatherCode === 65 || h.weatherCode === 81 || h.weatherCode === 82)
-            );
-            const lightRainHours = daytimeHours.filter(h => 
-              (h.weatherCode === 61 || h.weatherCode === 80 || h.weatherCode === 51 || h.weatherCode === 53 || h.weatherCode === 55)
-            );
-
-            // Calculate max precipitation probability and precipitation amount during the daytime
-            const maxRainProb = Math.max(...daytimeHours.map(h => h.precipitationProbability), 0);
-            const totalPrecip = daytimeHours.reduce((sum, h) => sum + h.precipitation, 0);
-
-            if (hasDailyRainCode || heavyRainHours.length > 0 || lightRainHours.length > 0) {
-              // But check if it's a false positive (no rain and very low probability)
-              if (totalPrecip === 0 && maxRainProb <= 20) {
-                // False positive rain! Demote to dry weather based on cloud cover
-                const overcastHours = daytimeHours.filter(h => h.weatherCode === 3).length;
-                const partlyCloudyHours = daytimeHours.filter(h => h.weatherCode === 2).length;
-                const mainlyClearHours = daytimeHours.filter(h => h.weatherCode === 1).length;
-
-                if (overcastHours > daytimeHours.length * 0.5) {
-                  representativeCode = 3; // Couvert
-                } else if (partlyCloudyHours > daytimeHours.length * 0.4) {
-                  representativeCode = 2; // Éclaircies
-                } else if (mainlyClearHours > daytimeHours.length * 0.3) {
-                  representativeCode = 1; // Peu nuageux
-                } else {
-                  representativeCode = 0; // Soleil
-                }
-              } else {
-                // Valid rain! Respect daily rain code or choose the heaviest rain code observed
-                if (heavyRainHours.length > 0) {
-                  representativeCode = heavyRainHours[0].weatherCode;
-                } else if (lightRainHours.length > 0) {
-                  representativeCode = lightRainHours[0].weatherCode;
-                } else {
-                  representativeCode = apiDailyCode;
-                }
-              }
-            } else {
-              // Dry day: the hourly codes are already derived from cloud cover,
-              // so the day's icon is simply the dominant sky over daytime hours.
-              // The previous version gated this on rain probability, which could
-              // turn a fully overcast day into "Peu nuageux" just because no rain
-              // was expected.
-              const counts = [0, 1, 2, 3].map(c => daytimeHours.filter(h => h.weatherCode === c).length);
-              representativeCode = counts.indexOf(Math.max(...counts));
-            }
-          }
+          representativeCode = computeRepresentativeDailyCode({
+            apiDailyCode,
+            daytimeHours,
+            fallbackDailyCode: fallbackData?.daily?.weather_code?.[k],
+            dayPrecipSum: dailyPrecipSum[k],
+          });
         }
       }
 

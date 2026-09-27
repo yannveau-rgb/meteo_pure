@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeSeries, PREFER_BLEND, consensus, skyCodeFromCloudCover } from '../weatherApi';
+import { mergeSeries, PREFER_BLEND, consensus, skyCodeFromCloudCover, computeRepresentativeDailyCode } from '../weatherApi';
 
 describe('consensus', () => {
   it('returns median for odd count of values', () => {
@@ -115,3 +115,102 @@ describe('mergeSeries', () => {
     expect(primary.temperature_2m).toEqual([10, 11]);
   });
 });
+
+describe('computeRepresentativeDailyCode', () => {
+  it('demotes daily rain code (51) to Couvert (3) when precipitation is 0 and all daytime hours are dry/cloudy, even with high probability', () => {
+    // Exact scenario reported by user for Monday:
+    // API returns weather_code 51 (drizzle) and 67% rain probability,
+    // but daytime hourly has 0.0mm everywhere and all hours were converted to cloud codes (3=Couvert).
+    const daytimeHours = Array.from({ length: 15 }, () => ({
+      weatherCode: 3,
+      precipitation: 0,
+      precipitationProbability: 67,
+    }));
+
+    const result = computeRepresentativeDailyCode({
+      apiDailyCode: 51,
+      daytimeHours,
+      dayPrecipSum: 0,
+    });
+
+    expect(result).toBe(3); // Couvert, matching the hourly view
+  });
+
+  it('preserves rain code when actual rain hours are present', () => {
+    const daytimeHours = [
+      { weatherCode: 3, precipitation: 0, precipitationProbability: 20 },
+      { weatherCode: 61, precipitation: 1.2, precipitationProbability: 80 },
+      { weatherCode: 3, precipitation: 0, precipitationProbability: 10 },
+    ];
+
+    const result = computeRepresentativeDailyCode({
+      apiDailyCode: 61,
+      daytimeHours,
+      dayPrecipSum: 1.2,
+    });
+
+    expect(result).toBe(61);
+  });
+
+  it('selects heavy rain code over light rain code if heavy rain occurs', () => {
+    const daytimeHours = [
+      { weatherCode: 61, precipitation: 0.5, precipitationProbability: 60 },
+      { weatherCode: 63, precipitation: 3.5, precipitationProbability: 90 },
+      { weatherCode: 3, precipitation: 0, precipitationProbability: 10 },
+    ];
+
+    const result = computeRepresentativeDailyCode({
+      apiDailyCode: 61,
+      daytimeHours,
+      dayPrecipSum: 4.0,
+    });
+
+    expect(result).toBe(63);
+  });
+
+  it('prioritizes storm code (95) when storm is predicted and confirmed by hourly data or high probability', () => {
+    const daytimeHours = [
+      { weatherCode: 95, precipitation: 5.0, precipitationProbability: 85 },
+      { weatherCode: 3, precipitation: 0, precipitationProbability: 20 },
+    ];
+
+    const result = computeRepresentativeDailyCode({
+      apiDailyCode: 95,
+      daytimeHours,
+    });
+
+    expect(result).toBe(95);
+  });
+
+  it('handles snow hours correctly', () => {
+    const daytimeHours = [
+      { weatherCode: 71, precipitation: 0.8, precipitationProbability: 70 },
+      { weatherCode: 3, precipitation: 0, precipitationProbability: 10 },
+    ];
+
+    const result = computeRepresentativeDailyCode({
+      apiDailyCode: 71,
+      daytimeHours,
+      dayPrecipSum: 0.8,
+    });
+
+    expect(result).toBe(71);
+  });
+
+  it('computes dominant sky for clear dry day', () => {
+    const daytimeHours = [
+      { weatherCode: 0, precipitation: 0, precipitationProbability: 0 },
+      { weatherCode: 0, precipitation: 0, precipitationProbability: 0 },
+      { weatherCode: 1, precipitation: 0, precipitationProbability: 0 },
+    ];
+
+    const result = computeRepresentativeDailyCode({
+      apiDailyCode: 0,
+      daytimeHours,
+      dayPrecipSum: 0,
+    });
+
+    expect(result).toBe(0); // Soleil
+  });
+});
+
