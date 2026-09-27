@@ -1,4 +1,4 @@
-import { getZodiacSign } from './notificationService';
+import { getZodiacSign } from './notificationService.js';
 
 export type ZodiacElement = 'Feu' | 'Terre' | 'Air' | 'Eau';
 
