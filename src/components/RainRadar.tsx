@@ -63,12 +63,23 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
         });
         mapRef.current = map;
 
-        // Light grey base — radar colors (blue/green/yellow/red) are much more readable on light
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
-          maxZoom: 12,
-          subdomains: 'abcd',
-          attribution: '© CartoDB',
-        }).addTo(map);
+        // Basemap: Use Carto if an API key is configured, otherwise fallback to OpenStreetMap
+        // with a soft light-grey filter (.radar-basemap-tiles) so radar precipitation echoes stand out cleanly.
+        const cartoKey = import.meta.env.VITE_CARTO_API_KEY;
+        if (cartoKey) {
+          L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${cartoKey}`, {
+            maxZoom: 12,
+            subdomains: 'abcd',
+            attribution: '© CartoDB',
+          }).addTo(map);
+        } else {
+          L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 12,
+            className: 'radar-basemap-tiles',
+            attribution: '© OpenStreetMap contributors',
+          }).addTo(map);
+        }
+
 
         // City marker
         L.circleMarker([latitude, longitude], {

@@ -620,3 +620,8 @@
   top: var(--top, 10%);
 }
 
+/* Radar basemap: soft light grayscale so precipitation overlays stand out clearly */
+.radar-basemap-tiles {
+  filter: grayscale(100%) brightness(105%) contrast(90%);
+}
+
