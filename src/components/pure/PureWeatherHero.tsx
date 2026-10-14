@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowRight, Leaf, CloudSun, MapPin, Sparkles } from 'lucide-react';
 import { WeatherData, HourlyForecastItem, Commune } from '../../types';
+import { getWeatherUI } from '../../utils/weatherUtils';
 
 interface PureWeatherHeroProps {
   weather: WeatherData;
@@ -35,7 +36,9 @@ export default function PureWeatherHero({
 }: PureWeatherHeroProps) {
   // Active temperature (either from scrubbed hour or current weather)
   const temp = Math.round(selectedHour ? selectedHour.temp : weather.current.temperature);
-  const conditionDesc = selectedHour ? selectedHour.iconName : weather.current.weatherDesc;
+  const conditionDesc = selectedHour 
+    ? getWeatherUI(selectedHour.weatherCode).label 
+    : weather.current.weatherDesc;
   
   // High and low for today
   const todayDaily = weather.daily[0];
@@ -53,6 +56,10 @@ export default function PureWeatherHero({
       if (temp >= 30) return "La chaleur s'installe, hydratez-vous bien";
       if (temp <= 5) return "Un air particulièrement frais s'annonce";
       if (selectedHour.precipitationProbability > 40) return `Risque d'averse (${selectedHour.precipitationProbability}%)`;
+      if (selectedHour.weatherCode === 0) return "Ciel dégagé et franc soleil";
+      if (selectedHour.weatherCode === 1) return "Ciel lumineux avec quelques voiles";
+      if (selectedHour.weatherCode === 2) return "Belles éclaircies et ciel doux";
+      if (selectedHour.weatherCode === 3) return "Ciel couvert et atmosphère feutrée";
       return conditionDesc || "Ciel dégagé et atmosphère paisible";
     }
     // Default overview statement
