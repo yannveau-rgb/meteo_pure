@@ -34,7 +34,7 @@ export default function TimeScrubber({
       lastVibratedIndex.current = newIdx;
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         try {
-          navigator.vibrate(8);
+          navigator.vibrate(4);
         } catch {
           // ignore vibrate errors if blocked by browser policy
         }

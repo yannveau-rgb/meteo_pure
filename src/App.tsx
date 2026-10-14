@@ -8,20 +8,16 @@ import {
   Navigation,
   CloudLightning,
   AlertCircle,
+  AlertTriangle,
   Clock,
   ShieldAlert,
   Sparkles,
-  AlertTriangle,
-  Sunrise,
-  Sunset,
-  Share2,
   CloudRain,
   Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { getWeatherUI, getMoonPhase, calculateCurrentUv, isNightTime } from './utils/weatherUtils';
+import { getWeatherUI, isNightTime } from './utils/weatherUtils';
 import { getSaintDuJour } from './utils/ephemeris';
-import { formatCacheTime } from './utils/weatherCache';
 import {
   loadNotificationSettings,
   saveNotificationSettings,
@@ -43,7 +39,6 @@ import {
 // Custom hooks
 import { useFavorites } from './hooks/useFavorites';
 import { usePwaInstall } from './hooks/usePwaInstall';
-import { useFrenchClock } from './hooks/useFrenchClock';
 import { useCurrentCommune } from './hooks/useCurrentCommune';
 import { useCitySearch } from './hooks/useCitySearch';
 import { useWeatherFetch } from './hooks/useWeatherFetch';
@@ -55,19 +50,10 @@ import { useShareImage } from './hooks/useShareImage';
 import { useGeolocation } from './hooks/useGeolocation';
 
 // Modular child components
-import RainForecast from './components/RainForecast';
-import VigilanceCard from './components/VigilanceCard';
-const WeatherStats = lazy(() => import('./components/WeatherStats'));
-import HourlyForecast from './components/HourlyForecast';
-import AirQualityCard from './components/AirQualityCard';
-import DailyForecast from './components/DailyForecast';
 import AmbientWeatherBackground from './components/AmbientWeatherBackground';
-import ClimateComparison from './components/ClimateComparison';
 const RainRadar = lazy(() => import('./components/RainRadar'));
-import TiltCard from './components/TiltCard';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import Toggle from './components/ui/Toggle';
-import InfoBadge from './components/ui/InfoBadge';
 import BottomNav, { AppTab } from './components/BottomNav';
 import MoonPhasesModal from './components/modals/MoonPhasesModal';
 import HoroscopeModal from './components/HoroscopeModal';
@@ -98,6 +84,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<AppTab>('meteo');
   const [selectedHourIndex, setSelectedHourIndex] = useState<number>(0);
   const [heroMode, setHeroMode] = useState<'weather' | 'aqi'>('weather');
+  const [cartesMode, setCartesMode] = useState<'radar' | 'compare'>('radar');
   const [showDetailDrawer, setShowDetailDrawer] = useState<boolean>(false);
 
   const isAdmin = typeof window !== 'undefined' && !!localStorage.getItem('adminToken');
@@ -112,9 +99,6 @@ export default function App() {
     isSearching,
     showSearchList, setShowSearchList,
   } = useCitySearch();
-
-  // Date + clock in French (updated every 10s)
-  const { frenchDate, currentTime } = useFrenchClock();
 
   // Traditional Feast Day lookup (saint du jour)
   const saintDuJour = getSaintDuJour();
@@ -417,6 +401,14 @@ export default function App() {
     // 3. Reset state
     setNotifSettings(DEFAULT_NOTIFICATION_SETTINGS);
     setNotifLogs([]);
+    setFavorites([]);
+    setCurrentCommune({
+      nom: 'Paris',
+      code: '75056',
+      codesPostaux: ['75001'],
+      centre: { type: 'Point', coordinates: [2.3522, 48.8566] },
+      codeDepartement: '75'
+    });
     setShowPrivacyPolicy(false);
     setActiveToast({
       id: Math.random().toString(),
@@ -464,7 +456,7 @@ export default function App() {
       {/* Container Principal (Mobile-First responsive frame) */}
       <main
         id="applet-main-frame"
-        className="relative w-full max-w-md h-[100dvh] sm:h-[880px] sm:max-h-[920px] sm:rounded-[40px] shadow-2xl overflow-hidden bg-white/5 backdrop-blur-[45px] border border-white/20 flex flex-col justify-between pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] px-4 sm:p-6"
+        className="relative w-full max-w-md h-[100dvh] sm:h-[880px] sm:max-h-[920px] sm:rounded-[40px] shadow-2xl overflow-hidden sm:bg-white/5 sm:backdrop-blur-2xl border border-white/20 flex flex-col justify-between pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] px-4 sm:p-6"
       >
         
         {/* MOON PHASES MODAL */}
@@ -517,8 +509,8 @@ export default function App() {
           weatherCode={scrubbedHourItem ? scrubbedHourItem.weatherCode : (weather?.current.weatherCode || 0)}
         />
 
-        {/* Animated subtle glow layer */}
-        <div className="absolute top-1/3 -left-12 pointer-events-none w-56 h-56 rounded-full bg-sky-200/10 filter blur-3xl animate-pulse" />
+        {/* Subtle static ambient glow layer */}
+        <div className="absolute top-1/3 -left-12 pointer-events-none w-56 h-56 rounded-full bg-sky-200/10 filter blur-3xl opacity-40" />
 
         {/* TOP PANEL: Auto-suggest Search and Geolocation pin (Shown on Villes tab or secondary tabs) */}
         {activeTab === 'villes' && (
@@ -702,6 +694,9 @@ export default function App() {
                       onToggleMode={setHeroMode}
                       airQualityIndex={airQuality?.aqi}
                       airQualityLabel={airQuality?.aqi ? getAqiBand(airQuality.aqi).label : undefined}
+                      onOpenBrief={handleOpenMorningBrief}
+                      favorites={favorites}
+                      onSelectFavorite={setCurrentCommune}
                     />
 
                     {/* The signature interactive Time-Scrubber ruler */}
@@ -731,10 +726,10 @@ export default function App() {
                 role="tabpanel"
                 aria-labelledby="tab-villes"
                 tabIndex={0}
-                initial={{ opacity: 0, x: 15 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -15 }}
-                transition={{ duration: 0.25 }}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15 }}
                 className="flex-1 flex flex-col space-y-4 text-white focus:outline-none pt-2"
               >
                 {/* Active City Card */}
@@ -805,7 +800,7 @@ export default function App() {
               </motion.div>
             )}
 
-{/* SCREEN 2: CARTES VIEW (NOW COMPARISON VIEW) */}
+            {/* SCREEN 2: CARTES VIEW (RADAR LIVE & COMPARATEUR) */}
             {activeTab === 'cartes' && (
               <motion.div
                 key="cartes-tab-screen"
@@ -813,24 +808,70 @@ export default function App() {
                 role="tabpanel"
                 aria-labelledby="tab-cartes"
                 tabIndex={0}
-                initial={{ opacity: 0, x: 15 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -15 }}
-                transition={{ duration: 0.3 }}
-                className="flex-1 flex flex-col justify-between text-white focus:outline-none"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15 }}
+                className="flex-1 flex flex-col space-y-3 text-white focus:outline-none pt-1"
               >
-                {weather ? (
-                  <Suspense fallback={<LazyFallback />}>
-                    <CityComparison
-                      currentCommune={currentCommune}
-                      currentWeather={weather}
-                    />
-                  </Suspense>
+                {/* Segmented Control Radar Live vs Comparateur */}
+                <div className="flex bg-black/30 backdrop-blur-md p-1 rounded-2xl border border-white/15 w-full shrink-0 shadow-md">
+                  <button
+                    onClick={() => setCartesMode('radar')}
+                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      cartesMode === 'radar'
+                        ? 'bg-sky-500 text-white shadow-md'
+                        : 'text-white/70 hover:text-white'
+                    }`}
+                  >
+                    <CloudRain className="w-3.5 h-3.5" />
+                    <span>Radar Pluie Live</span>
+                  </button>
+                  <button
+                    onClick={() => setCartesMode('compare')}
+                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      cartesMode === 'compare'
+                        ? 'bg-sky-500 text-white shadow-md'
+                        : 'text-white/70 hover:text-white'
+                    }`}
+                  >
+                    <Navigation className="w-3.5 h-3.5 rotate-45" />
+                    <span>Comparateur</span>
+                  </button>
+                </div>
+
+                {/* Sub-view Rendering */}
+                {cartesMode === 'radar' ? (
+                  weather ? (
+                    <Suspense fallback={<LazyFallback />}>
+                      <div className="glass-premium rounded-3xl p-3 flex-1 flex flex-col min-h-[380px] overflow-hidden">
+                        <RainRadar
+                          latitude={weather.latitude}
+                          longitude={weather.longitude}
+                          cityName={currentCommune.nom}
+                        />
+                      </div>
+                    </Suspense>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-8 text-center bg-white/5 border border-white/10 rounded-2xl">
+                      <Loader2 className="w-8 h-8 animate-spin text-sky-400 mb-2" />
+                      <p className="text-xs text-white/60">Chargement du radar des pluies...</p>
+                    </div>
+                  )
                 ) : (
-                  <div className="flex flex-col items-center justify-center p-8 text-center bg-white/5 border border-white/10 rounded-2xl">
-                    <Loader2 className="w-8 h-8 animate-spin text-sky-400 mb-2" />
-                    <p className="text-xs text-white/60">Chargement de la station principale...</p>
-                  </div>
+                  weather ? (
+                    <Suspense fallback={<LazyFallback />}>
+                      <CityComparison
+                        currentCommune={currentCommune}
+                        currentWeather={weather}
+                      />
+                    </Suspense>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-8 text-center bg-white/5 border border-white/10 rounded-2xl">
+                      <Loader2 className="w-8 h-8 animate-spin text-sky-400 mb-2" />
+                      <p className="text-xs text-white/60">Chargement du comparateur de villes...</p>
+                    </div>
+                  )
                 )}
               </motion.div>
             )}
@@ -843,10 +884,10 @@ export default function App() {
                 role="tabpanel"
                 aria-labelledby="tab-alertes"
                 tabIndex={0}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15 }}
                 className="flex-1 flex flex-col justify-between text-white focus:outline-none"
               >
                 <Suspense fallback={<LazyFallback />}>
@@ -870,10 +911,10 @@ export default function App() {
                 role="tabpanel"
                 aria-labelledby="tab-reglages"
                 tabIndex={0}
-                initial={{ opacity: 0, y: 15 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 15 }}
-                transition={{ duration: 0.3 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15 }}
                 className="flex-1 flex flex-col text-white space-y-4 pb-6 focus:outline-none"
               >
                 {/* Unified Alert Settings Panel */}
@@ -940,25 +981,25 @@ export default function App() {
                     <div className="bg-white/10 p-4 rounded-2xl border border-white/15 flex flex-col gap-3">
                       <div className="flex justify-between items-start gap-3">
                         <div>
-                          <h5 className="text-[11px] font-bold text-sky-300 flex items-center gap-1.5 uppercase tracking-wide">
+                          <h5 className="text-xs font-bold text-sky-300 flex items-center gap-1.5 uppercase tracking-wide">
                             ⭐ Brief & Horoscope Matinal (Astro-Météo)
                           </h5>
-                          <p className="text-[9.5px] text-white/80 leading-relaxed mt-1">
+                          <p className="text-xs text-white/80 leading-relaxed mt-1">
                             Recevez chaque matin à 8h00 votre récapitulatif ultra-personnalisé mêlant les prévisions météo du jour et une touche d'inspiration positive !
                           </p>
-                          <p className="text-[9px] text-white/50 leading-relaxed mt-1.5 italic">
+                          <p className="text-[11px] text-white/60 leading-relaxed mt-1 italic">
                             Pour activer cette fonctionnalité, veuillez renseigner votre date de naissance complète ci-dessous :
                           </p>
                         </div>
                         {notifSettings.birthDate && (
-                          <span className="text-[9px] bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded-md font-black tracking-wider uppercase shrink-0">
+                          <span className="text-[10px] bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded-md font-bold tracking-wider uppercase shrink-0">
                             ACTIF
                           </span>
                         )}
                       </div>
                       
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 pt-1.5 border-t border-white/5">
-                        <label htmlFor="birthdate-input" className="text-[10px] font-medium text-white/90 shrink-0">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 pt-1.5 border-t border-white/10">
+                        <label htmlFor="birthdate-input" className="text-xs font-semibold text-white/90 shrink-0">
                           Votre date de naissance :
                         </label>
                         <div className="relative w-full sm:w-auto flex-1 max-w-[200px]">
@@ -971,10 +1012,20 @@ export default function App() {
                               setNotifSettings(updated);
                               saveNotificationSettings(updated);
                             }}
-                            className="text-[10px] bg-black/50 border border-white/20 rounded-xl px-3 py-1.5 text-white focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/40 w-full font-mono"
+                            className="text-xs bg-black/50 border border-white/20 rounded-xl px-3 py-1.5 text-white focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/40 w-full font-mono"
                           />
                         </div>
                       </div>
+
+                      {notifSettings.birthDate && (
+                        <button
+                          onClick={handleOpenMorningBrief}
+                          className="w-full mt-1 py-2 px-3 rounded-xl bg-sky-500/25 hover:bg-sky-500/35 border border-sky-400/40 text-xs font-bold text-sky-200 flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm cursor-pointer"
+                        >
+                          <Sparkles className="w-4 h-4 text-amber-300" />
+                          <span>Écouter mon Brief Astro-Météo du jour</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* 3. Rain choice toggle */}
@@ -1234,9 +1285,7 @@ export default function App() {
               favorites={favorites}
               toggleFavorite={toggleFavorite}
               todayShare={todayShare}
-              frenchDate={frenchDate}
               saintDuJour={saintDuJour}
-              currentTime={currentTime}
               staleSince={staleSince}
               refreshing={refreshing}
               currentCode={currentCode}

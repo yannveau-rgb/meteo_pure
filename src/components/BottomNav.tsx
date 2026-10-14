@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigation, Heart, Map, Trophy, MoreHorizontal } from 'lucide-react';
+import { Navigation, Heart, Map, ShieldAlert, MoreHorizontal } from 'lucide-react';
 
 export type AppTab = 'meteo' | 'villes' | 'cartes' | 'alertes' | 'reglages';
 
@@ -71,14 +71,14 @@ export default function BottomNav({ activeTab, onSelectTab, hasActiveVigilance }
         <span className="text-[10px] tracking-tight">Carte</span>
       </button>
 
-      {/* 4. Rankings / Alerts (Comparaisons ou Vigilance) */}
+      {/* 4. Vigilance */}
       <button
         id="tab-alertes"
         role="tab"
         aria-selected={activeTab === 'alertes'}
         aria-controls="panel-alertes"
         onClick={() => onSelectTab('alertes')}
-        aria-label="Alertes et classements"
+        aria-label="Vigilance Météo"
         className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer relative ${
           activeTab === 'alertes'
             ? 'bg-white/20 text-white font-semibold scale-105'
@@ -86,7 +86,7 @@ export default function BottomNav({ activeTab, onSelectTab, hasActiveVigilance }
         }`}
       >
         <div className="relative">
-          <Trophy className="w-4 h-4" />
+          <ShieldAlert className="w-4 h-4" />
           {hasActiveVigilance && (
             <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-slate-900 animate-pulse" />
           )}

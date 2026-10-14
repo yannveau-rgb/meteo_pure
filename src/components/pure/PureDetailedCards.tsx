@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { WeatherData, Commune } from '../../types';
 import { formatCacheTime } from '../../utils/weatherCache';
 import { calculateCurrentUv, getMoonPhase } from '../../utils/weatherUtils';
+import { useFrenchClock } from '../../hooks/useFrenchClock';
 
 // Child components
 import RainForecast from '../RainForecast';
@@ -30,9 +31,9 @@ interface PureDetailedCardsProps {
   favorites: Commune[];
   toggleFavorite: (c: Commune) => void;
   todayShare: { openShare: (id: string) => void };
-  frenchDate: string;
+  frenchDate?: string;
   saintDuJour: string | null;
-  currentTime: string;
+  currentTime?: string;
   staleSince: number | null;
   refreshing: boolean;
   currentCode: number;
@@ -51,9 +52,9 @@ export default function PureDetailedCards({
   favorites,
   toggleFavorite,
   todayShare,
-  frenchDate,
+  frenchDate: propFrenchDate,
   saintDuJour,
-  currentTime,
+  currentTime: propCurrentTime,
   staleSince,
   refreshing,
   currentCode,
@@ -65,6 +66,10 @@ export default function PureDetailedCards({
   setShowMoonModal,
   airQuality,
 }: PureDetailedCardsProps) {
+  const internalClock = useFrenchClock();
+  const frenchDate = propFrenchDate || internalClock.frenchDate;
+  const currentTime = propCurrentTime || internalClock.currentTime;
+
   const isFavorite = favorites.some((fav) => fav.code === currentCommune.code);
   const temp = Math.round(weather.current.temperature);
   const isBurning = temp >= 30;

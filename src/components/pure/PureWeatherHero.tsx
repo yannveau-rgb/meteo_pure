@@ -1,6 +1,6 @@
 import React from 'react';
-import { ArrowRight, Leaf, CloudSun, MapPin } from 'lucide-react';
-import { WeatherData, HourlyForecastItem } from '../../types';
+import { ArrowRight, Leaf, CloudSun, MapPin, Sparkles } from 'lucide-react';
+import { WeatherData, HourlyForecastItem, Commune } from '../../types';
 
 interface PureWeatherHeroProps {
   weather: WeatherData;
@@ -11,6 +11,9 @@ interface PureWeatherHeroProps {
   onToggleMode: (mode: 'weather' | 'aqi') => void;
   airQualityIndex?: number;
   airQualityLabel?: string;
+  onOpenBrief?: () => void;
+  favorites?: Commune[];
+  onSelectFavorite?: (c: Commune) => void;
 }
 
 /**
@@ -26,6 +29,9 @@ export default function PureWeatherHero({
   onToggleMode,
   airQualityIndex,
   airQualityLabel,
+  onOpenBrief,
+  favorites,
+  onSelectFavorite,
 }: PureWeatherHeroProps) {
   // Active temperature (either from scrubbed hour or current weather)
   const temp = Math.round(selectedHour ? selectedHour.temp : weather.current.temperature);
@@ -85,10 +91,21 @@ export default function PureWeatherHero({
           </button>
         </div>
 
-        {/* Ambient subtle badge or favorite indicator */}
-        <div className="text-[11px] font-medium text-white/60 tracking-wider uppercase">
-          Météo Pure
-        </div>
+        {/* Top Right: Morning Brief / Horoscope Trigger or Brand */}
+        {onOpenBrief ? (
+          <button
+            onClick={onOpenBrief}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 border border-white/25 backdrop-blur-md text-[11px] font-semibold text-amber-200 shadow-md transition-all cursor-pointer"
+            title="Votre Horoscope & Brief Météo du Jour"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <span>Brief</span>
+          </button>
+        ) : (
+          <div className="text-[11px] font-medium text-white/60 tracking-wider uppercase">
+            Météo Pure
+          </div>
+        )}
       </div>
 
       {/* Editorial Contextual Summary Headline */}
@@ -131,12 +148,12 @@ export default function PureWeatherHero({
           </button>
         </div>
 
-        {/* Location & Condition line */}
+        {/* Location & Condition line with elegant font-display italic */}
         <div className="flex items-center gap-2 text-white/95 text-[15px] font-medium tracking-tight mt-1">
           <MapPin className="w-4 h-4 text-white/80 shrink-0" />
-          <span>{cityName}</span>
+          <span className="font-semibold">{cityName}</span>
           <span className="text-white/40">•</span>
-          <span className="capitalize">{conditionDesc}</span>
+          <span className="capitalize font-display italic text-lg text-white/90">{conditionDesc}</span>
         </div>
 
         {/* Sub-metrics: High, Low, Humidity, UV */}
@@ -148,6 +165,25 @@ export default function PureWeatherHero({
           <span className="text-white/30">•</span>
           <span>UV {uvIndex}</span>
         </div>
+
+        {/* Quick horizontal favorite chips right on the main hero */}
+        {favorites && favorites.length > 1 && (
+          <div className="flex gap-1.5 items-center mt-2 overflow-x-auto no-scrollbar py-0.5 select-none" style={{ WebkitOverflowScrolling: 'touch' }}>
+            {favorites.map((fav) => (
+              <button
+                key={fav.code}
+                onClick={() => onSelectFavorite?.(fav)}
+                className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all border shrink-0 cursor-pointer ${
+                  fav.nom === cityName
+                    ? 'bg-white/30 text-white border-white/40 shadow-sm'
+                    : 'bg-black/20 text-white/70 hover:text-white border-white/10'
+                }`}
+              >
+                {fav.nom}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
