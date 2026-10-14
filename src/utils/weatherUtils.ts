@@ -136,7 +136,7 @@ export function getWeatherUI(code: number, isNight = false): WeatherUI {
   switch (code) {
     case 0:
       return {
-        label: 'Ensoleillé',
+        label: isNight ? 'Nuit claire' : 'Ensoleillé',
         icon: isNight ? Moon : Sun,
         colorClass: isNight ? 'text-indigo-300' : 'text-amber-400',
         bgGradient: isNight ? 'from-slate-900 via-indigo-950 to-slate-900' : 'from-sky-400 via-indigo-200 to-indigo-100'

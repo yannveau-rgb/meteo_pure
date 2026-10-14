@@ -156,8 +156,9 @@ export default function App() {
   }, [weather?.sunset]);
 
   const isScrubbedDaytime = currentFloatHour >= sunriseFloat && currentFloatHour <= sunsetFloat;
-
-  // Moon / Morning Brief modals + AI call
+  const activeScrubbedCode = (selectedHourIndex > 0 && scrubbedHourItem)
+    ? scrubbedHourItem.weatherCode
+    : (weather?.current.weatherCode ?? 0);
   const {
     showMoonModal, setShowMoonModal,
     showMorningBriefModal, setShowMorningBriefModal,
@@ -506,11 +507,13 @@ export default function App() {
           hour={currentFloatHour}
           sunriseHour={sunriseFloat}
           sunsetHour={sunsetFloat}
-          weatherCode={scrubbedHourItem ? scrubbedHourItem.weatherCode : (weather?.current.weatherCode || 0)}
+          weatherCode={activeScrubbedCode}
         />
 
-        {/* Subtle static ambient glow layer */}
-        <div className="absolute top-1/3 -left-12 pointer-events-none w-56 h-56 rounded-full bg-sky-200/10 filter blur-3xl opacity-40" />
+        {/* Subtle static ambient glow layer (only during clear or partly cloudy daytime) */}
+        {activeScrubbedCode < 3 && isScrubbedDaytime && (
+          <div className="absolute top-1/3 -left-12 pointer-events-none w-56 h-56 rounded-full bg-sky-200/10 filter blur-3xl opacity-40" />
+        )}
 
         {/* TOP PANEL: Auto-suggest Search and Geolocation pin (Shown on Villes tab or secondary tabs) */}
         {activeTab === 'villes' && (
@@ -674,7 +677,7 @@ export default function App() {
                 className="relative w-full flex-1 min-h-0 flex flex-col justify-between focus:outline-none"
               >
                 {/* Dynamic live weather ambient atmospheric animation */}
-                <AmbientWeatherBackground weatherCode={scrubbedHourItem ? scrubbedHourItem.weatherCode : currentCode} />
+                <AmbientWeatherBackground weatherCode={activeScrubbedCode} />
 
                 {loading ? (
                   <div className="flex-1 flex flex-col items-center justify-center py-20 animate-pulse space-y-4">

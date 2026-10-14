@@ -625,3 +625,35 @@
   filter: grayscale(100%) brightness(105%) contrast(90%);
 }
 
+/* Celestial Weather Animations */
+@keyframes cloudDriftSlow {
+  0%, 100% { transform: translate3d(-4%, 0, 0); }
+  50% { transform: translate3d(4%, 0, 0); }
+}
+
+@keyframes cloudDriftFast {
+  0%, 100% { transform: translate3d(4%, 0, 0); }
+  50% { transform: translate3d(-5%, 0, 0); }
+}
+
+@keyframes rainDropFall {
+  0% { transform: translate3d(0, -40px, 0) rotate(12deg); opacity: 0; }
+  15% { opacity: 0.7; }
+  85% { opacity: 0.7; }
+  100% { transform: translate3d(-30px, 650px, 0) rotate(12deg); opacity: 0; }
+}
+
+@keyframes snowDriftFall {
+  0% { transform: translate3d(0, -20px, 0) rotate(0deg); opacity: 0; }
+  20% { opacity: 0.85; }
+  80% { opacity: 0.85; }
+  100% { transform: translate3d(35px, 650px, 0) rotate(360deg); opacity: 0; }
+}
+
+@keyframes stormFlashPulse {
+  0%, 90%, 94%, 98%, 100% { opacity: 0; }
+  92% { opacity: 0.4; }
+  93% { opacity: 0.08; }
+  96% { opacity: 0.65; }
+}
+

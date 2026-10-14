@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowRight, Leaf, CloudSun, MapPin, Sparkles } from 'lucide-react';
 import { WeatherData, HourlyForecastItem, Commune } from '../../types';
-import { getWeatherUI } from '../../utils/weatherUtils';
+import { getWeatherUI, isNightTime } from '../../utils/weatherUtils';
 
 interface PureWeatherHeroProps {
   weather: WeatherData;
@@ -34,11 +34,23 @@ export default function PureWeatherHero({
   favorites,
   onSelectFavorite,
 }: PureWeatherHeroProps) {
-  // Active temperature (either from scrubbed hour or current weather)
+  // Active temperature and condition (either from scrubbed hour or current weather)
   const temp = Math.round(selectedHour ? selectedHour.temp : weather.current.temperature);
+  const isNight = selectedHour 
+    ? (() => {
+        const hourNum = parseInt(selectedHour.time.split(':')[0], 10);
+        const sunriseNum = weather.sunrise ? parseInt(weather.sunrise.split(':')[0], 10) : 7;
+        const sunsetNum = weather.sunset ? parseInt(weather.sunset.split(':')[0], 10) : 20;
+        return hourNum < sunriseNum || hourNum >= sunsetNum;
+      })()
+    : isNightTime(weather.sunrise, weather.sunset);
+
+  const activeCode = selectedHour ? selectedHour.weatherCode : weather.current.weatherCode;
+  const weatherUI = getWeatherUI(activeCode, isNight);
   const conditionDesc = selectedHour 
-    ? getWeatherUI(selectedHour.weatherCode).label 
+    ? weatherUI.label 
     : weather.current.weatherDesc;
+  const WeatherConditionIcon = weatherUI.icon;
   
   // High and low for today
   const todayDaily = weather.daily[0];
@@ -56,13 +68,22 @@ export default function PureWeatherHero({
       if (temp >= 30) return "La chaleur s'installe, hydratez-vous bien";
       if (temp <= 5) return "Un air particulièrement frais s'annonce";
       if (selectedHour.precipitationProbability > 40) return `Risque d'averse (${selectedHour.precipitationProbability}%)`;
-      if (selectedHour.weatherCode === 0) return "Ciel dégagé et franc soleil";
-      if (selectedHour.weatherCode === 1) return "Ciel lumineux avec quelques voiles";
-      if (selectedHour.weatherCode === 2) return "Belles éclaircies et ciel doux";
-      if (selectedHour.weatherCode === 3) return "Ciel couvert et atmosphère feutrée";
-      return conditionDesc || "Ciel dégagé et atmosphère paisible";
+      if (selectedHour.weatherCode === 0) return isNight ? "Nuit claire et ciel étoilé" : "Ciel dégagé et franc soleil";
+      if (selectedHour.weatherCode === 1) return isNight ? "Nuit calme avec quelques voiles" : "Ciel lumineux avec quelques voiles";
+      if (selectedHour.weatherCode === 2) return isNight ? "Éclaircies nocturnes et ciel paisible" : "Belles éclaircies et ciel doux";
+      if (selectedHour.weatherCode === 3) return isNight ? "Nuit couverte et atmosphère feutrée" : "Ciel couvert et atmosphère feutrée";
+      if (selectedHour.weatherCode === 45 || selectedHour.weatherCode === 48) return "Brouillard et visibilité réduite";
+      if ([51, 53, 55, 56, 57].includes(selectedHour.weatherCode)) return "Bruine fine et temps humide";
+      if ([61, 63, 65, 80, 81, 82].includes(selectedHour.weatherCode)) return "Passages pluvieux au programme";
+      if ([71, 73, 75, 77, 85, 86].includes(selectedHour.weatherCode)) return "Chutes de neige prévues";
+      if ([95, 96, 99].includes(selectedHour.weatherCode)) return "Activité orageuse imminente";
+      return conditionDesc || (isNight ? "Nuit paisible" : "Ciel dégagé et atmosphère paisible");
     }
-    // Default overview statement
+    // When showing current live weather (not scrubbed):
+    if (weather.current.weatherCode === 3) return "Ciel actuellement couvert et feutré";
+    if (weather.current.weatherCode === 45 || weather.current.weatherCode === 48) return "Brouillard matinal et visibilité limitée";
+    if ([61, 63, 65, 80, 81, 82].includes(weather.current.weatherCode)) return "Pluie en cours sur la commune";
+    if ([95, 96, 99].includes(weather.current.weatherCode)) return "Risque d'orage et atmosphère électrique";
     return `Ce soir autour de ${minTemp}°C, demain atteindra ${maxTemp}°C`;
   })();
 
@@ -160,6 +181,7 @@ export default function PureWeatherHero({
           <MapPin className="w-4 h-4 text-white/80 shrink-0" />
           <span className="font-semibold">{cityName}</span>
           <span className="text-white/40">•</span>
+          <WeatherConditionIcon className={`w-4 h-4 ${weatherUI.colorClass} shrink-0`} />
           <span className="capitalize font-display italic text-lg text-white/90">{conditionDesc}</span>
         </div>
 
