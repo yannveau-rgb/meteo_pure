@@ -1,19 +1,13 @@
-import { CloudSun, ArrowRightLeft, Bell, Settings } from 'lucide-react';
+import React from 'react';
+import { Navigation, Heart, Map, Trophy, MoreHorizontal } from 'lucide-react';
 
-export type AppTab = 'meteo' | 'cartes' | 'alertes' | 'reglages';
+export type AppTab = 'meteo' | 'villes' | 'cartes' | 'alertes' | 'reglages';
 
 interface BottomNavProps {
   activeTab: AppTab;
   onSelectTab: (tab: AppTab) => void;
-  hasActiveVigilance: boolean;
+  hasActiveVigilance?: boolean;
 }
-
-const tabButtonClass = (active: boolean) =>
-  `flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-    active
-      ? 'bg-white/20 text-white font-bold text-shadow-sm scale-105'
-      : 'text-white/60 hover:text-white/90 font-medium'
-  }`;
 
 export default function BottomNav({ activeTab, onSelectTab, hasActiveVigilance }: BottomNavProps) {
   return (
@@ -21,63 +15,101 @@ export default function BottomNav({ activeTab, onSelectTab, hasActiveVigilance }
       id="tab-navigation-panel"
       role="tablist"
       aria-label="Sections de l'application"
-      className="relative z-10 mt-6 bg-white/15 backdrop-blur-md border border-white/20 rounded-full p-1.5 flex justify-around items-center shadow-lg"
+      className="relative z-20 w-full max-w-sm mx-auto bg-black/40 backdrop-blur-xl border border-white/15 rounded-full p-1.5 flex justify-around items-center shadow-2xl"
     >
+      {/* 1. Nearby (Météo locale) */}
       <button
         id="tab-meteo"
         role="tab"
         aria-selected={activeTab === 'meteo'}
         aria-controls="panel-meteo"
         onClick={() => onSelectTab('meteo')}
-        aria-label="Météo"
-        className={tabButtonClass(activeTab === 'meteo')}
+        aria-label="Météo actuelle"
+        className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+          activeTab === 'meteo'
+            ? 'bg-sky-500/25 text-sky-400 font-semibold scale-105'
+            : 'text-white/60 hover:text-white/90 font-medium'
+        }`}
       >
-        <CloudSun className="w-5 h-5" />
-        <span className="text-[9px]">Météo</span>
+        <Navigation className={`w-4 h-4 ${activeTab === 'meteo' ? 'fill-sky-400 text-sky-400' : ''}`} />
+        <span className="text-[10px] tracking-tight">Proche</span>
       </button>
 
+      {/* 2. Cities (Favoris & Recherche) */}
+      <button
+        id="tab-villes"
+        role="tab"
+        aria-selected={activeTab === 'villes'}
+        aria-controls="panel-villes"
+        onClick={() => onSelectTab('villes')}
+        aria-label="Villes favorites"
+        className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+          activeTab === 'villes'
+            ? 'bg-white/20 text-white font-semibold scale-105'
+            : 'text-white/60 hover:text-white/90 font-medium'
+        }`}
+      >
+        <Heart className={`w-4 h-4 ${activeTab === 'villes' ? 'fill-white text-white' : ''}`} />
+        <span className="text-[10px] tracking-tight">Villes</span>
+      </button>
+
+      {/* 3. Map (Radar de pluie & cartes) */}
       <button
         id="tab-cartes"
         role="tab"
         aria-selected={activeTab === 'cartes'}
         aria-controls="panel-cartes"
         onClick={() => onSelectTab('cartes')}
-        aria-label="Comparer les villes"
-        className={tabButtonClass(activeTab === 'cartes')}
+        aria-label="Radar et cartes"
+        className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+          activeTab === 'cartes'
+            ? 'bg-white/20 text-white font-semibold scale-105'
+            : 'text-white/60 hover:text-white/90 font-medium'
+        }`}
       >
-        <ArrowRightLeft className={`w-5 h-5 rotate-45 ${activeTab === 'cartes' ? 'text-sky-400' : ''}`} />
-        <span className="text-[9px]">Comparer</span>
+        <Map className="w-4 h-4" />
+        <span className="text-[10px] tracking-tight">Carte</span>
       </button>
 
+      {/* 4. Rankings / Alerts (Comparaisons ou Vigilance) */}
       <button
         id="tab-alertes"
         role="tab"
         aria-selected={activeTab === 'alertes'}
         aria-controls="panel-alertes"
         onClick={() => onSelectTab('alertes')}
-        aria-label="Alertes et vigilance"
-        className={tabButtonClass(activeTab === 'alertes')}
+        aria-label="Alertes et classements"
+        className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer relative ${
+          activeTab === 'alertes'
+            ? 'bg-white/20 text-white font-semibold scale-105'
+            : 'text-white/60 hover:text-white/90 font-medium'
+        }`}
       >
         <div className="relative">
-          <Bell className="w-5 h-5" />
+          <Trophy className="w-4 h-4" />
           {hasActiveVigilance && (
-            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400 ring-1 ring-white/60" />
+            <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-slate-900 animate-pulse" />
           )}
         </div>
-        <span className="text-[9px]">Alertes</span>
+        <span className="text-[10px] tracking-tight">Vigilance</span>
       </button>
 
+      {/* 5. More (Réglages & Options) */}
       <button
         id="tab-reglages"
         role="tab"
         aria-selected={activeTab === 'reglages'}
         aria-controls="panel-reglages"
         onClick={() => onSelectTab('reglages')}
-        aria-label="Réglages"
-        className={tabButtonClass(activeTab === 'reglages')}
+        aria-label="Plus d'options"
+        className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
+          activeTab === 'reglages'
+            ? 'bg-white/20 text-white font-semibold scale-105'
+            : 'text-white/60 hover:text-white/90 font-medium'
+        }`}
       >
-        <Settings className="w-5 h-5" />
-        <span className="text-[9px]">Réglages</span>
+        <MoreHorizontal className="w-4 h-4" />
+        <span className="text-[10px] tracking-tight">Plus</span>
       </button>
     </nav>
   );

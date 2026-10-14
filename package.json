@@ -14,6 +14,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@babel/helper-compilation-targets": "^8.0.7",
     "@tailwindcss/vite": "^4.1.14",
     "@types/leaflet": "^1.9.21",
     "@upstash/redis": "^1.34.3",

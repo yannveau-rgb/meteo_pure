@@ -49,6 +49,7 @@ import { useCitySearch } from './hooks/useCitySearch';
 import { useWeatherFetch } from './hooks/useWeatherFetch';
 import { useMorningBrief } from './hooks/useMorningBrief';
 import { useAirQuality } from './hooks/useAirQuality';
+import { getAqiBand } from './utils/airQuality';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { useShareImage } from './hooks/useShareImage';
 import { useGeolocation } from './hooks/useGeolocation';
@@ -67,11 +68,18 @@ import TiltCard from './components/TiltCard';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import Toggle from './components/ui/Toggle';
 import InfoBadge from './components/ui/InfoBadge';
-import BottomNav from './components/BottomNav';
+import BottomNav, { AppTab } from './components/BottomNav';
 import MoonPhasesModal from './components/modals/MoonPhasesModal';
 import HoroscopeModal from './components/HoroscopeModal';
 import WelcomePrompt from './components/modals/WelcomePrompt';
 import Toast, { ToastData } from './components/Toast';
+
+// Pure minimalist components (video UI match)
+import CelestialSky from './components/pure/CelestialSky';
+import TimeScrubber from './components/pure/TimeScrubber';
+import PureWeatherHero from './components/pure/PureWeatherHero';
+import PureDetailDrawer from './components/pure/PureDetailDrawer';
+import PureDetailedCards from './components/pure/PureDetailedCards';
 
 // Lazy-loaded: only fetched when their tab/modal is opened
 const CityComparison = lazy(() => import('./components/CityComparison'));
@@ -87,13 +95,10 @@ const LazyFallback = () => (
 
 export default function App() {
   // Navigation & Screen tab state
-  // Plain state setter on purpose — the View Transitions API was evaluated
-  // here and rejected as redundant: the tab panels below already cross-fade
-  // through `AnimatePresence mode="wait"` with per-panel enter/exit
-  // transitions. Layering a root-level view transition on top would animate
-  // the same change twice, and would additionally need `flushSync` to commit
-  // synchronously, which fights the React.lazy tab chunks.
-  const [activeTab, setActiveTab] = useState<'meteo' | 'cartes' | 'alertes' | 'reglages'>('meteo');
+  const [activeTab, setActiveTab] = useState<AppTab>('meteo');
+  const [selectedHourIndex, setSelectedHourIndex] = useState<number>(0);
+  const [heroMode, setHeroMode] = useState<'weather' | 'aqi'>('weather');
+  const [showDetailDrawer, setShowDetailDrawer] = useState<boolean>(false);
 
   const isAdmin = typeof window !== 'undefined' && !!localStorage.getItem('adminToken');
 
@@ -136,8 +141,37 @@ export default function App() {
   // Geolocation active indicator + handler
   const { geoLocating, handleGeolocation } = useGeolocation(setCurrentCommune, setActiveTab, setErrorMsg);
 
-  // Reset selected forecast day whenever commune changes
-  useEffect(() => { setSelectedDayIndex(0); }, [currentCommune]);
+  // Reset selected forecast day and hour scrubber whenever commune changes
+  useEffect(() => { 
+    setSelectedDayIndex(0); 
+    setSelectedHourIndex(0);
+  }, [currentCommune]);
+
+  // Scrubbed hour item & celestial time calculation
+  const scrubbedHourItem = weather?.hourly?.[selectedHourIndex];
+
+  const currentFloatHour = React.useMemo(() => {
+    if (selectedHourIndex === 0 || !scrubbedHourItem) {
+      const now = new Date();
+      return now.getHours() + now.getMinutes() / 60;
+    }
+    const parts = scrubbedHourItem.time.split(':');
+    return parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
+  }, [selectedHourIndex, scrubbedHourItem]);
+
+  const sunriseFloat = React.useMemo(() => {
+    if (!weather?.sunrise) return 7.0;
+    const parts = weather.sunrise.split(':');
+    return parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
+  }, [weather?.sunrise]);
+
+  const sunsetFloat = React.useMemo(() => {
+    if (!weather?.sunset) return 19.5;
+    const parts = weather.sunset.split(':');
+    return parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
+  }, [weather?.sunset]);
+
+  const isScrubbedDaytime = currentFloatHour >= sunriseFloat && currentFloatHour <= sunsetFloat;
 
   // Moon / Morning Brief modals + AI call
   const {
@@ -475,13 +509,20 @@ export default function App() {
         {/* FLOATING FUNNY TOAST NOTIFICATION */}
         <Toast toast={activeToast} cityName={currentCommune.nom} onDismiss={() => setActiveToast(null)} />
         
-        {/* Animated decorative 3D liquid waves and drop overlays matching mockup design perfectly */}
-        <div className="liquid-wave-top" />
-        <div className="liquid-drip-lone" />
+        {/* Dynamic Celestial Sky (Sun arc, Moon crescent, Stars, Gradients) */}
+        <CelestialSky
+          hour={currentFloatHour}
+          sunriseHour={sunriseFloat}
+          sunsetHour={sunsetFloat}
+          weatherCode={scrubbedHourItem ? scrubbedHourItem.weatherCode : (weather?.current.weatherCode || 0)}
+        />
+
+        {/* Animated subtle glow layer */}
         <div className="absolute top-1/3 -left-12 pointer-events-none w-56 h-56 rounded-full bg-sky-200/10 filter blur-3xl animate-pulse" />
 
-        {/* TOP PANEL: Auto-suggest Search and Geolocation pin */}
-        <div className="relative z-30">
+        {/* TOP PANEL: Auto-suggest Search and Geolocation pin (Shown on Villes tab or secondary tabs) */}
+        {activeTab === 'villes' && (
+        <div className="relative z-30 pt-1">
           <div className="flex gap-2 items-center">
             {/* Real Search Bar Container */}
             <div className="relative flex-1">
@@ -612,6 +653,7 @@ export default function App() {
             </div>
           )}
         </div>
+        )}
 
         {/* ERROR DISPLAY SYSTEM */}
         {errorMsg && (
@@ -625,7 +667,7 @@ export default function App() {
         <div className="flex-1 flex flex-col mt-4 overflow-y-auto no-scrollbar relative z-10">
           <AnimatePresence mode="wait">
             
-            {/* SCREEN 1: METEO VIEW */}
+                        {/* SCREEN 1: METEO VIEW (ULTRA-MINIMALIST WITH TIME-SCRUBBER) */}
             {activeTab === 'meteo' && (
               <motion.div
                 key="meteo-tab-screen"
@@ -633,358 +675,137 @@ export default function App() {
                 role="tabpanel"
                 aria-labelledby="tab-meteo"
                 tabIndex={0}
-                initial={{ opacity: 0, x: -15 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 15 }}
-                transition={{ duration: 0.3 }}
-                className="relative w-full flex flex-col focus:outline-none"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.25 }}
+                className="relative w-full flex-1 flex flex-col justify-between focus:outline-none min-h-[560px]"
               >
                 {/* Dynamic live weather ambient atmospheric animation */}
-                <AmbientWeatherBackground weatherCode={currentCode} />
+                <AmbientWeatherBackground weatherCode={scrubbedHourItem ? scrubbedHourItem.weatherCode : currentCode} />
 
-                {/* Glass panels layout overlay */}
-                <div className="relative z-10 w-full flex flex-col space-y-4">
-                  <div id="today-weather-widget" className="w-full flex flex-col space-y-4">
-                    {/* Header info (City & Date) */}
-                  <div className="pt-2 flex justify-between items-start text-white">
-                    <div>
-                      <div className="flex items-center gap-2.5 flex-wrap">
-                        {/* Serif here is the one editorial note in an otherwise
-                            technical interface — it makes the place feel named
-                            rather than merely queried. */}
-                        <h2 className="font-display text-[38px] font-normal tracking-tight leading-none" id="city-name">
-                          {currentCommune.nom}
-                        </h2>
-                        <button
-                          onClick={() => toggleFavorite(currentCommune)}
-                          aria-label={favorites.some(fav => fav.code === currentCommune.code) ? "Retirer des favoris" : "Ajouter aux favoris"}
-                          className="p-1 px-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 active:scale-95 transition-all text-white cursor-pointer shadow-sm shrink-0 flex items-center justify-center mt-1 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
-                          title={favorites.some(fav => fav.code === currentCommune.code) ? "Retirer des favoris" : "Ajouter aux favoris"}
-                        >
-                          <Star
-                            className={`w-4 h-4 ${
-                              favorites.some(fav => fav.code === currentCommune.code)
-                                ? 'text-amber-400 fill-amber-400'
-                                : 'text-white/70 hover:text-white'
-                            }`}
-                          />
-                        </button>
-                        <button
-                          onClick={() => todayShare.openShare('today-weather-widget')}
-                          data-html2canvas-ignore="true"
-                          aria-label="Partager la météo du jour"
-                          className="p-1 px-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 active:scale-95 transition-all text-white cursor-pointer shadow-sm shrink-0 flex items-center justify-center mt-1 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
-                          title="Partager la météo du jour"
-                        >
-                          <Share2 className="w-4 h-4 text-sky-200" />
-                        </button>
-                      </div>
-                      <p className="text-[14px] text-white/80 font-normal mt-0.5 flex flex-wrap items-center gap-2" id="current-date">
-                        <span>{frenchDate || 'Aujourd\'hui'}</span>
-                        {saintDuJour && (
-                          <>
-                            <span className="text-white/60 text-xs font-light">•</span>
-                            <span className="text-[12px] text-white/60 font-medium bg-white/5 border border-white/10 px-2 py-0.5 rounded-full" title="Saint(e) du jour">
-                              ✨ Fête : {saintDuJour}
-                            </span>
-                          </>
-                        )}
-                      </p>
-                      <p className="text-[12px] text-white/50 font-bold uppercase tracking-wider mt-1.5 flex items-center gap-1.5 flex-wrap">
-                        <Clock className="w-3.5 h-3.5 text-white/70" />
-                        <span>{currentTime || '00:00'} CEST</span>
-                        {/* Never let cached data pass for live data — that would
-                            break the one promise this app is built on. */}
-                        {staleSince && (
-                          <span className="normal-case tracking-normal text-[10px] font-semibold text-amber-300/90 bg-amber-500/15 border border-amber-400/30 rounded-full px-2 py-0.5">
-                            Hors-ligne · relevé de {formatCacheTime(staleSince)}
-                          </span>
-                        )}
-                        {/* Cached data paints instantly on a city change, then
-                            revalidates silently — without this, that revalidation
-                            was invisible: nothing on screen said a fetch was even
-                            happening. */}
-                        {refreshing && !staleSince && (
-                          <span
-                            className="flex items-center gap-1 normal-case tracking-normal text-[10px] font-semibold text-white/50"
-                            role="status"
-                            aria-live="polite"
-                          >
-                            <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
-                            Actualisation…
-                          </span>
-                        )}
-                      </p>
-                    </div>
+                {loading ? (
+                  <div className="flex-1 flex flex-col items-center justify-center py-20 animate-pulse space-y-4">
+                    <div className="w-20 h-20 bg-white/20 rounded-full" />
+                    <div className="h-10 w-28 bg-white/20 rounded-xl" />
+                    <div className="h-4 w-36 bg-white/20 rounded-full" />
                   </div>
+                ) : weather ? (
+                  <>
+                    {/* The signature minimalist Hero view */}
+                    <PureWeatherHero
+                      weather={weather}
+                      selectedHour={selectedHourIndex === 0 ? undefined : scrubbedHourItem}
+                      cityName={currentCommune.nom}
+                      onOpenDetails={() => setShowDetailDrawer(true)}
+                      mode={heroMode}
+                      onToggleMode={setHeroMode}
+                      airQualityIndex={airQuality?.aqi}
+                      airQualityLabel={airQuality?.aqi ? getAqiBand(airQuality.aqi).label : undefined}
+                    />
 
-                  {/* Loading skeleton or Climate central readout */}
-                  {loading ? (
-                    <div className="flex flex-col items-center py-10 my-auto animate-pulse space-y-4">
-                      <div className="w-24 h-24 bg-white/25 rounded-full" />
-                      <div className="h-10 w-28 bg-white/25 rounded-xl" />
-                      <div className="h-6 w-36 bg-white/25 rounded-full" />
+                    {/* The signature interactive Time-Scrubber ruler */}
+                    <div className="w-full pb-2 z-20">
+                      <TimeScrubber
+                        hourly={weather.hourly || []}
+                        selectedIndex={selectedHourIndex}
+                        onSelectIndex={setSelectedHourIndex}
+                        isDaytime={isScrubbedDaytime}
+                      />
                     </div>
-                  ) : weather ? (
-                    <>
-                      {/* Temperature Indicator Side-by-Side block matching graphic */}
-                      {(() => {
-                        const temp = Math.round(weather.current.temperature);
-                        const isBurning = temp >= 30;
-                        const isFreezing = temp < 10;
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center p-8 bg-white/10 rounded-2xl border border-white/20 my-auto">
+                    <AlertCircle className="w-10 h-10 text-white mb-2" />
+                    <p className="text-sm text-white font-semibold">Aucune donnée météo chargée.</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
 
-                        return (
-                          <div className="flex items-center justify-between gap-2 py-2 px-1 text-white select-none">
-                            {/* Column, not a row: the badge sits under the number rather than
-                                beside it. Inline, it stole enough width to push the weather
-                                icon and its label off the right edge of a phone screen. */}
-                            <div className="flex flex-col items-start pl-2 min-w-0">
-                              <div className="relative flex items-start">
-                              {/* Particles container for Burning (Sparks rising up) */}
-                              {isBurning && (
-                                <>
-                                  <div className="spark-particle" style={{ '--delay': '0s', '--left': '10%', '--duration': '1.8s', '--drift-x': '-12px' } as React.CSSProperties} />
-                                  <div className="spark-particle" style={{ '--delay': '0.3s', '--left': '35%', '--duration': '2.2s', '--drift-x': '15px' } as React.CSSProperties} />
-                                  <div className="spark-particle" style={{ '--delay': '0.6s', '--left': '60%', '--duration': '1.5s', '--drift-x': '-5px' } as React.CSSProperties} />
-                                  <div className="spark-particle" style={{ '--delay': '0.9s', '--left': '85%', '--duration': '2s', '--drift-x': '10px' } as React.CSSProperties} />
-                                  <div className="spark-particle" style={{ '--delay': '1.2s', '--left': '50%', '--duration': '1.7s', '--drift-x': '-8px' } as React.CSSProperties} />
-                                </>
-                              )}
+            {/* SCREEN: VILLES (FAVORITES & EXPLORATION) */}
+            {activeTab === 'villes' && (
+              <motion.div
+                key="villes-tab-screen"
+                id="panel-villes"
+                role="tabpanel"
+                aria-labelledby="tab-villes"
+                tabIndex={0}
+                initial={{ opacity: 0, x: 15 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -15 }}
+                transition={{ duration: 0.25 }}
+                className="flex-1 flex flex-col space-y-4 text-white focus:outline-none pt-2"
+              >
+                {/* Active City Card */}
+                <div className="glass-premium rounded-2xl p-4 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-white/60 font-semibold uppercase tracking-wider block">Ville active</span>
+                    <h3 className="text-xl font-bold text-white">{currentCommune.nom}</h3>
+                    <p className="text-xs text-white/70">Dép. {currentCommune.codeDepartement}</p>
+                  </div>
+                  <button
+                    onClick={() => toggleFavorite(currentCommune)}
+                    className="p-2 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-white cursor-pointer"
+                    title={favorites.some(fav => fav.code === currentCommune.code) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                  >
+                    <Star
+                      className={`w-5 h-5 ${favorites.some(fav => fav.code === currentCommune.code) ? 'text-amber-400 fill-amber-400' : 'text-white/70 hover:text-white'}`}
+                    />
+                  </button>
+                </div>
 
-                              {/* Particles container for Freezing (Snowflakes falling down) */}
-                              {isFreezing && (
-                                <>
-                                  <span className="frost-particle font-sans" style={{ '--delay': '0s', '--left': '15%', '--duration': '3.2s', '--drift-x': '-15px', '--top': '-10%' } as React.CSSProperties}>❄</span>
-                                  <span className="frost-particle font-sans" style={{ '--delay': '0.5s', '--left': '40%', '--duration': '2.8s', '--drift-x': '10px', '--top': '-15%' } as React.CSSProperties}>❅</span>
-                                  <span className="frost-particle font-sans" style={{ '--delay': '1.1s', '--left': '70%', '--duration': '3.5s', '--drift-x': '-10px', '--top': '-5%' } as React.CSSProperties}>❆</span>
-                                  <span className="frost-particle font-sans" style={{ '--delay': '1.7s', '--left': '90%', '--duration': '3s', '--drift-x': '12px', '--top': '-12%' } as React.CSSProperties}>❄</span>
-                                </>
-                              )}
+                {/* Saved Favorite Cities */}
+                <div className="flex-1 flex flex-col space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-1.5 pt-2">
+                    <Star className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                    <span>Mes villes favorites ({favorites.length})</span>
+                  </h4>
 
-                              <AnimatePresence mode="popLayout">
-                                <motion.span
-                                  key={temp}
-                                  initial={{ opacity: 0, y: 8 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  exit={{ opacity: 0, y: -8 }}
-                                  transition={{ duration: 0.3, ease: 'easeOut' }}
-                                  className={`text-[96px] font-extralight tracking-tighter leading-none drop-shadow-sm inline-block ${
-                                    isBurning ? 'burning-temp' : isFreezing ? 'freezing-temp' : 'text-white'
-                                  }`}
-                                  id="main-temp"
-                                >
-                                  {temp}
-                                </motion.span>
-                              </AnimatePresence>
-                              <span className={`text-4xl font-light mt-1 ml-1 transition-all duration-300 ${
-                                isBurning ? 'text-amber-400 font-normal drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : isFreezing ? 'text-sky-300 font-normal drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]' : 'text-white/80'
-                              }`}>
-                                °C
-                              </span>
-                              </div>
-
-                              {/* A measured temperature and a forecast one look identical on
-                                  screen, so name the difference. Measurement wins the slot. */}
-                              {weather.current.observed ? (
-                                <InfoBadge
-                                  className="-mt-1 ml-1 px-2 py-0.5 rounded-full bg-emerald-400/25 text-[11px] font-medium text-white/95 whitespace-nowrap"
-                                  label={
-                                    `Relevé de la station ${weather.current.observed.station}, à ${weather.current.observed.distanceKm} km` +
-                                    (weather.current.observed.lapseCorrected
-                                      ? `, ajusté de ${weather.current.observed.altitudeDeltaM} m de dénivelé`
-                                      : '') +
-                                    `. Mesuré à ${new Date(weather.current.observed.observedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` +
-                                    (weather.current.observed.sampling === '6min' ? '.' : ' (bulletin horaire).')
-                                  }
-                                >
-                                  Relevé · {weather.current.observed.distanceKm} km
-                                </InfoBadge>
-                              ) : weather.current.confidence === 'low' && weather.current.modelSpread !== undefined ? (
-                                /* No station in range: it is a forecast, and the models disagree
-                                   by more than 3°C on this very hour. Say so. */
-                                <InfoBadge
-                                  className="-mt-1 ml-1 px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-medium text-white/90 whitespace-nowrap"
-                                  label={`Prévision. Les trois modèles s'écartent de ${weather.current.modelSpread} °C sur cette heure ; la valeur affichée est leur médiane.`}
-                                >
-                                  ± {Math.round(weather.current.modelSpread / 2)}°
-                                </InfoBadge>
-                              ) : null}
-                            </div>
-
-                            {/* Glossy Weather Status icon aligned beautifully to the right.
-                                shrink-0 so a long label like "Averses orageuses" can never
-                                again be squeezed past the edge by whatever sits on its left. */}
-                            <div className="flex flex-col items-center shrink-0 pr-3 space-y-1">
-                              <div className="relative w-20 h-20 flex items-center justify-center">
-                                <div className={`absolute inset-1.5 rounded-full filter blur-md animate-pulse transition-colors duration-300 ${
-                                  isBurning ? 'bg-orange-500/25' : isFreezing ? 'bg-sky-300/25' : 'bg-blue-200/20'
-                                }`} />
-                                <AnimatePresence mode="wait">
-                                  <motion.div
-                                    key={`${currentCode}-${isNightTimeNow}`}
-                                    initial={{ opacity: 0, scale: 0.8 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.8 }}
-                                    transition={{ duration: 0.25, ease: 'easeOut' }}
-                                    className="flex items-center justify-center relative z-10"
-                                  >
-                                    <ActiveWeatherIcon className={`w-16 h-16 ${weatherStyle.colorClass} drop-shadow-[0_4px_12px_rgba(0,0,0,0.15)]`} />
-                                  </motion.div>
-                                </AnimatePresence>
-                              </div>
-                              <span className="text-[13px] font-semibold text-white/95" id="weather-desc">
-                                {weather.current.weatherDesc}
-                              </span>
-                            </div>
+                  {favorites.length === 0 ? (
+                    <div className="p-6 text-center bg-white/5 rounded-2xl border border-white/10 text-white/60 text-xs">
+                      Aucune ville en favoris. Recherchez une ville ci-dessus et cliquez sur l'étoile pour l'ajouter !
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-80 overflow-y-auto no-scrollbar">
+                      {favorites.map((fav) => (
+                        <div
+                          key={fav.code}
+                          onClick={() => {
+                            setCurrentCommune(fav);
+                            setActiveTab('meteo');
+                          }}
+                          className={`w-full p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                            currentCommune.code === fav.code
+                              ? 'bg-sky-500/30 border-sky-400/50 shadow-md'
+                              : 'bg-white/10 hover:bg-white/15 border-white/15'
+                          }`}
+                        >
+                          <div className="text-left">
+                            <span className="text-sm font-bold text-white block">{fav.nom}</span>
+                            <span className="text-[11px] text-white/60">Dép. {fav.codeDepartement}</span>
                           </div>
-                        );
-                      })()}
-
-                      {/* 2. Immediate alerts & short-term: Rain Grid & Vigilance side by side in glass panels */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <TiltCard>
-                          <RainForecast 
-                            rainData={weather.rainInTheHour} 
-                            precipitationProbability={weather.hourly[0]?.precipitationProbability || 0}
-                          />
-                        </TiltCard>
-                        <TiltCard>
-                          <VigilanceCard 
-                            vigilance={weather.vigilance} 
-                            uvIndex={selectedDayIndex === 0 
-                              ? calculateCurrentUv(weather.daily[0]?.uvIndex, weather.sunrise, weather.sunset)
-                              : weather.daily[selectedDayIndex]?.uvIndex} 
-                          />
-                        </TiltCard>
-                      </div>
-
-                      {/* 3. Hourly timeline progress rows */}
-                      <TiltCard>
-                        <HourlyForecast
-                          hourlyData={selectedDayIndex === 0 ? weather.hourly : (weather.daily[selectedDayIndex]?.hourly || [])}
-                          humidity={selectedDayIndex === 0 ? weather.current.humidity : (weather.daily[selectedDayIndex]?.humidity ?? weather.current.humidity)}
-                          dayName={selectedDayIndex === 0 ? "Aujourd'hui" : (weather.daily[selectedDayIndex]?.date || "Sélectionné")}
-                          sunrise={selectedDayIndex === 0 ? weather.sunrise : (weather.daily[selectedDayIndex]?.sunrise ?? weather.sunrise)}
-                          sunset={selectedDayIndex === 0 ? weather.sunset : (weather.daily[selectedDayIndex]?.sunset ?? weather.sunset)}
-                        />
-                      </TiltCard>
-
-                      {/* 4. Prévisions de la semaine (Météo-France) */}
-                      <TiltCard>
-                        <DailyForecast
-                          dailyData={weather.daily}
-                          cityName={weather.city}
-                          selectedDayIndex={selectedDayIndex}
-                          onSelectDay={setSelectedDayIndex}
-                        />
-                      </TiltCard>
-
-                      {/* 5. Astrological & Ephemeris Card */}
-                      <TiltCard>
-                        <div className="glass-premium rounded-3xl p-4 shadow-lg flex justify-between items-center text-white/90 select-none">
-                          <div className="flex items-center gap-5">
-                            <div className="flex flex-col items-center gap-1" title="Lever du soleil (Heure locale)">
-                              <Sunrise className="w-5 h-5 text-amber-300 drop-shadow-[0_0_8px_rgba(253,230,138,0.6)]" />
-                              <span className="text-[10px] font-bold tracking-wide uppercase opacity-80">Lever</span>
-                              <span className="text-xs font-semibold">{weather.sunrise || '06:00'}</span>
-                            </div>
-                            <div className="h-8 w-[1px] bg-white/10" />
-                            <div className="flex flex-col items-center gap-1" title="Coucher du soleil (Heure locale)">
-                              <Sunset className="w-5 h-5 text-indigo-300 drop-shadow-[0_0_8px_rgba(165,180,252,0.6)]" />
-                              <span className="text-[10px] font-bold tracking-wide uppercase opacity-80">Coucher</span>
-                              <span className="text-xs font-semibold">{weather.sunset || '21:30'}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="h-10 w-[1px] bg-white/10" />
-
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             <button
-                              onClick={() => setShowMoonModal(true)}
-                              className="flex flex-col items-center gap-1 px-3 hover:bg-white/5 rounded-xl transition-colors active:scale-95 border border-transparent hover:border-white/10 py-1" 
-                              title="Phase lunaire actuelle"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFavorites(favorites.filter(f => f.code !== fav.code));
+                              }}
+                              className="p-1.5 rounded-full hover:bg-white/20 text-white/60 hover:text-rose-300 transition-colors"
+                              title="Supprimer des favoris"
                             >
-                              <span className="text-xl drop-shadow-[0_0_10px_rgba(255,255,255,0.4)]">{getMoonPhase().emoji}</span>
-                              <span className="text-[9px] font-bold tracking-wider uppercase opacity-80 truncate max-w-[70px]">{getMoonPhase().name}</span>
-                            </button>
-                            <button
-                              onClick={handleOpenMorningBrief}
-                              className="flex flex-col items-center gap-1 px-3 hover:bg-sky-500/20 rounded-xl transition-colors active:scale-95 border border-transparent hover:border-sky-400/30 py-1 text-sky-200" 
-                              title="Votre Horoscope du Jour"
-                            >
-                              <span className="text-xl drop-shadow-[0_0_10px_rgba(14,165,233,0.4)]">✨</span>
-                              <span className="text-[9px] font-bold tracking-wider uppercase opacity-90 truncate max-w-[70px]">Horoscope</span>
+                              <X className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
-                      </TiltCard>
-
-                      {/* 6. Wind and Feels like metrics slider indicator bar */}
-                      <TiltCard>
-                        <Suspense fallback={
-                          <div className="glass-premium rounded-3xl p-5 h-40 flex items-center justify-center">
-                            <Loader2 className="w-5 h-5 animate-spin text-sky-400" />
-                          </div>
-                        }>
-                          <WeatherStats
-                            current={weather.current}
-                            uvIndex={selectedDayIndex === 0
-                              ? calculateCurrentUv(weather.daily[0]?.uvIndex, weather.sunrise, weather.sunset)
-                              : weather.daily[selectedDayIndex]?.uvIndex}
-                            hourlyData={selectedDayIndex === 0 ? weather.hourly : (weather.daily[selectedDayIndex]?.hourly || [])}
-                            dailyData={weather.daily}
-                          />
-                        </Suspense>
-                      </TiltCard>
-
-                      {/* 7. Air quality & pollen (separate free CAMS-backed API).
-                          Guarded here as well as inside the card so a failed
-                          request doesn't leave an empty TiltCard taking up space. */}
-                      {airQuality && (
-                        <TiltCard>
-                          <AirQualityCard data={airQuality} />
-                        </TiltCard>
-                      )}
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-center p-8 bg-white/10 rounded-2xl border border-white/20 my-auto">
-                      <AlertCircle className="w-10 h-10 text-white mb-2" />
-                      <p className="text-sm text-white font-semibold">Aucune donnée météo chargée.</p>
+                      ))}
                     </div>
-                  )}
-                  </div>
-
-                  {/* Climatology comparison to 30-year historical climate averages (normals) */}
-                  {weather && (
-                    <TiltCard>
-                      <ClimateComparison
-                        latitude={weather.latitude}
-                        longitude={weather.longitude}
-                        currentMin={weather.daily[0]?.tempMin ?? Math.round(weather.current.temperature - 4)}
-                        currentMax={weather.daily[0]?.tempMax ?? Math.round(weather.current.temperature + 4)}
-                      />
-                    </TiltCard>
-                  )}
-
-                  {/* Radar pluie & orages — RainViewer, historique + nowcast 30 min */}
-                  {weather && (
-                    <Suspense fallback={
-                      <div className="glass-premium rounded-3xl h-[300px] flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 animate-spin text-sky-400" />
-                      </div>
-                    }>
-                      <RainRadar
-                        latitude={weather.latitude}
-                        longitude={weather.longitude}
-                        cityName={weather.city}
-                      />
-                    </Suspense>
                   )}
                 </div>
               </motion.div>
             )}
 
-            {/* SCREEN 2: CARTES VIEW (NOW COMPARISON VIEW) */}
+{/* SCREEN 2: CARTES VIEW (NOW COMPARISON VIEW) */}
             {activeTab === 'cartes' && (
               <motion.div
                 key="cartes-tab-screen"
@@ -1399,6 +1220,36 @@ export default function App() {
 
           </AnimatePresence>
         </div>
+
+        {/* PURE WEATHER DETAILED DRAWER (EXPANDED ON ARROW CLICK) */}
+        {weather && (
+          <PureDetailDrawer
+            isOpen={showDetailDrawer}
+            onClose={() => setShowDetailDrawer(false)}
+            cityName={currentCommune.nom}
+          >
+            <PureDetailedCards
+              weather={weather}
+              currentCommune={currentCommune}
+              favorites={favorites}
+              toggleFavorite={toggleFavorite}
+              todayShare={todayShare}
+              frenchDate={frenchDate}
+              saintDuJour={saintDuJour}
+              currentTime={currentTime}
+              staleSince={staleSince}
+              refreshing={refreshing}
+              currentCode={currentCode}
+              isNightTimeNow={isNightTimeNow}
+              weatherStyle={weatherStyle}
+              ActiveWeatherIcon={ActiveWeatherIcon}
+              selectedDayIndex={selectedDayIndex}
+              setSelectedDayIndex={setSelectedDayIndex}
+              setShowMoonModal={setShowMoonModal}
+              airQuality={airQuality}
+            />
+          </PureDetailDrawer>
+        )}
 
         {/* BOTTOM GLASS NAVIGATION BAR - PERFECT 4-COL PILL DOCK STYLE */}
         <BottomNav
