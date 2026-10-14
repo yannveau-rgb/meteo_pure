@@ -464,7 +464,7 @@ export default function App() {
       {/* Container Principal (Mobile-First responsive frame) */}
       <main
         id="applet-main-frame"
-        className="relative w-full max-w-md min-h-screen sm:min-h-[880px] sm:max-h-[920px] sm:rounded-[40px] shadow-2xl overflow-hidden bg-white/5 backdrop-blur-[45px] border border-white/20 flex flex-col justify-between pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] px-6 sm:p-6"
+        className="relative w-full max-w-md h-[100dvh] sm:h-[880px] sm:max-h-[920px] sm:rounded-[40px] shadow-2xl overflow-hidden bg-white/5 backdrop-blur-[45px] border border-white/20 flex flex-col justify-between pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] px-4 sm:p-6"
       >
         
         {/* MOON PHASES MODAL */}
@@ -664,10 +664,10 @@ export default function App() {
         )}
 
         {/* VIEW ROUTER (MAIN BODY AREA) */}
-        <div className="flex-1 flex flex-col mt-4 overflow-y-auto no-scrollbar relative z-10">
+        <div className={`flex-1 min-h-0 flex flex-col relative z-10 ${activeTab === 'meteo' ? 'overflow-hidden' : 'overflow-y-auto no-scrollbar mt-3'}`}>
           <AnimatePresence mode="wait">
             
-                        {/* SCREEN 1: METEO VIEW (ULTRA-MINIMALIST WITH TIME-SCRUBBER) */}
+            {/* SCREEN 1: METEO VIEW (ULTRA-MINIMALIST WITH TIME-SCRUBBER) */}
             {activeTab === 'meteo' && (
               <motion.div
                 key="meteo-tab-screen"
@@ -675,11 +675,11 @@ export default function App() {
                 role="tabpanel"
                 aria-labelledby="tab-meteo"
                 tabIndex={0}
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.25 }}
-                className="relative w-full flex-1 flex flex-col justify-between focus:outline-none min-h-[560px]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="relative w-full flex-1 min-h-0 flex flex-col justify-between focus:outline-none"
               >
                 {/* Dynamic live weather ambient atmospheric animation */}
                 <AmbientWeatherBackground weatherCode={scrubbedHourItem ? scrubbedHourItem.weatherCode : currentCode} />

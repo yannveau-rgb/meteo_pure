@@ -1,6 +1,5 @@
 import React from 'react';
 import { ArrowRight, Leaf, CloudSun, MapPin } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 import { WeatherData, HourlyForecastItem } from '../../types';
 
 interface PureWeatherHeroProps {
@@ -55,7 +54,7 @@ export default function PureWeatherHero({
   })();
 
   return (
-    <div className="relative w-full flex-1 flex flex-col justify-between pt-4 pb-2 px-6 z-10 pointer-events-auto">
+    <div className="relative w-full flex-1 min-h-0 flex flex-col justify-between pt-2 pb-1 px-1 z-10 pointer-events-auto">
       {/* Top Header Row */}
       <div className="flex items-center justify-between w-full">
         {/* Top Left Frosted Toggle Pill (AQI Leaf / Weather Sun) */}
@@ -87,48 +86,36 @@ export default function PureWeatherHero({
         </div>
 
         {/* Ambient subtle badge or favorite indicator */}
-        <div className="text-[11px] font-medium text-white/50 tracking-wider uppercase">
+        <div className="text-[11px] font-medium text-white/60 tracking-wider uppercase">
           Météo Pure
         </div>
       </div>
 
       {/* Editorial Contextual Summary Headline */}
-      <div className="mt-6 min-h-[4rem] flex items-start">
-        <AnimatePresence mode="wait">
-          <motion.h1
-            key={editorialText}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
-            className="text-[26px] sm:text-[30px] font-normal tracking-tight text-white/95 leading-snug drop-shadow-sm max-w-sm"
-          >
-            {editorialText}
-          </motion.h1>
-        </AnimatePresence>
+      <div className="mt-3 sm:mt-5 min-h-[3.5rem] flex items-start">
+        <h1
+          key={editorialText}
+          className="text-[24px] sm:text-[30px] font-normal tracking-tight text-white leading-snug drop-shadow-sm max-w-sm transition-opacity duration-300"
+        >
+          {editorialText}
+        </h1>
       </div>
 
-      {/* Spacer pushing Hero readout down */}
-      <div className="flex-1 min-h-[40px]" />
+      {/* Flexible Spacer pushing Hero readout to bottom of hero zone */}
+      <div className="flex-1 min-h-[16px]" />
 
       {/* Lower Section: Giant Temperature + Location & Metrics + Detail Button */}
-      <div className="relative pb-2">
+      <div className="relative pb-1">
         <div className="flex items-end justify-between">
           {/* Left: Giant Temperature */}
           <div className="flex items-start">
-            <AnimatePresence mode="popLayout">
-              <motion.span
-                key={temp}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="text-[96px] sm:text-[112px] font-extralight tracking-tighter leading-none text-white select-none drop-shadow-md"
-              >
-                {temp}
-              </motion.span>
-            </AnimatePresence>
-            <span className="text-[42px] font-light text-white/70 ml-1 leading-tight select-none">
+            <span
+              key={temp}
+              className="text-[88px] sm:text-[108px] font-extralight tracking-tighter leading-none text-white select-none drop-shadow-md transition-all duration-200"
+            >
+              {temp}
+            </span>
+            <span className="text-[38px] sm:text-[44px] font-light text-white/70 ml-0.5 leading-tight select-none">
               °
             </span>
           </div>
@@ -136,7 +123,7 @@ export default function PureWeatherHero({
           {/* Right: Circular Arrow Action Button to Open Full Details */}
           <button
             onClick={onOpenDetails}
-            className="w-13 h-13 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 border border-white/25 backdrop-blur-md text-white flex items-center justify-center shadow-xl transition-all cursor-pointer group mb-3"
+            className="w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 border border-white/30 backdrop-blur-md text-white flex items-center justify-center shadow-xl transition-all cursor-pointer group mb-2"
             title="Voir toutes les prévisions et cartes détaillées"
             aria-label="Détails complets"
           >
