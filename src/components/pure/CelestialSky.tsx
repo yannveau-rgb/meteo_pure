@@ -19,6 +19,49 @@ interface CelestialSkyProps {
  * - Snow (71-86): Crisp winter slate-white gradient, gentle falling snowflakes, SUN HIDDEN.
  * - Thunderstorm (95, 96, 99): Dramatic indigo-charcoal sky, sheet lightning flash pulse, SUN HIDDEN.
  */
+
+// Helper : retourne la couleur exacte du sommet du ciel (0%) pour la barre système mobile
+export function getSkyTopColor(
+  hour: number,
+  weatherCode = 0,
+  sunriseHour = 7,
+  sunsetHour = 19.5
+): string {
+  const isDay = hour >= sunriseHour && hour <= sunsetHour;
+  const isDawn = hour >= sunriseHour - 1.5 && hour < sunriseHour + 1;
+  const isDusk = hour > sunsetHour - 1 && hour <= sunsetHour + 1.5;
+
+  if (weatherCode === 3) return isDay ? '#334155' : (isDawn || isDusk) ? '#1e2230' : '#070b12';
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(weatherCode)) {
+    return isDay ? '#1e293b' : (isDawn || isDusk) ? '#111624' : '#04070e';
+  }
+  if ([95, 96, 99].includes(weatherCode)) return '#06070a';
+  if ([71, 73, 75, 77, 85, 86].includes(weatherCode)) {
+    return isDay ? '#3b4858' : (isDawn || isDusk) ? '#16202c' : '#080e18';
+  }
+  if (weatherCode === 45 || weatherCode === 48) {
+    return isDay ? '#4b5563' : (isDawn || isDusk) ? '#262d38' : '#0b0f14';
+  }
+  if (weatherCode === 2) {
+    if (hour < 4.5 || hour > 22.5) return '#080d1a';
+    if (hour < 6.5) return '#0d1429';
+    if (hour < 8.5) return '#37537e';
+    if (hour < 16.5) return '#3b74b3';
+    if (hour < 18.5) return '#3a68aa';
+    if (hour < 20.5) return '#18203d';
+    return '#0e162f';
+  }
+  // Ciel clair (0 & 1)
+  if (hour < 4.5 || hour > 22.5) return '#050813';
+  if (hour < 6.5) return '#090e1f';
+  if (hour < 8.5) return '#324b77';
+  if (hour < 11.5) return '#3d7fd6';
+  if (hour < 16.5) return '#3878cf';
+  if (hour < 18.5) return '#3c6db8';
+  if (hour < 20.5) return '#161e38';
+  return '#0b1022';
+}
+
 export default function CelestialSky({
   hour,
   weatherCode = 0,
@@ -156,7 +199,7 @@ export default function CelestialSky({
     const x = 12 + progress * 76;
     // Y position: parabolic arc
     const normalizedY = 4 * Math.pow(progress - 0.5, 2);
-    const y = 16 + normalizedY * 46;
+    const y = 28 + normalizedY * 36;
 
     let opacity = 1;
     if (progress < 0.08) opacity = Math.max(0.1, progress / 0.08);
@@ -225,11 +268,39 @@ export default function CelestialSky({
     return base;
   }, [hour, sunriseHour, sunsetHour, isSunObscured, isPartlyCloudy]);
 
+  const [layers, setLayers] = React.useState<{ current: string; next: string | null }>({
+    current: skyBackground,
+    next: null,
+  });
+
+  React.useEffect(() => {
+    if (skyBackground !== layers.current) {
+      setLayers({ current: layers.next || layers.current, next: skyBackground });
+      const timer = setTimeout(() => {
+        setLayers({ current: skyBackground, next: null });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [skyBackground, layers.current, layers.next]);
+
   return (
     <div 
-      className="absolute inset-0 pointer-events-none overflow-hidden transition-all duration-700 ease-out z-0"
-      style={{ background: skyBackground }}
+      className="absolute inset-0 pointer-events-none overflow-hidden z-0"
     >
+      {/* Base Sky Layer */}
+      <div 
+        className="absolute inset-0" 
+        style={{ background: layers.current }} 
+      />
+      {/* Crossfading Incoming Sky Layer */}
+      {layers.next && (
+        <div 
+          key={layers.next} 
+          className="absolute inset-0 pointer-events-none" 
+          style={{ background: layers.next, animation: 'crossFadeIn 500ms linear forwards' }} 
+        />
+      )}
+
       {/* Starfield for Night (Clear / Mostly Clear / Lightly filtered in Partly Cloudy) */}
       {starsOpacity > 0.05 && (
         <div 
@@ -257,7 +328,7 @@ export default function CelestialSky({
       {/* Radiant Sun during Day (Hidden when overcast, rain, snow, fog, or storm) */}
       {sunData && (
         <div
-          className="absolute transition-all duration-300 ease-out"
+          className="absolute transition-all duration-500 ease-linear"
           style={{
             left: `${sunData.x}%`,
             top: `${sunData.y}%`,
@@ -302,7 +373,7 @@ export default function CelestialSky({
       {/* Realistic Crescent Moon during Night */}
       {moonData && (
         <div
-          className="absolute transition-all duration-500 ease-out"
+          className="absolute transition-all duration-500 ease-linear"
           style={{
             left: `${moonData.x}%`,
             top: `${moonData.y}%`,

@@ -26,26 +26,18 @@
 }
 
 @layer base {
-  body {
-    /* Same stops as the app shell's own gradient (App.tsx) — this used to be
-       defined twice with different colors/stops, so the body (visible during
-       iOS's elastic overscroll bounce, and before React hydrates) never
-       quite matched the app surface, and had no night variant at all: it
-       stayed on day colors after dark. App.tsx sets data-daytime on this
-       element once it knows the real sunrise/sunset for the location. */
-    --bg-day: linear-gradient(to bottom right, #123a5e, #2a72a8, #0d2e4a);
-    --bg-night: linear-gradient(to bottom right, #0a1f38, #123a5e, #081b2e);
-    background: var(--bg-day);
-    min-height: 100vh;
-    overflow-x: hidden;
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    /* On enlève le linear-gradient #123a5e qui créait le cadre bleu foncé ! */
+    background-color: #3878cf;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     /* Inter ships proper optical sizing; enabling it keeps the 96px
        temperature elegant without thinning the 9px labels into mush. */
     font-optical-sizing: auto;
-  }
-
-  body[data-daytime="night"] {
-    background: var(--bg-night);
   }
 
   /* Tabular figures stop the temperature and clock from reflowing as digits
@@ -254,51 +246,21 @@
   border-radius: 50%;
 }
 
-/* Super premium frosting classes */
+/* Surface vitrée minimaliste "Pure" — neutre en teinte pour laisser
+   transparaître les couleurs diurnes/nocturnes de CelestialSky */
 .glass-premium {
-  /* Light corner darkened from 0.12 to 0.06: at the busiest part of the
-     gradient, text at 50% white opacity dropped to a ~2.2:1 contrast ratio
-     against it — under half the WCAG AA floor for body text (4.5:1). */
-  background: linear-gradient(135deg, rgba(8, 20, 52, 0.55) 0%, rgba(255, 255, 255, 0.06) 100%);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1.5px solid rgba(255, 255, 255, 0.32);
-  box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.4),
-    inset 0 12px 24px rgba(255, 255, 255, 0.18),
-    inset 0 -12px 24px rgba(0, 0, 0, 0.12);
+  background: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
   position: relative;
   overflow: hidden;
 }
 
-/* One-shot diagonal light sweep played once when a glass card mounts —
-   deliberately not looping so a screen full of cards doesn't feel busy.
-   Scoped to :root:not(.sheen-seen): AnimatePresence remounts the active
-   tab's cards every time you switch tabs, which used to replay the sweep
-   across every card simultaneously — exactly the "busy" effect this was
-   meant to avoid. main.tsx adds `.sheen-seen` to <html> shortly after the
-   first load, so this only ever plays once per visit. */
+/* On désactive l'ancien reflet diagonal automatique pour garder une esthétique calme et pure */
 .glass-premium::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.16) 45%, rgba(255, 255, 255, 0.28) 50%, rgba(255, 255, 255, 0.16) 55%, transparent 70%);
-  transform: translateX(-120%);
-  animation: glass-sheen 1.4s cubic-bezier(0.22, 0.61, 0.36, 1) 0.15s 1 both;
-  pointer-events: none;
-  z-index: 1;
-}
-
-:root.sheen-seen .glass-premium::before {
-  animation: none;
-  transform: translateX(120%);
-}
-
-@keyframes glass-sheen {
-  to {
-    transform: translateX(120%);
-  }
+  display: none;
 }
 
 /* Subtle lift for small uppercase section titles sitting directly on the
@@ -626,34 +588,44 @@
 }
 
 /* Celestial Weather Animations */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
 @keyframes cloudDriftSlow {
   0%, 100% { transform: translate3d(-4%, 0, 0); }
   50% { transform: translate3d(4%, 0, 0); }
 }
 
 @keyframes cloudDriftFast {
-  0%, 100% { transform: translate3d(4%, 0, 0); }
+  0%, 100% { transform: translate3d(5%, 0, 0); }
   50% { transform: translate3d(-5%, 0, 0); }
 }
 
 @keyframes rainDropFall {
-  0% { transform: translate3d(0, -40px, 0) rotate(12deg); opacity: 0; }
+  0% { transform: translate3d(15px, -40px, 0) rotate(12deg); opacity: 0; }
   15% { opacity: 0.7; }
   85% { opacity: 0.7; }
-  100% { transform: translate3d(-30px, 650px, 0) rotate(12deg); opacity: 0; }
+  100% { transform: translate3d(-60px, 650px, 0) rotate(12deg); opacity: 0; }
 }
 
 @keyframes snowDriftFall {
-  0% { transform: translate3d(0, -20px, 0) rotate(0deg); opacity: 0; }
+  0% { transform: translate3d(0, -20px, 0); opacity: 0; }
   20% { opacity: 0.85; }
+  50% { transform: translate3d(18px, 300px, 0); }
   80% { opacity: 0.85; }
-  100% { transform: translate3d(35px, 650px, 0) rotate(360deg); opacity: 0; }
+  100% { transform: translate3d(-12px, 650px, 0); opacity: 0; }
 }
 
 @keyframes stormFlashPulse {
-  0%, 90%, 94%, 98%, 100% { opacity: 0; }
-  92% { opacity: 0.4; }
-  93% { opacity: 0.08; }
-  96% { opacity: 0.65; }
+  0%, 92%, 96%, 100% { opacity: 0; }
+  94% { opacity: 0.35; }
+  98% { opacity: 0.65; }
+}
+
+@keyframes crossFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 

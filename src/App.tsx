@@ -50,7 +50,6 @@ import { useShareImage } from './hooks/useShareImage';
 import { useGeolocation } from './hooks/useGeolocation';
 
 // Modular child components
-import AmbientWeatherBackground from './components/AmbientWeatherBackground';
 const RainRadar = lazy(() => import('./components/RainRadar'));
 import PrivacyPolicy from './components/PrivacyPolicy';
 import Toggle from './components/ui/Toggle';
@@ -61,7 +60,7 @@ import WelcomePrompt from './components/modals/WelcomePrompt';
 import Toast, { ToastData } from './components/Toast';
 
 // Pure minimalist components (video UI match)
-import CelestialSky from './components/pure/CelestialSky';
+import CelestialSky, { getSkyTopColor } from './components/pure/CelestialSky';
 import TimeScrubber from './components/pure/TimeScrubber';
 import PureWeatherHero from './components/pure/PureWeatherHero';
 import PureDetailDrawer from './components/pure/PureDetailDrawer';
@@ -428,18 +427,28 @@ export default function App() {
   const weatherStyle = getWeatherUI(currentCode, isNightTimeNow);
   const ActiveWeatherIcon = weatherStyle.icon;
 
-  // Keeps <body>'s background (index.css) and the status bar's theme-color
-  // in sync with the same day/night call this component already makes for
-  // the app shell itself — both used to be hardcoded to day colors, visible
-  // during iOS's overscroll bounce and in the installed PWA's status bar.
+  // Active inspected weather for details drawer (synchronised with TimeScrubber)
+  const inspectedHourItem = selectedHourIndex === 0 ? undefined : scrubbedHourItem;
+  const isInspectedNight = inspectedHourItem ? !isScrubbedDaytime : isNightTimeNow;
+  const inspectedWeatherStyle = getWeatherUI(activeScrubbedCode, isInspectedNight);
+  const InspectedWeatherIcon = inspectedWeatherStyle.icon;
+
+  const topSkyColor = React.useMemo(() => {
+    return getSkyTopColor(currentFloatHour, activeScrubbedCode, sunriseFloat, sunsetFloat);
+  }, [currentFloatHour, activeScrubbedCode, sunriseFloat, sunsetFloat]);
+
   useEffect(() => {
-    document.body.dataset.daytime = isNightTimeNow ? 'night' : 'day';
+    document.body.style.background = topSkyColor;
+    document.documentElement.style.background = topSkyColor;
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', isNightTimeNow ? '#0a1f38' : '#123a5e');
-  }, [isNightTimeNow]);
+    if (meta) meta.setAttribute('content', topSkyColor);
+  }, [topSkyColor]);
 
   return (
-    <div className={`min-h-screen w-full flex justify-center items-center p-0 sm:p-6 text-white antialiased overflow-x-hidden bg-gradient-to-br ${isNightTimeNow ? 'from-[#0a1f38] via-[#123a5e] to-[#081b2e]' : 'from-[#123a5e] via-[#2a72a8] to-[#0d2e4a]'}`}>
+    <div 
+      className="h-[100dvh] w-full flex justify-center items-center p-0 sm:p-6 text-white antialiased overflow-hidden"
+      style={{ backgroundColor: topSkyColor }}
+    >
       
       {/* Skip-to-content link for keyboard/screen-reader users */}
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-[200] focus:px-4 focus:py-2 focus:bg-sky-500 focus:text-white focus:rounded-full focus:font-bold focus:shadow-lg">
@@ -454,10 +463,10 @@ export default function App() {
           for equivalent content. */}
       <h1 className="sr-only">Météo Pure</h1>
 
-      {/* Container Principal (Mobile-First responsive frame) */}
+      {/* Container Principal : AUCUNE bordure sur mobile (border-0), bordure uniquement sur desktop (sm:border) */}
       <main
         id="applet-main-frame"
-        className="relative w-full max-w-md h-[100dvh] sm:h-[880px] sm:max-h-[920px] sm:rounded-[40px] shadow-2xl overflow-hidden sm:bg-white/5 sm:backdrop-blur-2xl border border-white/20 flex flex-col justify-between pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] px-4 sm:p-6"
+        className="relative w-full max-w-md h-[100dvh] sm:h-[880px] sm:max-h-[920px] sm:rounded-[40px] shadow-2xl overflow-hidden border-0 sm:border sm:border-white/20 sm:bg-white/5 sm:backdrop-blur-2xl box-border flex flex-col justify-between pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] px-5 sm:p-6"
       >
         
         {/* MOON PHASES MODAL */}
@@ -509,11 +518,6 @@ export default function App() {
           sunsetHour={sunsetFloat}
           weatherCode={activeScrubbedCode}
         />
-
-        {/* Subtle static ambient glow layer (only during clear or partly cloudy daytime) */}
-        {activeScrubbedCode < 3 && isScrubbedDaytime && (
-          <div className="absolute top-1/3 -left-12 pointer-events-none w-56 h-56 rounded-full bg-sky-200/10 filter blur-3xl opacity-40" />
-        )}
 
         {/* TOP PANEL: Auto-suggest Search and Geolocation pin (Shown on Villes tab or secondary tabs) */}
         {activeTab === 'villes' && (
@@ -659,7 +663,7 @@ export default function App() {
         )}
 
         {/* VIEW ROUTER (MAIN BODY AREA) */}
-        <div className={`flex-1 min-h-0 flex flex-col relative z-10 ${activeTab === 'meteo' ? 'overflow-hidden' : 'overflow-y-auto no-scrollbar mt-3'}`}>
+        <div className={`flex-1 min-h-0 flex flex-col relative z-10 ${activeTab === 'meteo' ? 'overflow-hidden' : 'overflow-y-auto no-scrollbar mt-1'}`}>
           <AnimatePresence mode="wait">
             
             {/* SCREEN 1: METEO VIEW (ULTRA-MINIMALIST WITH TIME-SCRUBBER) */}
@@ -676,9 +680,6 @@ export default function App() {
                 transition={{ duration: 0.2 }}
                 className="relative w-full flex-1 min-h-0 flex flex-col justify-between focus:outline-none"
               >
-                {/* Dynamic live weather ambient atmospheric animation */}
-                <AmbientWeatherBackground weatherCode={activeScrubbedCode} />
-
                 {loading ? (
                   <div className="flex-1 flex flex-col items-center justify-center py-20 animate-pulse space-y-4">
                     <div className="w-20 h-20 bg-white/20 rounded-full" />
@@ -703,7 +704,7 @@ export default function App() {
                     />
 
                     {/* The signature interactive Time-Scrubber ruler */}
-                    <div className="w-full pb-2 z-20">
+                    <div className="w-full pb-1 sm:pb-2 z-20">
                       <TimeScrubber
                         hourly={weather.hourly || []}
                         selectedIndex={selectedHourIndex}
@@ -1291,14 +1292,15 @@ export default function App() {
               saintDuJour={saintDuJour}
               staleSince={staleSince}
               refreshing={refreshing}
-              currentCode={currentCode}
-              isNightTimeNow={isNightTimeNow}
-              weatherStyle={weatherStyle}
-              ActiveWeatherIcon={ActiveWeatherIcon}
+              currentCode={activeScrubbedCode}
+              isNightTimeNow={isInspectedNight}
+              weatherStyle={inspectedWeatherStyle}
+              ActiveWeatherIcon={InspectedWeatherIcon}
               selectedDayIndex={selectedDayIndex}
               setSelectedDayIndex={setSelectedDayIndex}
               setShowMoonModal={setShowMoonModal}
               airQuality={airQuality}
+              selectedHour={inspectedHourItem}
             />
           </PureDetailDrawer>
         )}

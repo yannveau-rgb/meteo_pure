@@ -36,12 +36,16 @@ export default function PureWeatherHero({
 }: PureWeatherHeroProps) {
   // Active temperature and condition (either from scrubbed hour or current weather)
   const temp = Math.round(selectedHour ? selectedHour.temp : weather.current.temperature);
+  // Calcul exact en heures décimales (identique à CelestialSky) pour éviter tout décalage Soleil/Lune
   const isNight = selectedHour 
     ? (() => {
-        const hourNum = parseInt(selectedHour.time.split(':')[0], 10);
-        const sunriseNum = weather.sunrise ? parseInt(weather.sunrise.split(':')[0], 10) : 7;
-        const sunsetNum = weather.sunset ? parseInt(weather.sunset.split(':')[0], 10) : 20;
-        return hourNum < sunriseNum || hourNum >= sunsetNum;
+        const parts = selectedHour.time.split(':');
+        const hourFloat = parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
+        const srParts = (weather.sunrise || '07:00').split(':');
+        const sunriseFloat = parseInt(srParts[0], 10) + (parseInt(srParts[1] || '0', 10) / 60);
+        const ssParts = (weather.sunset || '20:00').split(':');
+        const sunsetFloat = parseInt(ssParts[0], 10) + (parseInt(ssParts[1] || '0', 10) / 60);
+        return hourFloat < sunriseFloat || hourFloat > sunsetFloat;
       })()
     : isNightTime(weather.sunrise, weather.sunset);
 
@@ -56,7 +60,7 @@ export default function PureWeatherHero({
   const todayDaily = weather.daily[0];
   const maxTemp = todayDaily ? Math.round(todayDaily.tempMax) : Math.round(temp + 3);
   const minTemp = todayDaily ? Math.round(todayDaily.tempMin) : Math.round(temp - 4);
-  const humidity = weather.current.humidity;
+  const humidity = selectedHour?.humidity ?? weather.current.humidity;
   const uvIndex = todayDaily ? todayDaily.uvIndex : 0;
 
   // Editorial natural summary text
@@ -156,23 +160,24 @@ export default function PureWeatherHero({
           <div className="flex items-start">
             <span
               key={temp}
-              className="text-[88px] sm:text-[108px] font-extralight tracking-tighter leading-none text-white select-none drop-shadow-md transition-all duration-200"
+              className="text-[76px] sm:text-[104px] font-extralight tracking-tighter leading-none text-white select-none drop-shadow-md transition-all duration-200"
             >
               {temp}
             </span>
-            <span className="text-[38px] sm:text-[44px] font-light text-white/70 ml-0.5 leading-tight select-none">
+            <span className="text-[34px] sm:text-[44px] font-light text-white/70 ml-0.5 leading-tight select-none">
               °
             </span>
           </div>
 
-          {/* Right: Circular Arrow Action Button to Open Full Details */}
+          {/* Bouton d'ouverture des prévisions 7 jours & détails */}
           <button
             onClick={onOpenDetails}
-            className="w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 border border-white/30 backdrop-blur-md text-white flex items-center justify-center shadow-xl transition-all cursor-pointer group mb-2"
-            title="Voir toutes les prévisions et cartes détaillées"
-            aria-label="Détails complets"
+            className="h-11 px-4 rounded-full bg-black/25 hover:bg-black/35 active:scale-95 border border-white/25 backdrop-blur-md text-white flex items-center gap-2 shadow-lg transition-all cursor-pointer group mb-2"
+            title="Voir les prévisions sur 7 jours et les détails"
+            aria-label="Prévisions 7 jours et détails"
           >
-            <ArrowRight className="w-5 h-5 transition-transform duration-200 group-hover:translate-x-0.5" />
+            <span className="text-xs font-semibold tracking-tight">7 jours</span>
+            <ArrowRight className="w-4 h-4 -rotate-90 transition-transform duration-200 group-hover:-translate-y-0.5" />
           </button>
         </div>
 

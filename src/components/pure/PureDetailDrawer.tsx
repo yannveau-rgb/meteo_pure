@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, ChevronDown } from 'lucide-react';
+import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface PureDetailDrawerProps {
@@ -10,9 +10,8 @@ interface PureDetailDrawerProps {
 }
 
 /**
- * PureDetailDrawer: A fluid bottom-sheet / modal that slides up
- * when the user taps the arrow button on the minimalist hero screen.
- * Displays all comprehensive Météo-France cards and stats.
+ * PureDetailDrawer: Feuille de verre translucide qui glisse par-dessus CelestialSky
+ * sans éteindre la couleur du ciel en arrière-plan.
  */
 export default function PureDetailDrawer({
   isOpen,
@@ -20,7 +19,6 @@ export default function PureDetailDrawer({
   children,
   cityName,
 }: PureDetailDrawerProps) {
-  // Prevent background scroll when drawer is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -36,54 +34,54 @@ export default function PureDetailDrawer({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          {/* Backdrop overlay */}
+          {/* Voile léger qui laisse respirer la couleur du ciel */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/60 backdrop-blur-md cursor-pointer"
+            className="absolute inset-0 bg-black/25 backdrop-blur-sm cursor-pointer"
           />
 
-          {/* Drawer content surface */}
+          {/* Surface du tiroir : verre givré neutre et aérien */}
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            className="relative z-10 w-full max-w-lg mx-auto bg-slate-900/90 backdrop-blur-2xl border-t border-white/20 rounded-t-[32px] max-h-[88vh] flex flex-col shadow-2xl overflow-hidden"
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className="relative z-10 w-full max-w-md mx-auto bg-black/30 backdrop-blur-2xl border-t border-white/25 rounded-t-[36px] max-h-[88dvh] flex flex-col shadow-[0_-12px_40px_rgba(0,0,0,0.25)] overflow-hidden text-white"
           >
-            {/* Grab handle bar */}
+            {/* Barre de préhension (Grab handle) */}
             <div 
               onClick={onClose}
-              className="w-full pt-3 pb-2 flex flex-col items-center cursor-pointer shrink-0"
+              className="w-full pt-3 pb-1.5 flex flex-col items-center cursor-pointer shrink-0"
             >
-              <div className="w-12 h-1.5 bg-white/30 rounded-full" />
+              <div className="w-10 h-1 bg-white/35 rounded-full" />
             </div>
 
-            {/* Header with Title and Close button */}
-            <div className="px-6 pb-3 pt-1 flex items-center justify-between border-b border-white/10 shrink-0">
-              <div>
-                <h2 className="text-lg font-semibold text-white tracking-tight">
-                  Détails météo
-                </h2>
-                <p className="text-xs text-white/60 font-medium">
+            {/* En-tête minimaliste aligné sur la typographie de la page 1 */}
+            <div className="px-6 pb-3 pt-1 flex items-center justify-between border-b border-white/15 shrink-0">
+              <div className="flex items-baseline gap-2.5">
+                <h2 className="text-lg font-medium text-white tracking-tight">
                   {cityName}
-                </p>
+                </h2>
+                <span className="font-display italic text-base text-white/75">
+                  7 jours &amp; détails
+                </span>
               </div>
 
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center text-white/80 transition-all cursor-pointer"
+                className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 border border-white/20 flex items-center justify-center text-white transition-all cursor-pointer"
                 aria-label="Fermer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Scrollable details list */}
-            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 overscroll-contain">
+            {/* Contenu scrollable fluide */}
+            <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-3.5 overscroll-contain pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
               {children}
             </div>
           </motion.div>
