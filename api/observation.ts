@@ -21,8 +21,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const observation = await getNearestObservation(lat, lon);
-    if (!observation) return res.status(204).end();
-    res.setHeader('Cache-Control', 'public, max-age=300');
+    // Edge-cached (s-maxage) so the next visitor of the same commune — or the
+    // same visitor on their next launch — is answered by the CDN instead of
+    // waking a lambda. A "no station here" answer is cached briefly too: it
+    // used to cost a full cold start every single time.
+    if (!observation) {
+      res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120');
+      return res.status(204).end();
+    }
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=600');
     res.json(observation);
   } catch (err: any) {
     console.error('[API OBSERVATION ERROR]', err);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Commune } from '../types';
 import { getCommuneByCoords } from '../utils/weatherApi';
 
@@ -40,7 +40,7 @@ export function useCurrentCommune() {
     () => !localStorage.getItem(STORAGE_KEY)
   );
 
-  const [currentCommune, setCurrentCommune] = useState<Commune>(() => {
+  const [currentCommune, setCurrentCommuneRaw] = useState<Commune>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) return JSON.parse(saved);
@@ -49,6 +49,22 @@ export function useCurrentCommune() {
     }
     return DEFAULT_COMMUNE;
   });
+
+  /**
+   * Re-selecting the commune already shown is a no-op.
+   *
+   * The silent auto-locate below resolves, for most people, to the very commune
+   * already restored from storage — but as a *new object*. Every consumer keyed
+   * on the object (weather fetch, push sync, scrubber reset) then fired again:
+   * the in-flight startup forecast was aborted and re-requested a few seconds
+   * into the launch, and /api/subscribe was re-POSTed. Same for tapping the
+   * favourite chip of the current city.
+   */
+  const setCurrentCommune = useCallback((next: Commune) => {
+    setCurrentCommuneRaw(prev =>
+      prev && next && prev.code && prev.code === next.code ? prev : next
+    );
+  }, []);
 
   useEffect(() => {
     if (!currentCommune) return;

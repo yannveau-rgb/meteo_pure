@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
+import React, { Suspense, useState, useEffect, useRef } from 'react';
 import {
   MapPin,
   Search,
@@ -50,27 +50,46 @@ import { useShareImage } from './hooks/useShareImage';
 import { useGeolocation } from './hooks/useGeolocation';
 
 // Modular child components
-const RainRadar = lazy(() => import('./components/RainRadar'));
-import PrivacyPolicy from './components/PrivacyPolicy';
 import Toggle from './components/ui/Toggle';
 import BottomNav, { AppTab } from './components/BottomNav';
-import MoonPhasesModal from './components/modals/MoonPhasesModal';
-import HoroscopeModal from './components/HoroscopeModal';
-import WelcomePrompt from './components/modals/WelcomePrompt';
 import Toast, { ToastData } from './components/Toast';
+import { lazyWithRetry, whenIdle } from './utils/lazyWithRetry';
 
-// Pure minimalist components (video UI match)
+// Pure minimalist components (video UI match) — the first screen, kept eager.
 import CelestialSky, { getSkyTopColor } from './components/pure/CelestialSky';
 import TimeScrubber from './components/pure/TimeScrubber';
 import PureWeatherHero from './components/pure/PureWeatherHero';
 import PureDetailDrawer from './components/pure/PureDetailDrawer';
-import PureDetailedCards from './components/pure/PureDetailedCards';
 
-// Lazy-loaded: only fetched when their tab/modal is opened
-const CityComparison = lazy(() => import('./components/CityComparison'));
-const AlertsView = lazy(() => import('./components/AlertsView'));
-const PwaInstallWizard = lazy(() => import('./components/PwaInstallWizard'));
-const SharePreviewModal = lazy(() => import('./components/SharePreviewModal'));
+// Lazy-loaded: only fetched when their tab/modal is opened.
+// Everything below is off the first screen; keeping it out of the entry chunk
+// is what shortens parse/execute time before the forecast can paint.
+const RainRadar = lazyWithRetry(() => import('./components/RainRadar'));
+const CityComparison = lazyWithRetry(() => import('./components/CityComparison'));
+const AlertsView = lazyWithRetry(() => import('./components/AlertsView'));
+const PwaInstallWizard = lazyWithRetry(() => import('./components/PwaInstallWizard'));
+const SharePreviewModal = lazyWithRetry(() => import('./components/SharePreviewModal'));
+const PureDetailedCards = lazyWithRetry(() => import('./components/pure/PureDetailedCards'));
+const HoroscopeModal = lazyWithRetry(() => import('./components/HoroscopeModal'));
+const MoonPhasesModal = lazyWithRetry(() => import('./components/modals/MoonPhasesModal'));
+const WelcomePrompt = lazyWithRetry(() => import('./components/modals/WelcomePrompt'));
+const PrivacyPolicy = lazyWithRetry(() => import('./components/PrivacyPolicy'));
+
+/**
+ * True from the first time `flag` is true, forever after.
+ *
+ * Lets a lazily-loaded modal stay unmounted (and its chunk unfetched) until it
+ * is first opened, then stay mounted so its own AnimatePresence exit animation
+ * still plays on close.
+ */
+function useMountedOnce(flag: boolean): boolean {
+  const [mounted, setMounted] = useState(flag);
+  if (flag && !mounted) setMounted(true);
+  return mounted;
+}
+
+/** Last sky colour, restored by index.html before any JS runs (no blue flash). */
+const SKY_COLOR_KEY = 'meteo_pure_sky_color';
 
 const LazyFallback = () => (
   <div className="flex items-center justify-center py-16">
@@ -99,8 +118,9 @@ export default function App() {
     showSearchList, setShowSearchList,
   } = useCitySearch();
 
-  // Traditional Feast Day lookup (saint du jour)
-  const saintDuJour = getSaintDuJour();
+  // Traditional Feast Day lookup (saint du jour) — once per mount, not per render
+  // (App re-renders on every scrubber tick).
+  const saintDuJour = React.useMemo(() => getSaintDuJour(), []);
 
   // PWA install prompt
   const { deferredPrompt, isAppInstalled, triggerPwaInstall } = usePwaInstall();
@@ -166,8 +186,12 @@ export default function App() {
     openMorningBrief,
   } = useMorningBrief();
 
-  // Air quality & pollen — supplementary, never blocks the forecast
-  const airQuality = useAirQuality(weather?.latitude, weather?.longitude);
+  // Air quality & pollen — supplementary, never blocks the forecast.
+  // Keyed on the commune's own coordinates (identical to weather.latitude /
+  // longitude) so it starts in parallel with the forecast instead of waiting
+  // for it to land first.
+  const [communeLon, communeLat] = currentCommune.centre.coordinates;
+  const airQuality = useAirQuality(communeLat, communeLon);
 
   // Audio playback of the morning brief (text-to-speech)
   const briefSpeech = useSpeechSynthesis();
@@ -442,7 +466,22 @@ export default function App() {
     document.documentElement.style.background = topSkyColor;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', topSkyColor);
-  }, [topSkyColor]);
+    // Only the live sky is remembered — a scrubbed hour is not "the" sky.
+    if (selectedHourIndex === 0 && weather) {
+      try { localStorage.setItem(SKY_COLOR_KEY, topSkyColor); } catch { /* optional */ }
+    }
+  }, [topSkyColor, selectedHourIndex, weather]);
+
+  // Modals: chunk fetched on first open only, then kept mounted for exit animations.
+  const moonModalMounted = useMountedOnce(showMoonModal);
+  const briefModalMounted = useMountedOnce(showMorningBriefModal);
+  const privacyMounted = useMountedOnce(showPrivacyPolicy);
+  const shareModalMounted = useMountedOnce(todayShare.isModalOpen);
+  const drawerMounted = useMountedOnce(showDetailDrawer);
+
+  // Warm the "7 jours" drawer chunk once the first screen is up and the main
+  // thread is idle, so the first tap on the button opens instantly.
+  useEffect(() => whenIdle(() => { PureDetailedCards.preload(); }), []);
 
   return (
     <div 
@@ -470,41 +509,55 @@ export default function App() {
       >
         
         {/* MOON PHASES MODAL */}
-        <MoonPhasesModal isOpen={showMoonModal} onClose={() => setShowMoonModal(false)} />
+        {moonModalMounted && (
+          <Suspense fallback={null}>
+            <MoonPhasesModal isOpen={showMoonModal} onClose={() => setShowMoonModal(false)} />
+          </Suspense>
+        )}
 
         {/* HOROSCOPE MODAL */}
-        <HoroscopeModal
-          isOpen={showMorningBriefModal}
-          onClose={() => setShowMorningBriefModal(false)}
-          loading={loadingBrief}
-          brief={aiBrief}
-          hasBirthDate={Boolean(notifSettings.birthDate)}
-          onOpenSettings={() => {
-            setShowMorningBriefModal(false);
-            setActiveTab('reglages');
-          }}
-          cityName={currentCommune?.nom}
-          speech={briefSpeech}
-        />
+        {briefModalMounted && (
+          <Suspense fallback={null}>
+            <HoroscopeModal
+              isOpen={showMorningBriefModal}
+              onClose={() => setShowMorningBriefModal(false)}
+              loading={loadingBrief}
+              brief={aiBrief}
+              hasBirthDate={Boolean(notifSettings.birthDate)}
+              onOpenSettings={() => {
+                setShowMorningBriefModal(false);
+                setActiveTab('reglages');
+              }}
+              cityName={currentCommune?.nom}
+              speech={briefSpeech}
+            />
+          </Suspense>
+        )}
 
         {/* WELCOME GEOLOCATION PROMPT */}
-        <WelcomePrompt
-          isOpen={showWelcomePrompt}
-          onDismiss={() => setShowWelcomePrompt(false)}
-          onUseLocation={() => {
-            setShowWelcomePrompt(false);
-            handleGeolocation();
-          }}
-        />
+        {showWelcomePrompt && (
+          <Suspense fallback={null}>
+            <WelcomePrompt
+              isOpen={showWelcomePrompt}
+              onDismiss={() => setShowWelcomePrompt(false)}
+              onUseLocation={() => {
+                setShowWelcomePrompt(false);
+                handleGeolocation();
+              }}
+            />
+          </Suspense>
+        )}
 
         {/* PRIVACY POLICY MODAL */}
         <AnimatePresence>
           {showPrivacyPolicy && (
-            <PrivacyPolicy
-              isOpen={showPrivacyPolicy}
-              onClose={() => setShowPrivacyPolicy(false)}
-              onDeleteAllData={handleDeleteAllData}
-            />
+            <Suspense fallback={null}>
+              <PrivacyPolicy
+                isOpen={showPrivacyPolicy}
+                onClose={() => setShowPrivacyPolicy(false)}
+                onDeleteAllData={handleDeleteAllData}
+              />
+            </Suspense>
           )}
         </AnimatePresence>
 
@@ -1277,31 +1330,33 @@ export default function App() {
         </div>
 
         {/* PURE WEATHER DETAILED DRAWER (EXPANDED ON ARROW CLICK) */}
-        {weather && (
+        {weather && drawerMounted && (
           <PureDetailDrawer
             isOpen={showDetailDrawer}
             onClose={() => setShowDetailDrawer(false)}
             cityName={currentCommune.nom}
           >
-            <PureDetailedCards
-              weather={weather}
-              currentCommune={currentCommune}
-              favorites={favorites}
-              toggleFavorite={toggleFavorite}
-              todayShare={todayShare}
-              saintDuJour={saintDuJour}
-              staleSince={staleSince}
-              refreshing={refreshing}
-              currentCode={activeScrubbedCode}
-              isNightTimeNow={isInspectedNight}
-              weatherStyle={inspectedWeatherStyle}
-              ActiveWeatherIcon={InspectedWeatherIcon}
-              selectedDayIndex={selectedDayIndex}
-              setSelectedDayIndex={setSelectedDayIndex}
-              setShowMoonModal={setShowMoonModal}
-              airQuality={airQuality}
-              selectedHour={inspectedHourItem}
-            />
+            <Suspense fallback={<LazyFallback />}>
+              <PureDetailedCards
+                weather={weather}
+                currentCommune={currentCommune}
+                favorites={favorites}
+                toggleFavorite={toggleFavorite}
+                todayShare={todayShare}
+                saintDuJour={saintDuJour}
+                staleSince={staleSince}
+                refreshing={refreshing}
+                currentCode={activeScrubbedCode}
+                isNightTimeNow={isInspectedNight}
+                weatherStyle={inspectedWeatherStyle}
+                ActiveWeatherIcon={InspectedWeatherIcon}
+                selectedDayIndex={selectedDayIndex}
+                setSelectedDayIndex={setSelectedDayIndex}
+                setShowMoonModal={setShowMoonModal}
+                airQuality={airQuality}
+                selectedHour={inspectedHourItem}
+              />
+            </Suspense>
           </PureDetailDrawer>
         )}
 
@@ -1315,18 +1370,20 @@ export default function App() {
       </main>
 
       {/* Share today's weather as PNG */}
-      <Suspense fallback={null}>
-        <SharePreviewModal
-          isOpen={todayShare.isModalOpen}
-          onClose={todayShare.close}
-          imageSrc={todayShare.imageSrc}
-          isGenerating={todayShare.isGenerating}
-          title={`Météo à ${currentCommune.nom}`}
-          copyStatus={todayShare.copyStatus}
-          onCopy={todayShare.copy}
-          onDownload={() => todayShare.download(`Meteo_${currentCommune.nom.replace(/\s+/g, '_')}_${Date.now()}.png`)}
-        />
-      </Suspense>
+      {shareModalMounted && (
+        <Suspense fallback={null}>
+          <SharePreviewModal
+            isOpen={todayShare.isModalOpen}
+            onClose={todayShare.close}
+            imageSrc={todayShare.imageSrc}
+            isGenerating={todayShare.isGenerating}
+            title={`Météo à ${currentCommune.nom}`}
+            copyStatus={todayShare.copyStatus}
+            onCopy={todayShare.copy}
+            onDownload={() => todayShare.download(`Meteo_${currentCommune.nom.replace(/\s+/g, '_')}_${Date.now()}.png`)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

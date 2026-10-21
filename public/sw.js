@@ -1,5 +1,5 @@
 // Météo Pure Service Worker - Offline cache + Web Push
-const CACHE_NAME = 'meteo-pure-v9';
+const CACHE_NAME = 'meteo-pure-v10';
 const META_CACHE_NAME = 'meteo-pure-meta';
 const ASSETS_TO_CACHE = [
   '/',
@@ -7,7 +7,9 @@ const ASSETS_TO_CACHE = [
   '/manifest.json',
   '/icon.svg',
   '/icon-192.png',
-  '/icon-512.png'
+  '/icon-512.png',
+  '/fonts/inter-latin-var.woff2',
+  '/fonts/instrument-serif-latin.woff2'
 ];
 
 self.addEventListener('install', (event) => {

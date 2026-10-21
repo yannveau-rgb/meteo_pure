@@ -6,11 +6,23 @@ import { readWeatherCache, writeWeatherCache, isStale } from '../utils/weatherCa
 const REFRESH_MS = 10 * 60 * 1000;
 
 export function useWeatherFetch(commune: Commune, onBackgroundRefresh?: () => void) {
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const cacheKey = commune?.code || commune?.nom || 'unknown';
+
+  // Hydrate from the last-known-good forecast *during the first render*.
+  // Reading it in an effect (as before) meant the very first paint was always
+  // the skeleton + a default clear-blue sky, followed a frame later by the
+  // real data and a sky crossfade — a visible flash on every launch, even
+  // when the answer was sitting in localStorage all along.
+  const [initialCache] = useState(() => readWeatherCache(cacheKey));
+  const hydratedKeyRef = useRef<string | null>(initialCache ? cacheKey : null);
+
+  const [weather, setWeather] = useState<WeatherData | null>(() => initialCache?.data ?? null);
+  const [loading, setLoading] = useState<boolean>(() => !initialCache);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   /** Timestamp of the data currently displayed — null while it is live. */
-  const [staleSince, setStaleSince] = useState<number | null>(null);
+  const [staleSince, setStaleSince] = useState<number | null>(
+    () => (initialCache && isStale(initialCache.at) ? initialCache.at : null)
+  );
   /** True during a silent (no-skeleton) refetch — e.g. switching to a city
    *  whose cache we already painted. `loading` alone can't cover this: it
    *  stays false so the cached content keeps showing, which used to leave
@@ -21,8 +33,6 @@ export function useWeatherFetch(commune: Commune, onBackgroundRefresh?: () => vo
   const abortRef = useRef<AbortController | null>(null);
   const onRefreshRef = useRef(onBackgroundRefresh);
   onRefreshRef.current = onBackgroundRefresh;
-
-  const cacheKey = commune?.code || commune?.nom || 'unknown';
 
   const load = useCallback(async (showSkeleton: boolean) => {
     // Supersede any in-flight request: without this, switching cities quickly
@@ -63,14 +73,21 @@ export function useWeatherFetch(commune: Commune, onBackgroundRefresh?: () => vo
 
   useEffect(() => {
     // Paint last-known-good instantly, then revalidate (stale-while-revalidate).
-    const cached = readWeatherCache(cacheKey);
-    if (cached) {
-      setWeather(cached.data);
-      setStaleSince(isStale(cached.at) ? cached.at : null);
-      setLoading(false);
+    if (hydratedKeyRef.current === cacheKey) {
+      // Already painted from cache during the first render — just revalidate.
+      hydratedKeyRef.current = null;
       load(false);
     } else {
-      load(true);
+      hydratedKeyRef.current = null;
+      const cached = readWeatherCache(cacheKey);
+      if (cached) {
+        setWeather(cached.data);
+        setStaleSince(isStale(cached.at) ? cached.at : null);
+        setLoading(false);
+        load(false);
+      } else {
+        load(true);
+      }
     }
 
     const interval = setInterval(() => {

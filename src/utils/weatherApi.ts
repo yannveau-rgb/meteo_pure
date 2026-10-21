@@ -174,6 +174,23 @@ export function mergeSeries(primary: any, secondary: any, tertiary: any) {
   return primary;
 }
 
+/** Days requested from every model — the UI renders exactly 7 (see the daily loop). */
+const FORECAST_DAYS = 7;
+
+/** Longest the forecast waits for a station observation before shipping without it. */
+export const OBSERVATION_BUDGET_MS = 1500;
+
+/** Resolves with `promise`, or with `fallback` once `ms` have elapsed — whichever comes first. */
+export function withBudget<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise<T>((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      () => { clearTimeout(timer); resolve(fallback); },
+    );
+  });
+}
+
 /**
  * Search French communes by name via the official geo.api.gouv.fr.
  */
@@ -221,17 +238,25 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
   const dailyVars   = 'weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max';
   const minuteVars  = 'precipitation,weather_code,lightning_potential';
 
-  const urlMeteoFrance = `https://api.open-meteo.com/v1/meteofrance?latitude=${latitude}&longitude=${longitude}&current=${currentVars}&hourly=${hourlyVars}&daily=${dailyVars}&minutely_15=${minuteVars}&forecast_days=10&timezone=Europe/Paris`;
+  // Payload diet (startup speed): the UI only ever reads 7 days (daily loop
+  // k < 7) and the 15-min series only for the current hour + the next 12
+  // (rain-in-the-hour nowcast and per-hour lightning). Asking for 10 days of
+  // minutely_15 shipped 960 rows per model that were never read — ~70% of each
+  // response. `past_minutely_15=4` keeps the whole current hour so the
+  // per-hour lightning max and the current-slot lookup stay correct.
+  const minutelyWindow = `minutely_15=${minuteVars}&past_minutely_15=4&forecast_minutely_15=56`;
+
+  const urlMeteoFrance = `https://api.open-meteo.com/v1/meteofrance?latitude=${latitude}&longitude=${longitude}&current=${currentVars}&hourly=${hourlyVars}&daily=${dailyVars}&${minutelyWindow}&forecast_days=${FORECAST_DAYS}&timezone=Europe/Paris`;
 
   // Secondary: standard endpoint (GFS/ECMWF-open-data/ICON "best_match" blend) — supports minutely_15 unlike /v1/ecmwf
-  const urlStandard = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=${currentVars}&hourly=${hourlyVars}&daily=${dailyVars}&minutely_15=${minuteVars}&forecast_days=10&timezone=Europe/Paris`;
+  const urlStandard = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=${currentVars}&hourly=${hourlyVars}&daily=${dailyVars}&${minutelyWindow}&forecast_days=${FORECAST_DAYS}&timezone=Europe/Paris`;
 
   // Tertiary: ECMWF IFS — AROME covers only ~2 days and ARPEGE ~4 days (both return
   // null beyond that in the /v1/meteofrance response), so days 5-10 currently fell
   // back to the generic "best_match" blend above. ECMWF has stronger medium-range
   // skill than that generic blend, so it's used specifically to fill that gap.
   // No `current`/`minutely_15` needed — ECMWF is never used for today's precision.
-  const urlEcmwf = `https://api.open-meteo.com/v1/ecmwf?latitude=${latitude}&longitude=${longitude}&hourly=${hourlyVars}&daily=${dailyVars}&forecast_days=10&timezone=Europe/Paris`;
+  const urlEcmwf = `https://api.open-meteo.com/v1/ecmwf?latitude=${latitude}&longitude=${longitude}&hourly=${hourlyVars}&daily=${dailyVars}&forecast_days=${FORECAST_DAYS}&timezone=Europe/Paris`;
 
   let data: any = null;
   let fallbackData: any = null;
@@ -430,7 +455,13 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
     // spanned 24.8 to 31.8°C over the Aisne and the station 7.6 km away simply
     // read 23.8°C. Null whenever no station is close and comparable enough — the
     // forecast then stands, exactly as before.
-    const observed = await observationPromise;
+    //
+    // Bounded wait: /api/observation is a serverless proxy whose cold start
+    // was measured at 11 s (station directory + elevation + DPObs, often for
+    // a 204 in the end). Awaiting it unconditionally held the *whole* forecast
+    // hostage. Past the budget the model forecast ships; the next refresh
+    // (served warm / from the CDN) picks the observation up.
+    const observed = await withBudget(observationPromise, OBSERVATION_BUDGET_MS, null);
 
     // Measured rain settles what the models were getting wrong. Keyed on the
     // rate, not the hourly total: an hour that collected 3 mm at dawn reads the

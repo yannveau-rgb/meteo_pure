@@ -70,6 +70,18 @@ const OBSERVATION_TTL_MS = 10 * 60 * 1000;
  */
 const OBSERVATION_MISS_TTL_MS = 45 * 1000;
 
+/**
+ * Per-request ceiling on every upstream call. None of them had one, so a slow
+ * DPObs gateway kept the lambda — and the browser waiting on it — hanging for
+ * 10 s+ on cold starts. The observation is an optional upgrade: a fast "no"
+ * is worth more than a slow "yes".
+ */
+const UPSTREAM_TIMEOUT_MS = 4000;
+
+function timedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(url, { ...init, signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
+}
+
 export interface StationObservation {
   station: string;
   stationId: string;
@@ -128,7 +140,7 @@ async function getAccessToken(): Promise<string | null> {
   if (!clientId || !clientSecret) return null;
 
   const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-  const res = await fetch(TOKEN_URL, {
+  const res = await timedFetch(TOKEN_URL, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${basic}`,
@@ -171,15 +183,21 @@ async function apiGetText(path: string): Promise<string | null> {
   const headers = await authHeaders();
   if (!headers) return null;
 
-  let res = await fetch(`${API_BASE}${path}`, { headers });
+  let res: Response;
+  try {
+    res = await timedFetch(`${API_BASE}${path}`, { headers });
 
-  // Météo-France documents the `apikey` header, but its gateway has been known
-  // to want the key as a bearer instead. Rather than bet on one spelling, retry
-  // with the other on a straight authentication failure.
-  if (res.status === 401 && headers.apikey) {
-    res = await fetch(`${API_BASE}${path}`, {
-      headers: { Authorization: `Bearer ${headers.apikey}` },
-    });
+    // Météo-France documents the `apikey` header, but its gateway has been known
+    // to want the key as a bearer instead. Rather than bet on one spelling, retry
+    // with the other on a straight authentication failure.
+    if (res.status === 401 && headers.apikey) {
+      res = await timedFetch(`${API_BASE}${path}`, {
+        headers: { Authorization: `Bearer ${headers.apikey}` },
+      });
+    }
+  } catch (err: any) {
+    console.error('[DPObs] request failed/timed out:', path, err?.name || err);
+    return null;
   }
 
   // 403 here means the application is not subscribed to *this version* of DPObs.
@@ -285,7 +303,7 @@ async function getElevation(lat: number, lon: number): Promise<number | null> {
 
   let value: number | null = null;
   try {
-    const res = await fetch(`${ELEVATION_URL}?latitude=${lat}&longitude=${lon}`);
+    const res = await timedFetch(`${ELEVATION_URL}?latitude=${lat}&longitude=${lon}`);
     if (res.ok) {
       const json: any = await res.json();
       const e = Array.isArray(json?.elevation) ? json.elevation[0] : json?.elevation;

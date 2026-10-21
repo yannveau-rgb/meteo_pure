@@ -90,7 +90,14 @@ dégradé bleu azur.
 - Cache offline avec badge « Hors-ligne · relevé de HH:MM »
 - Comparaison de villes, favoris, partage PNG, phases de lune, saint du jour
 - Typographie auto-hébergée (Inter + Instrument Serif)
-- **64 tests** au vert, typecheck à 0, build propre
+- **Fluidification & Démarrage instantané (Audit Octobre)** :
+  - **Payload diet Open-Meteo** : réduction de 70% des charges utiles (`forecast_days=7` au lieu de 10, fenêtre glissante `minutely_15` sur l'heure courante + 12h au lieu de 960 points inutilisés).
+  - **Timeout & Edge-cache DPObs** : garde-fou de 1500 ms côté client et 4000 ms côté lambda sur `/api/observation`, évitant les cold starts bloquants de 11s ; cache CDN `s-maxage=120s/300s`.
+  - **First-render Cache Hydration** : initialisation du state `weather` directement au mount depuis le localStorage (zéro flash de squelette).
+  - **Prévention du flash blanc** : restauration immédiate de la couleur du ciel (`meteo_pure_sky_color`) et `color-scheme: dark` dès le `<head>` de `index.html`.
+  - **Code-splitting & Préchargement idle** : modals et tiroir 7 jours chargés à la demande (`lazyWithRetry`), tiroir préchauffé sur temps mort (`requestIdleCallback`).
+  - **Auto-locate idempotente** : mémoisation de la commune actuelle pour éviter d'avorter et relancer la requête météo au démarrage.
+- **125 tests** au vert (11 suites vitest), typecheck à 0, build propre
 
 ### 🟡 Partiellement terminé
 

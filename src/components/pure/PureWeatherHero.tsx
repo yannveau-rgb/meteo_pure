@@ -60,7 +60,7 @@ export default function PureWeatherHero({
   const todayDaily = weather.daily[0];
   const maxTemp = todayDaily ? Math.round(todayDaily.tempMax) : Math.round(temp + 3);
   const minTemp = todayDaily ? Math.round(todayDaily.tempMin) : Math.round(temp - 4);
-  const humidity = selectedHour?.humidity ?? weather.current.humidity;
+  const humidity = todayDaily?.humidity ?? weather.current.humidity;
   const uvIndex = todayDaily ? todayDaily.uvIndex : 0;
 
   // Editorial natural summary text
