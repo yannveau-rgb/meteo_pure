@@ -1,13 +1,14 @@
-import React from 'react';
-import { ArrowRight, Leaf, CloudSun, MapPin, Sparkles } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Leaf, CloudSun, MapPin, Sparkles, Sunrise, Sunset, TrendingUp, TrendingDown } from 'lucide-react';
 import { WeatherData, HourlyForecastItem, Commune } from '../../types';
 import { getWeatherUI, isNightTime } from '../../utils/weatherUtils';
+import { getDaylightInfo } from '../../utils/ephemeris';
 
 interface PureWeatherHeroProps {
   weather: WeatherData;
   selectedHour?: HourlyForecastItem;
   cityName: string;
-  onOpenDetails: () => void;
+  onOpenDetails?: () => void;
   mode: 'weather' | 'aqi';
   onToggleMode: (mode: 'weather' | 'aqi') => void;
   airQualityIndex?: number;
@@ -19,13 +20,12 @@ interface PureWeatherHeroProps {
 
 /**
  * PureWeatherHero: Ultra-clean, modern minimalist weather hero view
- * strictly modeled after the iconic minimalist design.
+ * integrated at the top of the unified single-page forecast.
  */
 export default function PureWeatherHero({
   weather,
   selectedHour,
   cityName,
-  onOpenDetails,
   mode,
   onToggleMode,
   airQualityIndex,
@@ -63,6 +63,12 @@ export default function PureWeatherHero({
   const humidity = todayDaily?.humidity ?? weather.current.humidity;
   const uvIndex = todayDaily ? todayDaily.uvIndex : 0;
 
+  // Daylight duration & daily minutes gained/lost
+  const daylight = useMemo(
+    () => getDaylightInfo(weather.latitude, weather.longitude, 0, weather.sunrise, weather.sunset),
+    [weather.latitude, weather.longitude, weather.sunrise, weather.sunset]
+  );
+
   // Editorial natural summary text
   const editorialText = (() => {
     if (mode === 'aqi') {
@@ -91,8 +97,15 @@ export default function PureWeatherHero({
     return `Ce soir autour de ${minTemp}°C, demain atteindra ${maxTemp}°C`;
   })();
 
+  const handleScrollToDaylight = () => {
+    const el = document.getElementById('daylight-ephemeris-card');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
   return (
-    <div className="relative w-full flex-1 min-h-0 flex flex-col justify-between pt-2 pb-1 px-1 z-10 pointer-events-auto">
+    <div className="relative w-full flex flex-col justify-between pt-1 pb-1 px-1 z-10 pointer-events-auto">
       {/* Top Header Row */}
       <div className="flex items-center justify-between w-full">
         {/* Top Left Frosted Toggle Pill (AQI Leaf / Weather Sun) */}
@@ -141,57 +154,81 @@ export default function PureWeatherHero({
       </div>
 
       {/* Editorial Contextual Summary Headline */}
-      <div className="mt-3 sm:mt-5 min-h-[3.5rem] flex items-start">
-        <h1
+      <div className="mt-2.5 sm:mt-3 min-h-[2.75rem] flex items-start">
+        <h2
           key={editorialText}
-          className="text-[24px] sm:text-[30px] font-normal tracking-tight text-white leading-snug drop-shadow-sm max-w-sm transition-opacity duration-300"
+          className="text-[21px] sm:text-[25px] font-normal tracking-tight text-white leading-snug drop-shadow-sm max-w-sm transition-opacity duration-300"
         >
           {editorialText}
-        </h1>
+        </h2>
       </div>
 
-      {/* Flexible Spacer pushing Hero readout to bottom of hero zone */}
-      <div className="flex-1 min-h-[16px]" />
-
-      {/* Lower Section: Giant Temperature + Location & Metrics + Detail Button */}
-      <div className="relative pb-1">
-        <div className="flex items-end justify-between">
+      {/* Lower Section: Giant Temperature + Prominent Daylight Gain/Loss Pill */}
+      <div className="relative mt-2">
+        <div className="flex items-end justify-between gap-2">
           {/* Left: Giant Temperature */}
           <div className="flex items-start">
             <span
+              id="main-temp"
               key={temp}
-              className="text-[76px] sm:text-[104px] font-extralight tracking-tighter leading-none text-white select-none drop-shadow-md transition-all duration-200"
+              className="text-[68px] sm:text-[84px] font-extralight tracking-tighter leading-none text-white select-none drop-shadow-md transition-all duration-200 tabular-figures"
             >
               {temp}
             </span>
-            <span className="text-[34px] sm:text-[44px] font-light text-white/70 ml-0.5 leading-tight select-none">
+            <span className="text-[30px] sm:text-[38px] font-light text-white/70 ml-0.5 leading-tight select-none">
               °
             </span>
           </div>
 
-          {/* Bouton d'ouverture des prévisions 7 jours & détails */}
+          {/* Right: Prominent Daylight Minutes Gained/Lost & Lever/Coucher Badge */}
           <button
-            onClick={onOpenDetails}
-            className="h-11 px-4 rounded-full bg-black/25 hover:bg-black/35 active:scale-95 border border-white/25 backdrop-blur-md text-white flex items-center gap-2 shadow-lg transition-all cursor-pointer group mb-2"
-            title="Voir les prévisions sur 7 jours et les détails"
-            aria-label="Prévisions 7 jours et détails"
+            type="button"
+            onClick={handleScrollToDaylight}
+            className="mb-1 px-3 py-2 rounded-2xl bg-black/30 hover:bg-black/40 active:scale-95 border border-white/25 backdrop-blur-md text-left shadow-lg transition-all cursor-pointer flex flex-col gap-1"
+            title={`${daylight.headline} (${daylight.preciseDeltaLabel}) — Cliquez pour voir le détail`}
           >
-            <span className="text-xs font-semibold tracking-tight">7 jours</span>
-            <ArrowRight className="w-4 h-4 -rotate-90 transition-transform duration-200 group-hover:-translate-y-0.5" />
+            <div className="flex items-center gap-1.5">
+              {daylight.isGaining ? (
+                <TrendingUp className="w-4 h-4 text-emerald-300 shrink-0" />
+              ) : (
+                <TrendingDown className="w-4 h-4 text-amber-300 shrink-0" />
+              )}
+              <span
+                className={`text-xs sm:text-sm font-extrabold tracking-tight tabular-figures ${
+                  daylight.isGaining ? 'text-emerald-200' : 'text-amber-200'
+                }`}
+              >
+                {daylight.badgeLabel}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[10.5px] font-semibold text-white/85 tabular-figures">
+              <span className="flex items-center gap-0.5">
+                <Sunrise className="w-3 h-3 text-amber-300" />
+                {daylight.sunrise}
+              </span>
+              <span className="text-white/35">•</span>
+              <span className="flex items-center gap-0.5">
+                <Sunset className="w-3 h-3 text-indigo-300" />
+                {daylight.sunset}
+              </span>
+            </div>
+            <div className="text-[9.5px] text-white/65 font-medium tabular-figures">
+              Durée du jour : <strong className="text-white/90">{daylight.dayLengthFormatted}</strong> ({daylight.preciseDeltaLabel})
+            </div>
           </button>
         </div>
 
         {/* Location & Condition line with elegant font-display italic */}
-        <div className="flex items-center gap-2 text-white/95 text-[15px] font-medium tracking-tight mt-1">
+        <div className="flex items-center gap-2 text-white/95 text-[14px] font-medium tracking-tight mt-1">
           <MapPin className="w-4 h-4 text-white/80 shrink-0" />
           <span className="font-semibold">{cityName}</span>
           <span className="text-white/40">•</span>
           <WeatherConditionIcon className={`w-4 h-4 ${weatherUI.colorClass} shrink-0`} />
-          <span className="capitalize font-display italic text-lg text-white/90">{conditionDesc}</span>
+          <span className="capitalize font-display italic text-base sm:text-lg text-white/90">{conditionDesc}</span>
         </div>
 
         {/* Sub-metrics: High, Low, Humidity, UV */}
-        <div className="flex items-center gap-3 text-white/70 text-[13px] font-normal mt-1 tracking-tight">
+        <div className="flex items-center gap-2.5 text-white/75 text-[12px] font-normal mt-0.5 tracking-tight">
           <span>Max {maxTemp}°</span>
           <span>Min {minTemp}°</span>
           <span className="text-white/30">•</span>

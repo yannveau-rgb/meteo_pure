@@ -419,3 +419,258 @@ export function getSaintDuJour(date: Date = new Date()): string {
     return ephemeris[m]?.[d] || '';
   }
 }
+
+
+export interface DaylightInfo {
+  /** Displayed sunrise "HH:MM" */
+  sunrise: string;
+  /** Displayed sunset "HH:MM" */
+  sunset: string;
+  /** Total daylight duration in integer minutes */
+  dayLengthMinutes: number;
+  /** Formatted duration e.g. "9h 42m" */
+  dayLengthFormatted: string;
+  /** Exact daily daylight change vs previous day in float minutes (positive = gaining, negative = losing) */
+  deltaMinutesExact: number;
+  /** Daily daylight change rounded to nearest integer minute */
+  deltaMinutesRounded: number;
+  /** Total daily change in seconds */
+  deltaSecondsTotal: number;
+  /** True when days are getting longer (between Dec 21 and Jun 21) */
+  isGaining: boolean;
+  /** Morning contribution in minutes (positive = earlier sunrise = more light in morning) */
+  morningDeltaMinutes: number;
+  /** Evening contribution in minutes (positive = later sunset = more light in evening) */
+  eveningDeltaMinutes: number;
+  /** Cumulative daylight change over the next 7 days in integer minutes */
+  weeklyDeltaMinutes: number;
+  /** Compact badge label e.g. "+3 min / jour" or "-3 min / jour" */
+  badgeLabel: string;
+  /** Very short badge for daily forecast rows e.g. "+3 min" or "-3 min" */
+  shortDeltaLabel: string;
+  /** Precise formatted change e.g. "-3 min 17 s" or "+2 min 45 s" */
+  preciseDeltaLabel: string;
+  /** Clear human-readable headline e.g. "On perd 3 min de soleil par jour" */
+  headline: string;
+  /** Context relative to winter/summer solstice */
+  solsticeContext: string;
+}
+
+/**
+ * Computes exact astronomical sunrise, sunset (in UTC minutes from midnight)
+ * and daylight duration (in float minutes) for a given date and coordinates
+ * using the NOAA solar position equations.
+ */
+function computeAstronomicalSolarDay(lat: number, lon: number, date: Date): {
+  daylightMinutes: number;
+  sunriseUtcMin: number;
+  sunsetUtcMin: number;
+} {
+  const rad = Math.PI / 180;
+  const deg = 180 / Math.PI;
+
+  const y = date.getUTCFullYear();
+  const m = date.getUTCMonth();
+  const d = date.getUTCDate();
+  const utcNoonMs = Date.UTC(y, m, d, 12, 0, 0);
+
+  const jd = utcNoonMs / 86400000 + 2440587.5;
+  const T = (jd - 2451545.0) / 36525.0;
+
+  const L0 = ((280.46646 + T * (36000.76983 + T * 0.0003032)) % 360 + 360) % 360;
+  const M = 357.52911 + T * (35999.05029 - 0.0001537 * T);
+  const e = 0.016708634 - T * (0.000042037 + 0.0000001267 * T);
+
+  const Mrad = M * rad;
+  const C =
+    Math.sin(Mrad) * (1.914602 - T * (0.004817 + 0.000014 * T)) +
+    Math.sin(2 * Mrad) * (0.019993 - 0.000101 * T) +
+    Math.sin(3 * Mrad) * 0.000289;
+
+  const sunTrueLong = L0 + C;
+  const omega = 125.04 - 1934.136 * T;
+  const lambda = sunTrueLong - 0.00569 - 0.00478 * Math.sin(omega * rad);
+
+  const epsilon0 = 23 + (26 + (21.448 - T * (46.815 + T * (0.00059 - T * 0.001813))) / 60) / 60;
+  const epsilon = epsilon0 + 0.00256 * Math.cos(omega * rad);
+
+  const sinDec = Math.sin(epsilon * rad) * Math.sin(lambda * rad);
+  const decl = Math.asin(Math.max(-1, Math.min(1, sinDec)));
+
+  const yVar = Math.pow(Math.tan((epsilon * rad) / 2), 2);
+  const L0rad = L0 * rad;
+  const eqTime =
+    4 *
+    deg *
+    (yVar * Math.sin(2 * L0rad) -
+      2 * e * Math.sin(Mrad) +
+      4 * e * yVar * Math.sin(Mrad) * Math.cos(2 * L0rad) -
+      0.5 * yVar * yVar * Math.sin(4 * L0rad) -
+      1.25 * e * e * Math.sin(2 * Mrad));
+
+  const latRad = Math.max(-65, Math.min(65, lat)) * rad;
+  const cosHa =
+    (Math.cos(90.833 * rad) - Math.sin(latRad) * Math.sin(decl)) /
+    (Math.cos(latRad) * Math.cos(decl));
+  const clampedCosHa = Math.max(-1, Math.min(1, cosHa));
+  const haDeg = Math.acos(clampedCosHa) * deg;
+
+  const daylightMinutes = 8 * haDeg;
+  const solarNoonUtcMin = 720 - 4 * lon - eqTime;
+  const sunriseUtcMin = solarNoonUtcMin - 4 * haDeg;
+  const sunsetUtcMin = solarNoonUtcMin + 4 * haDeg;
+
+  return { daylightMinutes, sunriseUtcMin, sunsetUtcMin };
+}
+
+function parseHhMmToMinutes(hhmm?: string): number | null {
+  if (!hhmm || !hhmm.includes(':')) return null;
+  const [h, m] = hhmm.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+/**
+ * Computes rich daylight duration and daily gain/loss metrics for a commune and date.
+ */
+export function getDaylightInfo(
+  latitude: number = 48.8566,
+  longitude: number = 2.3522,
+  dayOffset: number = 0,
+  sunriseStr?: string,
+  sunsetStr?: string,
+  referenceDate: Date = new Date()
+): DaylightInfo {
+  let year = referenceDate.getUTCFullYear();
+  let month = referenceDate.getUTCMonth();
+  let day = referenceDate.getUTCDate();
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Paris',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(referenceDate);
+    parts.forEach((p) => {
+      if (p.type === 'year') year = parseInt(p.value, 10);
+      if (p.type === 'month') month = parseInt(p.value, 10) - 1;
+      if (p.type === 'day') day = parseInt(p.value, 10);
+    });
+  } catch {
+    // fallback to UTC getters
+  }
+
+  const targetDate = new Date(Date.UTC(year, month, day + dayOffset, 12, 0, 0));
+  const prevDate = new Date(Date.UTC(year, month, day + dayOffset - 1, 12, 0, 0));
+  const nextWeekDate = new Date(Date.UTC(year, month, day + dayOffset + 7, 12, 0, 0));
+
+  const todaySolar = computeAstronomicalSolarDay(latitude, longitude, targetDate);
+  const prevSolar = computeAstronomicalSolarDay(latitude, longitude, prevDate);
+  const weekSolar = computeAstronomicalSolarDay(latitude, longitude, nextWeekDate);
+
+  const deltaMinutesExact = todaySolar.daylightMinutes - prevSolar.daylightMinutes;
+  const deltaSecondsTotal = Math.round(deltaMinutesExact * 60);
+  const deltaMinutesRounded = Math.round(deltaMinutesExact);
+  const isGaining = deltaSecondsTotal >= 0;
+
+  const rawMorningDelta = prevSolar.sunriseUtcMin - todaySolar.sunriseUtcMin;
+  const morningDeltaMinutes = Math.round(rawMorningDelta);
+  const eveningDeltaMinutes = deltaMinutesRounded - morningDeltaMinutes;
+
+  const weeklyDeltaMinutes = Math.round(weekSolar.daylightMinutes - todaySolar.daylightMinutes);
+
+  const sunrise = sunriseStr || '07:30';
+  const sunset = sunsetStr || '18:30';
+
+  const srMin = parseHhMmToMinutes(sunrise);
+  const ssMin = parseHhMmToMinutes(sunset);
+  const dayLengthMinutes =
+    srMin !== null && ssMin !== null && ssMin > srMin
+      ? ssMin - srMin
+      : Math.round(todaySolar.daylightMinutes);
+
+  const hours = Math.floor(dayLengthMinutes / 60);
+  const mins = dayLengthMinutes % 60;
+  const dayLengthFormatted = `${hours}h ${mins.toString().padStart(2, '0')}m`;
+
+  const absSec = Math.abs(deltaSecondsTotal);
+  const absWholeMin = Math.floor(absSec / 60);
+  const remSec = absSec % 60;
+  const sign = isGaining ? '+' : '-';
+
+  let badgeLabel: string;
+  let shortDeltaLabel: string;
+  if (absSec < 30) {
+    badgeLabel = '±0 min/j';
+    shortDeltaLabel = '±0 min';
+  } else if (absWholeMin === 0) {
+    badgeLabel = `${sign}${absSec} sec/j`;
+    shortDeltaLabel = `${sign}${absSec}s`;
+  } else {
+    const roundedAbs = Math.max(1, Math.abs(deltaMinutesRounded));
+    badgeLabel = `${sign}${roundedAbs} min / jour`;
+    shortDeltaLabel = `${sign}${roundedAbs} min`;
+  }
+
+  const preciseDeltaLabel =
+    absWholeMin === 0
+      ? `${sign}${absSec} sec`
+      : remSec > 0
+      ? `${sign}${absWholeMin} min ${remSec.toString().padStart(2, '0')} s`
+      : `${sign}${absWholeMin} min`;
+
+  const roundedAbsMin = Math.max(1, Math.abs(deltaMinutesRounded));
+  const headline =
+    absSec < 30
+      ? 'Durée du jour stable (Solstice)'
+      : isGaining
+      ? absWholeMin === 0
+        ? `On gagne ${absSec} sec de soleil par jour`
+        : `On gagne ${roundedAbsMin} min de soleil par jour`
+      : absWholeMin === 0
+      ? `On perd ${absSec} sec de soleil par jour`
+      : `On perd ${roundedAbsMin} min de soleil par jour`;
+
+  const targetYear = targetDate.getUTCFullYear();
+  let solsticeContext = '';
+  if (!isGaining) {
+    let winterSolstice = new Date(Date.UTC(targetYear, 11, 21, 12, 0, 0));
+    if (targetDate > winterSolstice) {
+      winterSolstice = new Date(Date.UTC(targetYear + 1, 11, 21, 12, 0, 0));
+    }
+    const daysToWinter = Math.max(0, Math.round((winterSolstice.getTime() - targetDate.getTime()) / 86400000));
+    solsticeContext =
+      daysToWinter === 0
+        ? "Solstice d'hiver aujourd'hui : les jours vont rallonger dès demain !"
+        : `Les jours rallongeront dans ${daysToWinter} jour${daysToWinter > 1 ? 's' : ''} (21 déc.)`;
+  } else {
+    let summerSolstice = new Date(Date.UTC(targetYear, 5, 21, 12, 0, 0));
+    if (targetDate > summerSolstice) {
+      summerSolstice = new Date(Date.UTC(targetYear + 1, 5, 21, 12, 0, 0));
+    }
+    const daysToSummer = Math.max(0, Math.round((summerSolstice.getTime() - targetDate.getTime()) / 86400000));
+    solsticeContext =
+      daysToSummer === 0
+        ? "Solstice d'été aujourd'hui : jour le plus long de l'année !"
+        : `Jour le plus long dans ${daysToSummer} jour${daysToSummer > 1 ? 's' : ''} (21 juin)`;
+  }
+
+  return {
+    sunrise,
+    sunset,
+    dayLengthMinutes,
+    dayLengthFormatted,
+    deltaMinutesExact,
+    deltaMinutesRounded,
+    deltaSecondsTotal,
+    isGaining,
+    morningDeltaMinutes,
+    eveningDeltaMinutes,
+    weeklyDeltaMinutes,
+    badgeLabel,
+    shortDeltaLabel,
+    preciseDeltaLabel,
+    headline,
+    solsticeContext,
+  };
+}

@@ -53,23 +53,20 @@ import { useGeolocation } from './hooks/useGeolocation';
 import Toggle from './components/ui/Toggle';
 import BottomNav, { AppTab } from './components/BottomNav';
 import Toast, { ToastData } from './components/Toast';
-import { lazyWithRetry, whenIdle } from './utils/lazyWithRetry';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 
-// Pure minimalist components (video UI match) — the first screen, kept eager.
+// Pure minimalist components — unified single-page forecast, kept eager.
 import CelestialSky, { getSkyTopColor } from './components/pure/CelestialSky';
 import TimeScrubber from './components/pure/TimeScrubber';
 import PureWeatherHero from './components/pure/PureWeatherHero';
-import PureDetailDrawer from './components/pure/PureDetailDrawer';
+import PureDetailedCards from './components/pure/PureDetailedCards';
 
 // Lazy-loaded: only fetched when their tab/modal is opened.
-// Everything below is off the first screen; keeping it out of the entry chunk
-// is what shortens parse/execute time before the forecast can paint.
 const RainRadar = lazyWithRetry(() => import('./components/RainRadar'));
 const CityComparison = lazyWithRetry(() => import('./components/CityComparison'));
 const AlertsView = lazyWithRetry(() => import('./components/AlertsView'));
 const PwaInstallWizard = lazyWithRetry(() => import('./components/PwaInstallWizard'));
 const SharePreviewModal = lazyWithRetry(() => import('./components/SharePreviewModal'));
-const PureDetailedCards = lazyWithRetry(() => import('./components/pure/PureDetailedCards'));
 const HoroscopeModal = lazyWithRetry(() => import('./components/HoroscopeModal'));
 const MoonPhasesModal = lazyWithRetry(() => import('./components/modals/MoonPhasesModal'));
 const WelcomePrompt = lazyWithRetry(() => import('./components/modals/WelcomePrompt'));
@@ -103,7 +100,6 @@ export default function App() {
   const [selectedHourIndex, setSelectedHourIndex] = useState<number>(0);
   const [heroMode, setHeroMode] = useState<'weather' | 'aqi'>('weather');
   const [cartesMode, setCartesMode] = useState<'radar' | 'compare'>('radar');
-  const [showDetailDrawer, setShowDetailDrawer] = useState<boolean>(false);
 
   const isAdmin = typeof window !== 'undefined' && !!localStorage.getItem('adminToken');
 
@@ -477,11 +473,6 @@ export default function App() {
   const briefModalMounted = useMountedOnce(showMorningBriefModal);
   const privacyMounted = useMountedOnce(showPrivacyPolicy);
   const shareModalMounted = useMountedOnce(todayShare.isModalOpen);
-  const drawerMounted = useMountedOnce(showDetailDrawer);
-
-  // Warm the "7 jours" drawer chunk once the first screen is up and the main
-  // thread is idle, so the first tap on the button opens instantly.
-  useEffect(() => whenIdle(() => { PureDetailedCards.preload(); }), []);
 
   return (
     <div 
@@ -716,10 +707,10 @@ export default function App() {
         )}
 
         {/* VIEW ROUTER (MAIN BODY AREA) */}
-        <div className={`flex-1 min-h-0 flex flex-col relative z-10 ${activeTab === 'meteo' ? 'overflow-hidden' : 'overflow-y-auto no-scrollbar mt-1'}`}>
+        <div id="main-content" className="flex-1 min-h-0 flex flex-col relative z-10 overflow-y-auto no-scrollbar">
           <AnimatePresence mode="wait">
             
-            {/* SCREEN 1: METEO VIEW (ULTRA-MINIMALIST WITH TIME-SCRUBBER) */}
+            {/* SCREEN 1: UNIFIED METEO VIEW (HERO + TIME-SCRUBBER + 7-DAY & DETAILS ON ONE PAGE) */}
             {activeTab === 'meteo' && (
               <motion.div
                 key="meteo-tab-screen"
@@ -731,7 +722,7 @@ export default function App() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="relative w-full flex-1 min-h-0 flex flex-col justify-between focus:outline-none"
+                className="relative w-full flex flex-col space-y-3.5 pb-6 focus:outline-none"
               >
                 {loading ? (
                   <div className="flex-1 flex flex-col items-center justify-center py-20 animate-pulse space-y-4">
@@ -746,7 +737,6 @@ export default function App() {
                       weather={weather}
                       selectedHour={selectedHourIndex === 0 ? undefined : scrubbedHourItem}
                       cityName={currentCommune.nom}
-                      onOpenDetails={() => setShowDetailDrawer(true)}
                       mode={heroMode}
                       onToggleMode={setHeroMode}
                       airQualityIndex={airQuality?.aqi}
@@ -757,7 +747,7 @@ export default function App() {
                     />
 
                     {/* The signature interactive Time-Scrubber ruler */}
-                    <div className="w-full pb-1 sm:pb-2 z-20">
+                    <div className="w-full glass-premium rounded-3xl py-0.5 z-20">
                       <TimeScrubber
                         hourly={weather.hourly || []}
                         selectedIndex={selectedHourIndex}
@@ -765,6 +755,27 @@ export default function App() {
                         isDaytime={isScrubbedDaytime}
                       />
                     </div>
+
+                    {/* All 7-day forecast, daylight gain/loss, hourly & detailed cards on the same page */}
+                    <PureDetailedCards
+                      weather={weather}
+                      currentCommune={currentCommune}
+                      favorites={favorites}
+                      toggleFavorite={toggleFavorite}
+                      todayShare={todayShare}
+                      saintDuJour={saintDuJour}
+                      staleSince={staleSince}
+                      refreshing={refreshing}
+                      currentCode={activeScrubbedCode}
+                      isNightTimeNow={isInspectedNight}
+                      weatherStyle={inspectedWeatherStyle}
+                      ActiveWeatherIcon={InspectedWeatherIcon}
+                      selectedDayIndex={selectedDayIndex}
+                      setSelectedDayIndex={setSelectedDayIndex}
+                      setShowMoonModal={setShowMoonModal}
+                      airQuality={airQuality}
+                      selectedHour={inspectedHourItem}
+                    />
                   </>
                 ) : (
                   <div className="flex flex-col items-center justify-center text-center p-8 bg-white/10 rounded-2xl border border-white/20 my-auto">
@@ -1328,37 +1339,6 @@ export default function App() {
 
           </AnimatePresence>
         </div>
-
-        {/* PURE WEATHER DETAILED DRAWER (EXPANDED ON ARROW CLICK) */}
-        {weather && drawerMounted && (
-          <PureDetailDrawer
-            isOpen={showDetailDrawer}
-            onClose={() => setShowDetailDrawer(false)}
-            cityName={currentCommune.nom}
-          >
-            <Suspense fallback={<LazyFallback />}>
-              <PureDetailedCards
-                weather={weather}
-                currentCommune={currentCommune}
-                favorites={favorites}
-                toggleFavorite={toggleFavorite}
-                todayShare={todayShare}
-                saintDuJour={saintDuJour}
-                staleSince={staleSince}
-                refreshing={refreshing}
-                currentCode={activeScrubbedCode}
-                isNightTimeNow={isInspectedNight}
-                weatherStyle={inspectedWeatherStyle}
-                ActiveWeatherIcon={InspectedWeatherIcon}
-                selectedDayIndex={selectedDayIndex}
-                setSelectedDayIndex={setSelectedDayIndex}
-                setShowMoonModal={setShowMoonModal}
-                airQuality={airQuality}
-                selectedHour={inspectedHourItem}
-              />
-            </Suspense>
-          </PureDetailDrawer>
-        )}
 
         {/* BOTTOM GLASS NAVIGATION BAR - PERFECT 4-COL PILL DOCK STYLE */}
         <BottomNav
