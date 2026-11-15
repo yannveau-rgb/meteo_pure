@@ -26,6 +26,8 @@ const ELEVATION_URL = 'https://api.open-meteo.com/v1/elevation';
 
 /** Stations further than this are not describing the user's sky any more. */
 const MAX_STATION_DISTANCE_KM = 35;
+/** Ranking penalty (metres of altitude gap) for a station that lists no altitude. */
+const UNKNOWN_STATION_ALTITUDE_GAP_M = 200;
 /** With an unknown altitude gap, a station further than this is not trusted for temperature. */
 const UNKNOWN_ALTITUDE_MAX_KM = 5;
 /** Past this, the reading is stale enough to mislead rather than inform. */
@@ -63,6 +65,7 @@ const ALT_PENALTY_M_PER_KM = 50;
 
 const STATIONS_TTL_MS = 24 * 60 * 60 * 1000;
 const ELEVATION_TTL_MS = 24 * 60 * 60 * 1000;
+const ELEVATION_MISS_TTL_MS = 45 * 1000;
 const OBSERVATION_TTL_MS = 10 * 60 * 1000;
 /**
  * Failures are remembered far more briefly than successes. Caching "no
@@ -302,7 +305,9 @@ async function getStations(): Promise<Station[]> {
 async function getElevation(lat: number, lon: number): Promise<number | null> {
   const key = `${lat.toFixed(3)},${lon.toFixed(3)}`;
   const cached = elevationCache.get(key);
-  if (cached && Date.now() - cached.at < ELEVATION_TTL_MS) return cached.value;
+  // A failed lookup is retried soon: caching `null` for a day would switch off the
+  // altitude check, and with it the station temperature, after one timeout.
+  if (cached && Date.now() - cached.at < (cached.value === null ? ELEVATION_MISS_TTL_MS : ELEVATION_TTL_MS)) return cached.value;
 
   let value: number | null = null;
   try {
@@ -442,7 +447,11 @@ export async function getNearestObservation(lat: number, lon: number): Promise<S
     const ranked = stations
       .map(station => {
         const distanceKm = haversineKm(lat, lon, station.lat, station.lon);
-        const altGap = communeElevation === null || station.altitude === undefined ? 0 : Math.abs(communeElevation - station.altitude);
+        // An unknown station altitude must not rank better than a known one: it is scored as a
+        // 200 m gap (4 km of distance), otherwise such stations crowd out the right ones.
+        const altGap = station.altitude === undefined
+          ? UNKNOWN_STATION_ALTITUDE_GAP_M
+          : communeElevation === null ? 0 : Math.abs(communeElevation - station.altitude);
         return { station, distanceKm, score: distanceKm + altGap / ALT_PENALTY_M_PER_KM };
       })
       .filter(c => c.distanceKm <= MAX_STATION_DISTANCE_KM)

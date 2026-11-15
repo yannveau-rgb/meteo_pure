@@ -250,12 +250,14 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
             {pastCount < frames.length && (
               <span className="text-amber-400/70">◆ Prévu ({frames.length - pastCount} pas)</span>
             )}
-            <span>{pastCount < frames.length ? formatFrameLabel(frames[frames.length - 1]) : 'Maintenant'}</span>
+            <span>{formatFrameLabel(frames[frames.length - 1])}</span>
           </div>
-          <p className="text-[11px] text-white/50 leading-snug">
-            Observations passées uniquement (mosaïque de radars, source RainViewer) : le radar ne prévoit pas la suite.
-            Pour l'heure qui vient, voyez « Pluie dans l'heure ».
-          </p>
+          {pastCount === frames.length && (
+            <p className="text-[11px] text-white/50 leading-snug">
+              Observations passées uniquement (mosaïque de radars, source RainViewer) : le radar ne prévoit pas la suite.
+              Pour l'heure qui vient, voyez « Pluie dans l'heure ».
+            </p>
+          )}
         </div>
       )}
     </div>
