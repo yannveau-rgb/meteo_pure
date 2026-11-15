@@ -147,11 +147,11 @@ function DailyForecast({
               onClick={() => onSelectDay(index)}
               aria-pressed={selectedDayIndex === index}
               data-selected={selectedDayIndex === index}
-              className="day-row justify-between"
+              className="day-row justify-between !gap-1.5"
               title="Cliquez pour afficher la météo heure par heure et l'éphéméride de ce jour"
             >
               {/* Day Name + Daylight Delta */}
-              <div className="w-24 min-w-[92px] text-left flex flex-col leading-tight">
+              <div className="w-[5.25rem] shrink-0 text-left flex flex-col leading-tight">
                 <span className="text-white font-bold whitespace-nowrap">
                   {day.date}
                 </span>
@@ -163,7 +163,7 @@ function DailyForecast({
               </div>
 
               {/* Weather Status mini icon + desc */}
-              <div className="flex items-center gap-1.5 w-9 justify-center shrink-0">
+              <div className="flex items-center gap-1.5 w-8 justify-center shrink-0">
                 <WeatherIcon className={`w-5 h-5 ${weatherUI.colorClass} drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)]`} />
               </div>
 
@@ -173,7 +173,7 @@ function DailyForecast({
               </span>
 
               {/* Temperature custom spectrum bar */}
-              <div className="flex-1 mx-2 h-[4px] rounded-full bg-white/15 relative overflow-hidden">
+              <div className="flex-1 min-w-[28px] mx-1 h-[4px] rounded-full bg-white/15 relative overflow-hidden">
                 <div 
                   className="absolute h-full rounded-full bg-gradient-to-r from-sky-400 via-yellow-300 to-orange-400"
                   style={{ 
@@ -191,7 +191,7 @@ function DailyForecast({
               {/* Model-agreement dot. Only drawn when the three models actually
                   disagree — a badge on every row would be noise, and silence
                   correctly reads as "nothing to worry about". */}
-              <span className="w-3 flex justify-center">
+              <span className="w-3 shrink-0 flex justify-center">
                 {day.confidence && day.confidence !== 'high' && (
                   <span
                     title={`${CONFIDENCE_LABELS[day.confidence]} · écart ${day.modelSpread}°C entre modèles`}

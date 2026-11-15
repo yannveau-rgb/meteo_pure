@@ -16,6 +16,8 @@ export interface ThemeMeta {
   tagline: string;
   /** Couleur de la barre système mobile / fond avant le premier rendu. */
   topColor: string;
+  /** Couleur du bas du fond : sert de repli sous le contenu (zone système, barre de gestes). */
+  bottomColor: string;
   /** Trois pastilles d'aperçu : fond, surface, accent. */
   swatch: [string, string, string];
   /** Aperçu du fond dans le sélecteur. */
@@ -28,6 +30,7 @@ export const THEMES: ThemeMeta[] = [
     label: 'Ciel vivant',
     tagline: "Suit l'heure et la météo",
     topColor: '#3878cf',
+    bottomColor: '#3878cf',
     swatch: ['#3878cf', '#5495e8', '#fbbf24'],
     preview:
       'linear-gradient(160deg,#3d7fd6,#7eb8f7 60%,#f2ae7a)',
@@ -37,6 +40,7 @@ export const THEMES: ThemeMeta[] = [
     label: 'Aurore boréale',
     tagline: 'Nuit polaire, voiles verts et violets',
     topColor: '#0b1020',
+    bottomColor: '#120d2b',
     swatch: ['#0b1020', '#141b34', '#5ef2c0'],
     preview:
       'radial-gradient(circle at 25% 20%,rgba(61,224,176,.75),transparent 55%),radial-gradient(circle at 80% 30%,rgba(123,77,255,.8),transparent 55%),#0b1020',
@@ -46,6 +50,7 @@ export const THEMES: ThemeMeta[] = [
     label: 'Papier Kraft',
     tagline: 'Carnet de météo ancien, encre et rouille',
     topColor: '#f2e8d5',
+    bottomColor: '#e6d6b8',
     swatch: ['#f2e8d5', '#e7d8bc', '#c4552d'],
     preview:
       'radial-gradient(circle at 85% 10%,#f2c39a,transparent 55%),linear-gradient(160deg,#f8f0e0,#e9dcc0)',
@@ -55,6 +60,7 @@ export const THEMES: ThemeMeta[] = [
     label: 'Terminal Radar',
     tagline: 'Écran de contrôle, vert phosphore',
     topColor: '#030a06',
+    bottomColor: '#040a06',
     swatch: ['#030a06', '#08160d', '#3cff6b'],
     preview:
       'radial-gradient(circle at 50% 40%,#1b5a2c,#04100a 70%)',
@@ -64,6 +70,7 @@ export const THEMES: ThemeMeta[] = [
     label: 'Pop Party',
     tagline: 'Couleurs vives, formes pop, bords nets',
     topColor: '#ff3d8b',
+    bottomColor: '#ffc12e',
     swatch: ['#ff3d8b', '#ffe14d', '#2de2e6'],
     preview:
       'radial-gradient(circle at 20% 20%,#ffe14d,transparent 45%),radial-gradient(circle at 85% 80%,#7b2cff,transparent 50%),linear-gradient(160deg,#ff3d6e,#ff9f1c)',
@@ -103,4 +110,16 @@ export function applyThemeAttribute(id: ThemeId): void {
   const root = document.documentElement;
   if (id === 'auto') root.removeAttribute('data-theme');
   else root.setAttribute('data-theme', id);
+}
+
+/**
+ * Fond de la page entière pour un thème alternatif : dégradé haut → bas aux
+ * couleurs du fond animé. Un aplat de la seule couleur du haut dessinait un
+ * trait net sous le contenu dès que la zone visible dépassait la hauteur de
+ * l'appli (barre de gestes Android, barre d'adresse qui se rétracte).
+ */
+export function getThemePageBackground(id: ThemeId): string | null {
+  if (id === 'auto') return null;
+  const t = getThemeMeta(id);
+  return `linear-gradient(180deg, ${t.topColor} 0%, ${t.bottomColor} 100%)`;
 }

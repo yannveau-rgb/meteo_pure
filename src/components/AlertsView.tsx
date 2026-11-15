@@ -81,7 +81,7 @@ export default function AlertsView({ vigilance, cityName }: AlertsViewProps) {
             onClick={() => setActiveTab(tab)}
             data-active={activeTab === tab}
             aria-pressed={activeTab === tab}
-            className="segmented-item truncate"
+            className="segmented-item truncate !flex-[1_1_auto] !px-2.5"
           >
             <span className="truncate">{label}</span>
           </button>

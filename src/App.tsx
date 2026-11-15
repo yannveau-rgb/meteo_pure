@@ -59,7 +59,7 @@ import CelestialSky, { getSkyTopColor } from './components/pure/CelestialSky';
 import ThemeBackdrop from './components/pure/ThemeBackdrop';
 import ThemePicker from './components/ui/ThemePicker';
 import { useTheme } from './hooks/useTheme';
-import { getThemeMeta } from './utils/theme';
+import { getThemeMeta, getThemePageBackground } from './utils/theme';
 import HourlyForecast from './components/HourlyForecast';
 import PureWeatherHero from './components/pure/PureWeatherHero';
 import PureDetailedCards from './components/pure/PureDetailedCards';
@@ -438,15 +438,17 @@ export default function App() {
   }, [theme, currentFloatHour, activeWeatherCode, sunriseFloat, sunsetFloat]);
 
   useEffect(() => {
-    document.body.style.background = topSkyColor;
-    document.documentElement.style.background = topSkyColor;
+    const pageBg = getThemePageBackground(theme) ?? topSkyColor;
+    document.body.style.background = pageBg;
+    document.documentElement.style.background = pageBg;
+    document.documentElement.style.backgroundAttachment = 'fixed';
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', topSkyColor);
     // Remember the live sky so the first paint of the next visit matches.
     if (weather) {
       try { localStorage.setItem(SKY_COLOR_KEY, topSkyColor); } catch { /* optional */ }
     }
-  }, [topSkyColor, weather]);
+  }, [topSkyColor, weather, theme]);
 
   // Modals: chunk fetched on first open only, then kept mounted for exit animations.
   const moonModalMounted = useMountedOnce(showMoonModal);
@@ -457,7 +459,7 @@ export default function App() {
   return (
     <div 
       className="h-[100dvh] w-full flex justify-center items-center p-0 sm:p-6 text-white antialiased overflow-hidden"
-      style={{ backgroundColor: topSkyColor }}
+      style={{ background: getThemePageBackground(theme) ?? topSkyColor }}
     >
       
       {/* Skip-to-content link for keyboard/screen-reader users */}

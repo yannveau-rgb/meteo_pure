@@ -897,3 +897,11 @@
   to { opacity: 1; }
 }
 
+
+/* Les tuiles qui défilent sous la barre du bas se terminent par une coupure nette
+   (tuile « tronquée » + trait). Un fondu sur les derniers pixels adoucit la
+   coupure, quel que soit le thème. */
+#main-content {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent 100%);
+}

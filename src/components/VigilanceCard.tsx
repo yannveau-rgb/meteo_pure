@@ -25,7 +25,7 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
         id="vigilance-widget"
         onClick={() => setIsOpen(true)}
         aria-haspopup="dialog"
-        className="w-full text-left glass-premium rounded-3xl p-4 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:brightness-105 hover:scale-[1.02] active:scale-95 h-40 relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60"
+        className="w-full text-left glass-premium rounded-3xl p-4 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:brightness-105 hover:scale-[1.02] active:scale-95 min-h-40 relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60"
       >
         <div className="flex justify-between items-center text-[11px] text-white/50 uppercase tracking-widest leading-none select-none w-full">
           <span className="whitespace-nowrap">Vigilance</span>

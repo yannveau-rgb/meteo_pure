@@ -277,7 +277,7 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
             </svg>
             <div className="flex justify-between px-1.5 text-[11px] font-bold text-white/50 uppercase">
               {uvChart.points.map((pt, idx) => (
-                <span key={idx} className={selectedUvDay === idx ? 'text-amber-200' : ''}>{pt.label}</span>
+                <span key={idx} className={selectedUvDay === idx ? 'text-amber-200' : ''}>{pt.label.length > 4 ? pt.label.slice(0, 3) : pt.label}</span>
               ))}
             </div>
           </div>
