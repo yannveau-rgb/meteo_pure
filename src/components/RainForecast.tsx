@@ -106,7 +106,7 @@ export default function RainForecast({ rainData, onOpenRadar }: RainForecastProp
       {/* Dynamic inline stats view inside Pluie panel */}
       <div className="mt-2 text-center min-h-[16px] flex items-center justify-center transition-all duration-200">
         <p className="text-[11px] text-white/75 font-semibold leading-normal">
-          {selectedBar !== null ? (
+          {selectedBar !== null && rainData[selectedBar] ? (
             <span>
               +{rainData[selectedBar].minutes} min : {getIntensityLabel(rainData[selectedBar].intensity)}
             </span>

@@ -317,7 +317,8 @@ export function calculateVigilance(
 ): VigilanceStatus {
   // Météo-France vigilance is driven by gusts, not sustained wind speed —
   // use whichever is higher so a gusty-but-calm-average hour isn't underrated.
-  const windKnown = windSpeed !== undefined || windGusts !== undefined;
+  // `!= null` on purpose: an API `null` is as unknown as `undefined`.
+  const windKnown = windSpeed != null || windGusts != null;
   const effectiveWind = Math.max(windSpeed ?? 0, windGusts ?? 0);
   const categories: VigilanceCategory[] = [
     {

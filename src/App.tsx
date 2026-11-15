@@ -147,6 +147,11 @@ export default function App() {
     setSelectedDayIndex(0);
   }, [currentCommune]);
 
+  // A refresh can bring fewer days than before: never keep a selection past the end.
+  useEffect(() => {
+    if (weather && selectedDayIndex >= weather.daily.length) setSelectedDayIndex(0);
+  }, [weather, selectedDayIndex]);
+
   // Position of the sun in the sky. The hour-by-hour ruler was removed, so the
   // sky always reflects the live hour (stable within a given minute).
   const now = new Date();

@@ -133,6 +133,11 @@ describe('fetchWeatherData — pas de valeur inventée', () => {
     const w = await fetchWeatherData(commune);
     expect(w.current.humidity).toBeUndefined();
     expect(w.current.windSpeed).toBeUndefined();
+    // Un `null` de l'API (rafales comprises) est aussi inconnu qu'un champ absent :
+    // le vent n'est alors « non évalué », pas vert.
+    expect(w.current.windGusts).toBeUndefined();
+    const wind = w.vigilance.categories.find((c) => c.name === 'Vent violent');
+    expect(wind?.description).toMatch(/indisponible/i);
   });
 
   it("échoue plutôt que d'afficher 15 °C quand aucun modèle ne donne de température", async () => {

@@ -69,7 +69,7 @@ export interface DailyForecastItem {
   tempMin: number;
   weatherCode: number;
   iconName: string;
-  uvIndex: number;
+  uvIndex?: number;
   precipitationSum?: number;  // mm
   precipProbMax?: number;     // %
   windMax?: number;           // km/h
