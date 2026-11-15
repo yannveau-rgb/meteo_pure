@@ -192,14 +192,26 @@ function DailyForecast({
                   disagree — a badge on every row would be noise, and silence
                   correctly reads as "nothing to worry about". */}
               <span className="w-3 shrink-0 flex justify-center">
-                {day.confidence && day.confidence !== 'high' && (
-                  <span
-                    title={`${CONFIDENCE_LABELS[day.confidence]} · écart ${day.modelSpread}°C entre modèles`}
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      day.confidence === 'low' ? 'bg-orange-400/80' : 'bg-white/30'
-                    }`}
-                  />
-                )}
+                {(() => {
+                  const tempFlag = day.confidence && day.confidence !== 'high';
+                  const rainFlag = day.rainConfidence && day.rainConfidence !== 'high';
+                  if (!tempFlag && !rainFlag) return null;
+                  const reasons = [
+                    tempFlag ? `${CONFIDENCE_LABELS[day.confidence!]} · écart ${day.modelSpread}°C entre modèles` : null,
+                    rainFlag
+                      ? (day.rainConfidence === 'low'
+                          ? 'Modèles en désaccord sur la pluie (sec ou pluvieux)'
+                          : 'Quantités de pluie très différentes selon les modèles')
+                      : null,
+                  ].filter(Boolean).join(' · ');
+                  const strong = day.confidence === 'low' || day.rainConfidence === 'low';
+                  return (
+                    <span
+                      title={reasons}
+                      className={`w-1.5 h-1.5 rounded-full ${strong ? 'bg-orange-400/80' : 'bg-white/30'}`}
+                    />
+                  );
+                })()}
               </span>
             </motion.button>
           );
@@ -216,7 +228,7 @@ function DailyForecast({
           </strong>
         </p>
         <p>Modèles Météo-France à maille fine (AROME / ARPEGE)</p>
-        {dailyData.some(d => d.confidence && d.confidence !== 'high') && (
+        {dailyData.some(d => (d.confidence && d.confidence !== 'high') || (d.rainConfidence && d.rainConfidence !== 'high')) && (
           <p className="flex items-center justify-center gap-1.5 text-white/60 font-medium normal-case">
             <span className="w-1.5 h-1.5 rounded-full bg-orange-400/80" />
             Les modèles divergent sur ces jours

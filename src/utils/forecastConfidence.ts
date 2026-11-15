@@ -27,6 +27,26 @@ export const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
 };
 
 /**
+ * Do the models agree on whether it rains on a given day? Daily precipitation
+ * totals (mm) from each model. The temperature spread says nothing about rain,
+ * which is where forecasts go wrong most visibly (a shower cell 20 km off).
+ *
+ *  - low:    one model gives a wet day (>= 1 mm) while another gives a dry one (< 0.2 mm)
+ *  - medium: all on the same side but totals differ by 4 mm or more
+ *  - high:   consistent
+ * null with fewer than two usable models, for the same reason as above.
+ */
+export function assessRainAgreement(values: Array<number | null | undefined>): ConfidenceLevel | null {
+  const usable = values.filter((v): v is number => typeof v === 'number' && !isNaN(v));
+  if (usable.length < 2) return null;
+  const max = Math.max(...usable);
+  const min = Math.min(...usable);
+  if (max >= 1 && min < 0.2) return 'low';
+  if (max - min >= 4) return 'medium';
+  return 'high';
+}
+
+/**
  * Classifies agreement between per-model temperature predictions for one day.
  * Returns null when fewer than two models supplied a value — with a single
  * source there is no agreement to measure, and inventing a confidence level

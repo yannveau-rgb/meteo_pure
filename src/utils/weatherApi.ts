@@ -1,6 +1,6 @@
 import { Commune, WeatherData, CurrentWeather, HourlyForecastItem, DailyForecastItem } from '../types';
 import { parseRealMinutelyRain, calculateVigilance, getWeatherUI } from './weatherUtils';
-import { assessConfidence } from './forecastConfidence';
+import { assessConfidence, assessRainAgreement } from './forecastConfidence';
 import { fetchObservation } from './observationApi';
 
 /**
@@ -267,8 +267,8 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
   // Per-model series, captured pre-merge. Model agreement can only be measured
   // against un-blended values, and the consensus median needs each model's own
   // number rather than the coalesced one.
-  type ModelSeries = { hourlyTemp: any[]; dailyMax: any[]; dailyMin: any[]; hourlyCloud: any[] };
-  const empty = (): ModelSeries => ({ hourlyTemp: [], dailyMax: [], dailyMin: [], hourlyCloud: [] });
+  type ModelSeries = { hourlyTemp: any[]; dailyMax: any[]; dailyMin: any[]; hourlyCloud: any[]; dailyPrecip: any[] };
+  const empty = (): ModelSeries => ({ hourlyTemp: [], dailyMax: [], dailyMin: [], hourlyCloud: [], dailyPrecip: [] });
   const models: { meteoFrance: ModelSeries; ecmwf: ModelSeries; blend: ModelSeries } = {
     meteoFrance: empty(), ecmwf: empty(), blend: empty(),
   };
@@ -314,6 +314,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       dailyMax: Array.isArray(src?.daily?.temperature_2m_max) ? [...src.daily.temperature_2m_max] : [],
       dailyMin: Array.isArray(src?.daily?.temperature_2m_min) ? [...src.daily.temperature_2m_min] : [],
       hourlyCloud: Array.isArray(src?.hourly?.cloud_cover) ? [...src.hourly.cloud_cover] : [],
+      dailyPrecip: Array.isArray(src?.daily?.precipitation_sum) ? [...src.daily.precipitation_sum] : [],
     });
     // When Météo-France failed outright, `data` *is* the blend — counting it
     // twice would fake a perfect agreement between two identical series.
@@ -772,6 +773,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
         humidity: dayAvgHumidity,
         confidence: dayConfidence?.level,
         modelSpread: dayConfidence?.spread,
+        rainConfidence: assessRainAgreement([models.meteoFrance.dailyPrecip[k], models.ecmwf.dailyPrecip[k], models.blend.dailyPrecip[k]]) ?? undefined,
         sunrise: dailySunrise[k] ? dailySunrise[k].split('T')[1]?.substring(0, 5) : undefined,
         sunset: dailySunset[k] ? dailySunset[k].split('T')[1]?.substring(0, 5) : undefined,
         hourly: dailyHourly

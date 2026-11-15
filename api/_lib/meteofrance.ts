@@ -344,7 +344,7 @@ function ageMinutes(record: any): number | null {
  * below are deliberate: a silently mis-scaled temperature is far more damaging
  * than a missing one, since it looks perfectly plausible on screen.
  */
-function parseObservation(
+export function parseObservation(
   fresh: any,
   hourly: any,
   station: Station,

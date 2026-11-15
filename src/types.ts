@@ -77,6 +77,8 @@ export interface DailyForecastItem {
   humidity?: number;          // % average over daytime hours (7h-21h)
   confidence?: 'high' | 'medium' | 'low';  // multi-model agreement
   modelSpread?: number;       // °C between the most and least warm model
+  /** Do the models agree on whether it rains that day? */
+  rainConfidence?: 'high' | 'medium' | 'low';
   sunrise?: string;           // "06:12" — that day's actual sunrise, not today's
   sunset?: string;            // "21:34" — that day's actual sunset, not today's
   hourly?: HourlyForecastItem[];
