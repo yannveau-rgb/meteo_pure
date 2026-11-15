@@ -805,17 +805,21 @@
 /* OSM/Leaflet attribution must stay visible (tile usage policy). It is tiny
    by default and unreadable on the dark radar card, so it gets its own
    contrast chip rather than being disabled. */
-.radar-attribution.leaflet-control-attribution {
-  background: rgba(2, 6, 23, 0.75);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 10px;
+/* Three classes on purpose: Leaflet ships `.leaflet-container
+   .leaflet-control-attribution` (two classes) and its stylesheet is injected
+   after ours, so an equal-specificity rule would lose the tie and render white
+   text on a white chip. */
+.leaflet-container .radar-attribution.leaflet-control-attribution {
+  background: rgba(2, 6, 23, 0.82);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
   line-height: 1.3;
   padding: 1px 6px;
   border-radius: 6px 0 0 0;
   margin: 0;
 }
 
-.radar-attribution.leaflet-control-attribution a {
+.leaflet-container .radar-attribution.leaflet-control-attribution a {
   color: rgba(186, 230, 253, 0.9);
 }
 

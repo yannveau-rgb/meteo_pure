@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useMemo } from 'react';
+﻿import React, { Suspense, lazy, useMemo } from 'react';
 import {
   Clock,
   Loader2,
@@ -129,7 +129,7 @@ export default function PureDetailedCards({
 
               {weather.current.observed && (
                 <InfoBadge
-                  className="pill !text-[10px] !py-0.5 !bg-emerald-400/20 !border-emerald-400/30 !text-emerald-200"
+                  className="pill !py-0.5 !bg-emerald-400/20 !border-emerald-400/30 !text-emerald-200"
                   label={
                     `Relevé de la station ${weather.current.observed.station}, à ${weather.current.observed.distanceKm} km` +
                     (weather.current.observed.lapseCorrected ? `, ajusté de ${weather.current.observed.altitudeDeltaM} m de dénivelé` : '')
@@ -140,7 +140,7 @@ export default function PureDetailedCards({
               )}
 
               {staleSince && (
-                <span className="pill !text-[10px] !bg-amber-500/20 !border-amber-400/30 !text-amber-200">
+                <span className="pill !bg-amber-500/20 !border-amber-400/30 !text-amber-200">
                   Hors-ligne · {formatCacheTime(staleSince)}
                 </span>
               )}

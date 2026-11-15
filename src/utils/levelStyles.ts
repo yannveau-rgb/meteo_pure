@@ -45,7 +45,10 @@ const LEVEL_STYLES: Record<VigilanceLevel, LevelStyle> = {
     accentText: 'text-yellow-400',
     outline: 'border-yellow-400/30 bg-yellow-400/5',
     badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-    banner: 'bg-yellow-500/25 text-white border-yellow-500/40',
+    // A solid yellow reads as actual vigilance yellow; yellow at 25% opacity
+    // over the navy glass turned into a muddy olive. Dark text keeps the WCAG
+    // contrast, so the banner sets its own text color.
+    banner: 'bg-yellow-400 text-yellow-950 border-yellow-300',
   },
   orange: {
     label: 'Orange',

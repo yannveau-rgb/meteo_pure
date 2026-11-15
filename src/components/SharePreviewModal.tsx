@@ -102,7 +102,10 @@ export default function SharePreviewModal({
               ) : imageSrc ? (
                 <>
                   {/* Real Image loaded for touch/click interaction */}
-                  <div className="relative group w-full rounded-2xl overflow-hidden border border-white/15 shadow-lg bg-black/40">
+                  {/* shrink-0: the image is taller than the modal body. Without it,
+                      the flex parent shrinks this box and clips the preview; the
+                      body should scroll instead. */}
+                  <div className="relative group w-full shrink-0 rounded-2xl overflow-hidden border border-white/15 shadow-lg bg-black/40">
                     <img
                       src={imageSrc}
                       alt="Aperçu météo"

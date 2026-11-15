@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+﻿import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Play, Pause, Radio, CloudOff } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
@@ -174,7 +174,7 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
         </div>
         <div className="flex items-center gap-2">
           {currentFrame && (
-            <span className={`pill !text-[10px] ${
+            <span className={`pill ${
               currentFrame.isNowcast
                 ? '!bg-amber-500/20 !border-amber-500/30 !text-amber-300'
                 : '!bg-sky-500/20 !border-sky-500/30 !text-sky-300'
@@ -227,7 +227,9 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
           />
           <div className="flex justify-between text-[11px] text-white/60 font-bold">
             <span>Passé</span>
-            <span className="text-amber-400/70">◆ Nowcast ({frames.length - pastCount} pas)</span>
+            <span className="text-amber-400/70">
+              {pastCount < frames.length && `◆ Nowcast (${frames.length - pastCount} pas)`}
+            </span>
             <span>+30 min</span>
           </div>
         </div>

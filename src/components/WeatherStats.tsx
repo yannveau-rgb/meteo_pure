@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { CurrentWeather, HourlyForecastItem, DailyForecastItem } from '../types';
 
 interface WeatherStatsProps {
@@ -138,7 +138,7 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
       <div className="flex justify-between items-center text-[11px] font-semibold text-white/70 pt-0.5">
         <div className="flex items-center gap-1.5">
           <span>UV : {uvIndex}</span>
-          <span className={`pill !text-[10px] !py-0 border ${uvRisk.color}`}>{uvRisk.label}</span>
+          <span className={`pill !py-0 border ${uvRisk.color}`}>{uvRisk.label}</span>
         </div>
         <div className="flex items-center gap-2">
           {current.windDirection !== undefined && (
@@ -275,7 +275,7 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
                 </g>
               ))}
             </svg>
-            <div className="flex justify-between px-1.5 text-[10px] font-bold text-white/50 uppercase">
+            <div className="flex justify-between px-1.5 text-[11px] font-bold text-white/50 uppercase">
               {uvChart.points.map((pt, idx) => (
                 <span key={idx} className={selectedUvDay === idx ? 'text-amber-200' : ''}>{pt.label}</span>
               ))}

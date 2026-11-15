@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'motion/react';
+﻿import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 import { NotificationIntensity } from '../utils/notificationService';
 
@@ -84,9 +84,9 @@ export default function Toast({ toast, cityName, onDismiss }: ToastProps) {
               "{toast.message}"
             </p>
 
-            <div className="flex justify-between items-center text-[9px] text-white/50 font-extrabold pl-0.5 mt-1 uppercase select-none tracking-widest">
+            <div className="flex justify-between items-center text-[11px] text-white/50 font-extrabold pl-0.5 mt-1 uppercase select-none tracking-widest">
               <span>Météo à {cityName}</span>
-              <span className="bg-white/15 px-1.5 py-0.5 rounded-full text-[9px] text-white/90">
+              <span className="bg-white/15 px-1.5 py-0.5 rounded-full text-[11px] text-white/90">
                 {toast.intensity === 'alert_red' ? 'Vigilance rouge' :
                  toast.intensity === 'alert_orange' ? 'Vigilance orange' :
                  toast.intensity === 'alert_yellow' ? 'Vigilance jaune' :

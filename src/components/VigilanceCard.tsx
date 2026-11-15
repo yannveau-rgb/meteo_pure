@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { VigilanceStatus } from '../types';
 import { ShieldAlert, X, Sun } from 'lucide-react';
@@ -30,7 +30,7 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
           <>
             {/* Vigilance active: it outranks UV, so it takes the card's
                 dominant slot instead of a small footer pill. */}
-            <div className="flex justify-between items-center text-[10px] text-white/50 uppercase tracking-widest leading-none select-none w-full">
+            <div className="flex justify-between items-center text-[11px] text-white/50 uppercase tracking-widest leading-none select-none w-full">
               <span className="whitespace-nowrap">Vigilance</span>
               <ShieldAlert className={`w-3.5 h-3.5 shrink-0 ${activeColor.accentText}`} />
             </div>
@@ -43,12 +43,12 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
               <span className={`text-2xl sm:text-3xl font-black tracking-wide drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)] ${activeColor.accentText}`}>
                 {activeColor.label}
               </span>
-              <span className="text-[10px] font-semibold text-white/50 uppercase tracking-wider mt-1 whitespace-nowrap">Voir les détails</span>
+              <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider mt-1 whitespace-nowrap">Voir les détails</span>
             </div>
 
             <div className="w-full border-t border-white/5 pt-2 flex items-center justify-between gap-2 select-none">
-              <span className="text-[9px] text-white/60 font-medium tracking-wide uppercase whitespace-nowrap">UV</span>
-              <div className="flex items-center gap-1.5 text-[9.5px] font-bold text-white/80 whitespace-nowrap">
+              <span className="text-[11px] text-white/60 font-medium tracking-wide uppercase whitespace-nowrap">UV</span>
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-white/80 whitespace-nowrap">
                 <Sun className="w-3 h-3 text-amber-300 shrink-0" />
                 {uvIndex !== undefined ? `${uvIndex} / 11` : 'Indisponible'}
               </div>
@@ -57,7 +57,7 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
         ) : (
           <>
             {/* Card Header */}
-            <div className="flex justify-between items-center text-[10px] text-white/50 uppercase tracking-widest leading-none select-none w-full">
+            <div className="flex justify-between items-center text-[11px] text-white/50 uppercase tracking-widest leading-none select-none w-full">
               <span>Rayonnement UV</span>
               <Sun className="w-3.5 h-3.5 text-white/60" />
             </div>
@@ -71,7 +71,7 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
                 <span className="text-xs font-semibold text-white/60 tracking-tight">/11</span>
               </div>
 
-              <span className={`text-[9px] font-black tracking-wider uppercase mt-2 rounded-full px-2.5 py-0.5 border select-none transition-colors duration-300 ${
+              <span className={`text-[11px] font-black tracking-wider uppercase mt-2 rounded-full px-2.5 py-0.5 border select-none transition-colors duration-300 ${
                 uvIndex !== undefined && uvIndex >= 11 ? 'bg-violet-500/10 text-violet-300 border-violet-500/30' :
                 uvIndex !== undefined && uvIndex >= 8 ? 'bg-rose-500/10 text-rose-300 border-rose-500/30' :
                 uvIndex !== undefined && uvIndex >= 6 ? 'bg-orange-500/10 text-orange-300 border-orange-500/30' :
@@ -88,9 +88,9 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
 
             {/* Elegant Bottom Border & Vigilance Status */}
             <div className="w-full border-t border-white/5 pt-2 flex items-center justify-between gap-2 select-none">
-              <span className="text-[9px] text-white/60 font-medium tracking-wide uppercase">Vigilance</span>
+              <span className="text-[11px] text-white/60 font-medium tracking-wide uppercase">Vigilance</span>
 
-              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9.5px] font-bold tracking-normal ${activeColor.outline}`}>
+              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-bold tracking-normal ${activeColor.outline}`}>
                 <span className="relative flex h-1.5 w-1.5">
                   <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${activeColor.dot}`}></span>
                 </span>
@@ -160,7 +160,7 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
                           <Sun className="w-4 h-4 text-amber-300 fill-amber-400/20 animate-spin" style={{ animationDuration: '20s' }} />
                           <span className="font-bold text-sm text-white">Rayonnement UV : {uvIndex} / 11+</span>
                         </div>
-                        <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                        <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border ${
                           uvIndex >= 11 ? 'bg-violet-500/15 text-violet-300 border-violet-500/30' :
                           uvIndex >= 8 ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' :
                           uvIndex >= 6 ? 'bg-orange-500/15 text-orange-300 border-orange-500/30' :
@@ -191,7 +191,7 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
                         <div key={i} className="p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-white">
                           <div className="flex justify-between items-center">
                             <span className="font-bold text-sm text-white">{cat.name}</span>
-                            <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${catColor.badge}`}>
+                            <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${catColor.badge}`}>
                               {catColor.label}
                             </span>
                           </div>
@@ -212,7 +212,7 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
 
                 {/* FIXED INTERNAL FOOTER */}
                 <div className="px-5 py-4 border-t border-white/15 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between shrink-0">
-                  <span className="text-[9px] text-white/50 select-none">
+                  <span className="text-[11px] text-white/50 select-none">
                     Modèles de prévisions numériques Météo-France (AROME).
                   </span>
                   <button

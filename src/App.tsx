@@ -890,13 +890,11 @@ export default function App() {
                 {cartesMode === 'radar' ? (
                   weather ? (
                     <Suspense fallback={<LazyFallback />}>
-                      <div className="card card--tight flex-1 flex flex-col min-h-[380px] overflow-hidden">
-                        <RainRadar
-                          latitude={weather.latitude}
-                          longitude={weather.longitude}
-                          cityName={currentCommune.nom}
-                        />
-                      </div>
+                      <RainRadar
+                        latitude={weather.latitude}
+                        longitude={weather.longitude}
+                        cityName={currentCommune.nom}
+                      />
                     </Suspense>
                   ) : (
                     <div className="flex flex-col items-center justify-center p-8 text-center bg-white/5 border border-white/10 rounded-2xl">
@@ -1014,7 +1012,12 @@ export default function App() {
 
                   {/* Categories */}
                   <div className="space-y-2">
-                    <div className={`tile flex items-center gap-3 transition-opacity duration-300 ${!notifSettings.systemEnabled ? 'opacity-40' : ''}`}>
+                    {!notifSettings.systemEnabled && (
+                      <p className="meta px-1">
+                        Activez d'abord les notifications en arrière-plan pour régler ces catégories.
+                      </p>
+                    )}
+                    <div className={`tile flex items-center gap-3 transition-opacity duration-300 ${!notifSettings.systemEnabled ? 'opacity-60' : ''}`}>
                       <div className="w-8 h-8 rounded-xl bg-sky-500/15 border border-sky-400/20 flex items-center justify-center shrink-0">
                         <CloudRain className="w-4 h-4 text-sky-300" />
                       </div>
@@ -1026,10 +1029,11 @@ export default function App() {
                         checked={notifSettings.rainNotificationsEnabled !== false}
                         onChange={handleToggleRainNotifications}
                         label="Notifications pluie"
+                        disabled={!notifSettings.systemEnabled}
                       />
                     </div>
 
-                    <div className={`tile flex items-center gap-3 transition-opacity duration-300 ${!notifSettings.systemEnabled ? 'opacity-40' : ''}`}>
+                    <div className={`tile flex items-center gap-3 transition-opacity duration-300 ${!notifSettings.systemEnabled ? 'opacity-60' : ''}`}>
                       <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-400/20 flex items-center justify-center shrink-0">
                         <CloudLightning className="w-4 h-4 text-amber-300" />
                       </div>
@@ -1042,10 +1046,11 @@ export default function App() {
                         onChange={handleToggleStormNotifications}
                         label="Notifications orages"
                         activeColorClass="bg-amber-500"
+                        disabled={!notifSettings.systemEnabled}
                       />
                     </div>
 
-                    <div className={`tile flex items-center gap-3 transition-opacity duration-300 ${!notifSettings.systemEnabled ? 'opacity-40' : ''}`}>
+                    <div className={`tile flex items-center gap-3 transition-opacity duration-300 ${!notifSettings.systemEnabled ? 'opacity-60' : ''}`}>
                       <div className="w-8 h-8 rounded-xl bg-rose-500/15 border border-rose-400/20 flex items-center justify-center shrink-0">
                         <AlertTriangle className="w-4 h-4 text-rose-300" />
                       </div>
@@ -1058,6 +1063,7 @@ export default function App() {
                         onChange={handleToggleAlertNotifications}
                         label="Notifications vigilance"
                         activeColorClass="bg-rose-500"
+                        disabled={!notifSettings.systemEnabled}
                       />
                     </div>
                   </div>
@@ -1122,9 +1128,9 @@ export default function App() {
                     type="button"
                     onClick={handleOpenMorningBrief}
                     disabled={!weather}
-                    className="w-full py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 disabled:opacity-40 disabled:cursor-not-allowed border border-amber-400/40 text-[12px] font-bold text-amber-100 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer"
+                    className="w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-40 disabled:cursor-not-allowed border border-amber-300 text-[12px] font-bold text-amber-950 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
                   >
-                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <Sparkles className="w-4 h-4 text-amber-900" />
                     <span>Lire / écouter le brief du jour</span>
                   </button>
                 </section>

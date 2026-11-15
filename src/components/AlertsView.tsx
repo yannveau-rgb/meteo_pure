@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Bell, ShieldAlert, PhoneCall, CheckCircle2 } from 'lucide-react';
 import { VigilanceStatus } from '../types';
 import { getLevelStyle } from '../utils/levelStyles';
@@ -94,10 +94,10 @@ export default function AlertsView({ vigilance, cityName }: AlertsViewProps) {
           <div className="space-y-3">
             {/* Main Status Badge */}
             <div className={`tile !p-3.5 flex items-center gap-3 shadow-md ${getLevelStyle(vigilance.globalLevel).banner}`}>
-              <ShieldAlert className="w-5 h-5 text-white drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] shrink-0" />
+              <ShieldAlert className="w-5 h-5 shrink-0" />
               <div>
                 <h3 className="font-bold text-[12px] uppercase tracking-widest">Vigilance active à {cityName}</h3>
-                <p className="text-[11px] font-bold leading-relaxed mt-0.5 text-white">
+                <p className="text-[11px] font-bold leading-relaxed mt-0.5">
                   {getAlertLabelText(vigilance.globalLevel)}
                 </p>
               </div>
@@ -115,7 +115,7 @@ export default function AlertsView({ vigilance, cityName }: AlertsViewProps) {
                         {cat.description}
                       </p>
                     </div>
-                    <span className={`pill !text-[10px] ${catStyle.badge}`}>
+                    <span className={`pill ${catStyle.badge}`}>
                       {catStyle.label.toUpperCase()}
                     </span>
                   </div>

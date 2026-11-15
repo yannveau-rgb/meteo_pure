@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'motion/react';
+﻿import { motion, AnimatePresence } from 'motion/react';
 import { getNext7DaysMoonPhases } from '../../utils/weatherUtils';
 import { useModalA11y } from '../../hooks/useModalA11y';
 
@@ -30,7 +30,7 @@ export default function MoonPhasesModal({ isOpen, onClose }: MoonPhasesModalProp
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center w-full mb-6 relative">
-              <h2 id="moon-modal-title" className="text-xl font-bold text-white tracking-wide">Cycles Lunaires</h2>
+              <h2 id="moon-modal-title" className="text-xl font-bold text-white tracking-wide">Cycles lunaires</h2>
               <button onClick={onClose} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400/60">
                 &times;
               </button>
@@ -45,10 +45,10 @@ export default function MoonPhasesModal({ isOpen, onClose }: MoonPhasesModalProp
                       <span className="text-xs text-white/50 font-bold uppercase tracking-wider">
                         {index === 0 ? "Aujourd'hui" : index === 1 ? "Demain" : moon.date.toLocaleDateString('fr-FR', { weekday: 'long' })}
                       </span>
-                      <span className="text-sm text-white font-medium capitalize">{moon.name}</span>
+                      <span className="text-sm text-white font-medium">{moon.name}</span>
                     </div>
                   </div>
-                  <div className="text-[10px] text-white/60 font-mono">
+                  <div className="text-[11px] text-white/60 font-mono">
                     {Math.round(moon.phase * 100)}%
                   </div>
                 </div>

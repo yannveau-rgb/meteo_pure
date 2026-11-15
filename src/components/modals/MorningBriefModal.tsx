@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'motion/react';
+﻿import { motion, AnimatePresence } from 'motion/react';
 import { Loader2, Volume2, VolumeX, Sparkles, Settings } from 'lucide-react';
 import { useModalA11y } from '../../hooks/useModalA11y';
 import { MorningBriefView } from '../../hooks/useMorningBrief';
@@ -85,7 +85,7 @@ export default function MorningBriefModal({
                     <h3 className="kicker text-sky-200 flex items-center gap-2">
                       {aiBrief.title}
                       {aiBrief.ai !== false && (
-                        <span className="pill !py-0 !text-[10px] !bg-sky-500/20 !border-sky-400/40 !text-sky-200">
+                        <span className="pill !py-0 !bg-sky-500/20 !border-sky-400/40 !text-sky-200">
                           IA
                         </span>
                       )}
@@ -142,7 +142,7 @@ export default function MorningBriefModal({
 
             {!loadingBrief && aiBrief && (
               <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between gap-3">
-                <p className="text-[10px] text-white/45 leading-snug">
+                <p className="text-[11px] text-white/45 leading-snug">
                   Faits calculés localement, punchline générée par IA.
                 </p>
                 <button

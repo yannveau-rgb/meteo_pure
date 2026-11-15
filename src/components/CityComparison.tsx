@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
   ArrowRightLeft,
@@ -238,7 +238,7 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
                       <span className="text-[11px] text-white/50 ml-2 font-mono">({commune.codesPostaux[0]})</span>
                     </div>
                   </div>
-                  <span className="pill !text-[10px] uppercase font-mono">
+                  <span className="pill uppercase font-mono">
                     {commune.codeDepartement}
                   </span>
                 </button>
@@ -310,7 +310,7 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
               <div className="grid grid-cols-2 gap-3.5">
                 {/* Left Card: Main Commune */}
                 <div className="tile !p-4 flex flex-col items-center text-center space-y-2.5 relative overflow-hidden !bg-gradient-to-br !from-indigo-950/40 !to-slate-900/50">
-                  <div className="absolute top-2.5 left-2.5 pill !text-[10px] !py-0.5 !bg-sky-500 !border-sky-400 !text-white uppercase">
+                  <div className="absolute top-2.5 left-2.5 pill !py-0.5 !bg-sky-500 !border-sky-400 !text-white uppercase">
                     Ici
                   </div>
                   <span className="text-[12px] uppercase font-bold tracking-wider text-slate-300 mt-1 truncate max-w-full">
@@ -330,7 +330,7 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
 
                 {/* Right Card: Compared Commune */}
                 <div className="tile !p-4 flex flex-col items-center text-center space-y-2.5 relative overflow-hidden !bg-gradient-to-br !from-sky-950/40 !to-slate-900/50 !border-sky-500/20">
-                  <div className="absolute top-2.5 right-2.5 pill !text-[10px] !py-0.5 !bg-orange-500 !border-orange-400 !text-white uppercase">
+                  <div className="absolute top-2.5 right-2.5 pill !py-0.5 !bg-orange-500 !border-orange-400 !text-white uppercase">
                     Cible
                   </div>
                   <span className="text-[12px] uppercase font-bold tracking-wider text-amber-300 mt-1 truncate max-w-full">

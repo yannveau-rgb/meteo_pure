@@ -335,6 +335,13 @@ export async function generateElementDataUrl(elementId: string): Promise<string>
           docElement.style.filter = 'none';
           docElement.style.backdropFilter = 'none';
           (docElement.style as any).webkitBackdropFilter = 'none';
+          // html2canvas 1.4 mis-measures word gaps with our self-hosted
+          // variable Inter inside its cloned iframe: the exported PNG reads
+          // "ModèlesMétéo-France". The clone never finishes loading the
+          // webfont before text is measured, so pin the system stack for the
+          // still image — metrics then match what is drawn.
+          docElement.style.fontFamily =
+            '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif';
           // A card that clips for a scrolling UI must not clip in a still
           // image: the header was losing its title to `overflow: hidden`.
           docElement.style.overflow = 'visible';

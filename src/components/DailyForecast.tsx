@@ -157,7 +157,7 @@ function DailyForecast({
                 </span>
                 {dayLight && (
                   <span className="text-[11px] text-white/45 font-medium tabular-figures mt-0.5">
-                    {dayLight.dayLengthFormatted} de jour
+                    {dayLight.dayLengthFormatted}&nbsp;de jour
                   </span>
                 )}
               </div>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Wind, Flower2 } from 'lucide-react';
 import {
@@ -42,7 +42,7 @@ export default function AirQualityCard({ data }: AirQualityCardProps) {
       transition={{ duration: 0.35, ease: 'easeOut' }}
       className="glass-premium rounded-3xl p-4 shadow-lg select-none text-white space-y-3"
     >
-      <div className="flex items-center gap-2 text-[10px] font-bold text-sky-200 uppercase tracking-widest border-b border-white/10 pb-2">
+      <div className="flex items-center gap-2 text-[11px] font-bold text-sky-200 uppercase tracking-widest border-b border-white/10 pb-2">
         <Wind className="w-3.5 h-3.5 text-sky-300" />
         <span>Air &amp; pollens</span>
       </div>
@@ -51,7 +51,7 @@ export default function AirQualityCard({ data }: AirQualityCardProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-semibold tabular-figures">{Math.round(data.aqi!)}</span>
-            <span className="text-[10px] text-white/50 font-medium uppercase tracking-wider">indice europ.</span>
+            <span className="text-[11px] text-white/50 font-medium uppercase tracking-wider">indice europ.</span>
           </div>
           <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${SEVERITY_STYLES[band.severity]}`}>
             {band.label}
@@ -61,7 +61,7 @@ export default function AirQualityCard({ data }: AirQualityCardProps) {
 
       {notable.length > 0 ? (
         <div className="space-y-1.5 pt-1 border-t border-white/5">
-          <div className="flex items-center gap-1.5 text-[10px] text-white/50 font-semibold uppercase tracking-wider">
+          <div className="flex items-center gap-1.5 text-[11px] text-white/50 font-semibold uppercase tracking-wider">
             <Flower2 className="w-3 h-3 text-lime-300" />
             <span>Pollens actifs</span>
           </div>

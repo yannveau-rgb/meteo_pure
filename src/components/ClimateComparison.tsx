@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { getLocalClimatology } from '../utils/climatology';
 import { Thermometer, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 
@@ -71,12 +71,12 @@ function ClimateComparison({
       <div className="grid grid-cols-2 gap-3">
         {/* Box 1: Température Minimale */}
         <div className="bg-white/5 p-3 rounded-2xl border border-white/10 flex flex-col justify-between">
-          <span className="text-[10px] text-white/60 font-medium">Température de nuit (Min)</span>
+          <span className="text-[11px] text-white/60 font-medium">Température de nuit (Min)</span>
           <div className="flex items-baseline gap-1.5 mt-1.5">
             <span className="text-xl font-extrabold">{currentMin}°C</span>
-            <span className="text-[10px] text-white/50">actuel</span>
+            <span className="text-[11px] text-white/50">actuel</span>
           </div>
-          <div className="mt-2 pt-2 border-t border-white/5 flex justify-between items-center text-[10px]">
+          <div className="mt-2 pt-2 border-t border-white/5 flex justify-between items-center text-[11px]">
             <span className="text-white/60">Habituel : {stats.normalMin}°C</span>
             <span className={`font-bold ${stats.deviationMin > 1.2 ? 'text-rose-300' : stats.deviationMin < -1.2 ? 'text-sky-300' : 'text-emerald-300'}`}>
               {stats.deviationMin === 0 ? '±0' : formatDiff(stats.deviationMin)}
@@ -86,12 +86,12 @@ function ClimateComparison({
 
         {/* Box 2: Température Maximale */}
         <div className="bg-white/5 p-3 rounded-2xl border border-white/10 flex flex-col justify-between">
-          <span className="text-[10px] text-white/60 font-medium">Température de jour (Max)</span>
+          <span className="text-[11px] text-white/60 font-medium">Température de jour (Max)</span>
           <div className="flex items-baseline gap-1.5 mt-1.5">
             <span className="text-xl font-extrabold">{currentMax}°C</span>
-            <span className="text-[10px] text-white/50">actuel</span>
+            <span className="text-[11px] text-white/50">actuel</span>
           </div>
-          <div className="mt-2 pt-2 border-t border-white/5 flex justify-between items-center text-[10px]">
+          <div className="mt-2 pt-2 border-t border-white/5 flex justify-between items-center text-[11px]">
             <span className="text-white/60">Habituel : {stats.normalMax}°C</span>
             <span className={`font-bold ${stats.deviationMax > 1.2 ? 'text-rose-300' : stats.deviationMax < -1.2 ? 'text-sky-300' : 'text-emerald-300'}`}>
               {stats.deviationMax === 0 ? '±0' : formatDiff(stats.deviationMax)}
@@ -102,7 +102,7 @@ function ClimateComparison({
 
       {/* Visual Slide Gauge Comparative Scale */}
       <div className="bg-slate-900/40 p-3 rounded-2xl border border-white/5 space-y-2">
-        <div className="flex justify-between items-center text-[9px] text-white/50 uppercase font-extrabold">
+        <div className="flex justify-between items-center text-[11px] text-white/50 uppercase font-extrabold">
           <span>Inférieur</span>
           <span className={currentStatus.color}>Conforme</span>
           <span>Supérieur</span>
@@ -127,7 +127,7 @@ function ClimateComparison({
             <div className="w-1.5 h-1.5 rounded-full bg-slate-900" />
           </div>
         </div>
-        <div className="text-[9px] text-white/60 text-center select-none pt-0.5">
+        <div className="text-[11px] text-white/60 text-center select-none pt-0.5">
           Aide de lecture : le point marque le niveau d'écart moyen face aux normales de 1991-2020.
         </div>
       </div>
