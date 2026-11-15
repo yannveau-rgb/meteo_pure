@@ -45,7 +45,7 @@ export default function PureWeatherHero({
   const maxTemp = todayDaily ? Math.round(todayDaily.tempMax) : Math.round(temp + 3);
   const minTemp = todayDaily ? Math.round(todayDaily.tempMin) : Math.round(temp - 4);
   const humidity = todayDaily?.humidity ?? weather.current.humidity;
-  const uvIndex = todayDaily ? todayDaily.uvIndex : 0;
+  const uvIndex = todayDaily?.uvIndex;
 
   // Daylight duration & daily minutes gained/lost
   const daylight = useMemo(
@@ -56,7 +56,9 @@ export default function PureWeatherHero({
   // Editorial natural summary text
   const editorialText = (() => {
     if (mode === 'aqi') {
-      return `Indice qualité de l'air : ${airQualityLabel || 'Bon'} (${airQualityIndex ?? 25} AQI)`;
+      return airQualityIndex === undefined
+        ? "Indice qualité de l'air indisponible"
+        : `Indice qualité de l'air : ${airQualityLabel || '—'} (${airQualityIndex} AQI)`;
     }
     if (weather.current.weatherCode === 3) return "Ciel actuellement couvert et feutré";
     if (weather.current.weatherCode === 45 || weather.current.weatherCode === 48) return "Brouillard matinal et visibilité limitée";
@@ -192,9 +194,9 @@ export default function PureWeatherHero({
           <span>Max {maxTemp}°</span>
           <span>Min {minTemp}°</span>
           <span className="text-white/30">•</span>
-          <span>Humidité moy. {humidity}%</span>
+          <span>Humidité moy. {humidity !== undefined ? `${humidity}%` : '—'}</span>
           <span className="text-white/30">•</span>
-          <span>UV {uvIndex}</span>
+          <span>UV {uvIndex ?? '—'}</span>
         </div>
 
         {/* Quick horizontal favorite chips right on the main hero */}

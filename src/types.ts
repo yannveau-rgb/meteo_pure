@@ -34,8 +34,8 @@ export interface StationObservation {
 export interface CurrentWeather {
   temperature: number;
   feelsLike: number;
-  humidity: number;
-  windSpeed: number;
+  humidity?: number;        // % (absent si aucune source ne la donne)
+  windSpeed?: number;       // km/h (idem)
   windGusts?: number;       // km/h
   windDirection?: number;   // degrees 0-360
   cloudCover?: number;      // %

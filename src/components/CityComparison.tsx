@@ -32,6 +32,10 @@ const PRESET_COMMUNES: Commune[] = [
   { nom: 'Bordeaux', code: '33063', codesPostaux: ['33000'], centre: { type: 'Point', coordinates: [-0.5792, 44.8378] }, codeDepartement: '33' },
 ];
 
+/** Valeur absente (aucune source) : un tiret, jamais un chiffre inventé. */
+const fmtPct = (v?: number) => (v === undefined ? '—' : `${v}%`);
+const fmtKmh = (v?: number) => (v === undefined ? '—' : `${Math.round(v)} km/h`);
+
 export default function CityComparison({ currentCommune, currentWeather }: CityComparisonProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Commune[]>([]);
@@ -386,25 +390,25 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
                 {/* Humidity Comparison */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center text-[11px] text-slate-300">
-                    <span className="font-mono tabular-figures">{currentWeather.current.humidity}%</span>
+                    <span className="font-mono tabular-figures">{fmtPct(currentWeather.current.humidity)}</span>
                     <span className="flex items-center gap-1 text-[11px] text-white/60 font-medium uppercase">
                       <Droplets className="w-3 h-3 text-sky-400" /> Humidité
                     </span>
-                    <span className="font-mono tabular-figures">{comparedWeather.current.humidity}%</span>
+                    <span className="font-mono tabular-figures">{fmtPct(comparedWeather.current.humidity)}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 relative h-2">
                     {/* Left side progress */}
                     <div className="bg-white/10 rounded-l-full overflow-hidden flex justify-end">
                       <div 
                         className="h-full bg-sky-400 rounded-l-full min-w-[2%]" 
-                        style={{ width: `${currentWeather.current.humidity}%` }}
+                        style={{ width: `${currentWeather.current.humidity ?? 0}%` }}
                       />
                     </div>
                     {/* Right side progress */}
                     <div className="bg-white/10 rounded-r-full overflow-hidden">
                       <div 
                         className="h-full bg-sky-400 rounded-r-full min-w-[2%]" 
-                        style={{ width: `${comparedWeather.current.humidity}%` }}
+                        style={{ width: `${comparedWeather.current.humidity ?? 0}%` }}
                       />
                     </div>
                   </div>
@@ -413,25 +417,25 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
                 {/* Wind speed */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-center text-[11px] text-slate-300">
-                    <span className="font-mono tabular-figures">{Math.round(currentWeather.current.windSpeed)} km/h</span>
+                    <span className="font-mono tabular-figures">{fmtKmh(currentWeather.current.windSpeed)}</span>
                     <span className="flex items-center gap-1 text-[11px] text-white/60 font-medium uppercase">
                       <Wind className="w-3 h-3 text-emerald-400" /> Vent
                     </span>
-                    <span className="font-mono tabular-figures">{Math.round(comparedWeather.current.windSpeed)} km/h</span>
+                    <span className="font-mono tabular-figures">{fmtKmh(comparedWeather.current.windSpeed)}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 relative h-2">
                     {/* Left side progress */}
                     <div className="bg-white/10 rounded-l-full overflow-hidden flex justify-end">
                       <div 
                         className="h-full bg-emerald-400 rounded-l-full min-w-[2%]" 
-                        style={{ width: `${Math.min(100, (currentWeather.current.windSpeed / 100) * 100)}%` }}
+                        style={{ width: `${Math.min(100, ((currentWeather.current.windSpeed ?? 0) / 100) * 100)}%` }}
                       />
                     </div>
                     {/* Right side progress */}
                     <div className="bg-white/10 rounded-r-full overflow-hidden">
                       <div 
                         className="h-full bg-emerald-400 rounded-r-full min-w-[2%]" 
-                        style={{ width: `${Math.min(100, (comparedWeather.current.windSpeed / 100) * 100)}%` }}
+                        style={{ width: `${Math.min(100, ((comparedWeather.current.windSpeed ?? 0) / 100) * 100)}%` }}
                       />
                     </div>
                   </div>

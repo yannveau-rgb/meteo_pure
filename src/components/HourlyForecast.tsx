@@ -5,7 +5,7 @@ import { getWeatherUI, isHourNight } from '../utils/weatherUtils';
 
 interface HourlyForecastProps {
   hourlyData: HourlyForecastItem[];
-  humidity: number;
+  humidity?: number;
   dayName?: string;
   sunrise?: string;
   sunset?: string;
@@ -75,19 +75,21 @@ function HourlyForecast({ hourlyData, humidity, dayName = "Aujourd'hui", sunrise
         })}
       </div>
 
-      {/* Humidity progress slider line */}
-      <div className="space-y-2 pt-2 border-t border-white/10">
-        <div className="flex justify-between items-center text-[11px] font-bold text-white/50 tracking-wider">
-          <span className="uppercase">Modèle AROME</span>
-          <span className="text-white/80">Humidité {dayName === "Aujourd'hui" ? 'actuelle' : 'moyenne'} : {humidity}%</span>
+      {/* Humidity progress slider line (masquée si aucune source ne la donne) */}
+      {humidity !== undefined && (
+        <div className="space-y-2 pt-2 border-t border-white/10">
+          <div className="flex justify-between items-center text-[11px] font-bold text-white/50 tracking-wider">
+            <span className="uppercase">Modèle AROME</span>
+            <span className="text-white/80">Humidité {dayName === "Aujourd'hui" ? 'actuelle' : 'moyenne'} : {humidity}%</span>
+          </div>
+          <div className="relative w-full h-[3px] bg-white/15 rounded-full overflow-hidden">
+            <div 
+              className="absolute top-0 left-0 h-full bg-white/65 rounded-full" 
+              style={{ width: `${humidity}%` }}
+            />
+          </div>
         </div>
-        <div className="relative w-full h-[3px] bg-white/15 rounded-full overflow-hidden">
-          <div 
-            className="absolute top-0 left-0 h-full bg-white/65 rounded-full" 
-            style={{ width: `${humidity}%` }}
-          />
-        </div>
-      </div>
+      )}
     </div>
   );
 }

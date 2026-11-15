@@ -304,41 +304,12 @@ export function parseRealMinutelyRain(minutely15: {
 }
 
 /**
- * Fallback rain-in-the-hour estimate based on precipitation probability only.
- * Used when minutely_15 data is unavailable.
- */
-export function generateRainInTheHour(precipitationProb: number, _unused: number): RainInTheHour[] {
-  const times = [0, 15, 30, 45];
-
-  if (precipitationProb < 10) {
-    return times.map(m => ({ minutes: m, intensity: 'none' as const, percentage: 5 }));
-  }
-
-  return times.map((m, index) => {
-    const factor = precipitationProb + Math.sin((index + 1) * 1.5) * 20;
-
-    let intensity: 'none' | 'light' | 'moderate' | 'heavy' = 'none';
-    let percentage = 5;
-
-    if (factor > 80) {
-      intensity = 'heavy'; percentage = 80;
-    } else if (factor > 55) {
-      intensity = 'moderate'; percentage = 55;
-    } else if (factor > 25) {
-      intensity = 'light'; percentage = 30;
-    }
-
-    return { minutes: m, intensity, percentage };
-  });
-}
-
-/**
  * Calculates dynamic meteorological vigilance categories based on actual weather readings.
  * Includes French Météo-France standard alert names.
  */
 export function calculateVigilance(
   temp: number,
-  windSpeed: number,
+  windSpeed: number | undefined,
   weatherCode: number,
   rainAmt: number,
   dailyPrecipSum?: number,
@@ -346,7 +317,8 @@ export function calculateVigilance(
 ): VigilanceStatus {
   // Météo-France vigilance is driven by gusts, not sustained wind speed —
   // use whichever is higher so a gusty-but-calm-average hour isn't underrated.
-  const effectiveWind = Math.max(windSpeed, windGusts ?? 0);
+  const windKnown = windSpeed !== undefined || windGusts !== undefined;
+  const effectiveWind = Math.max(windSpeed ?? 0, windGusts ?? 0);
   const categories: VigilanceCategory[] = [
     {
       name: 'Orages',
@@ -392,6 +364,11 @@ export function calculateVigilance(
   }
 
   // 2. Vent violent (basé sur les rafales, critère réel de Météo-France)
+  // Sans mesure de vent, on ne conclut pas « aucune vigilance » : on le dit.
+  if (!windKnown) {
+    categories[1].description = 'Vent : donnée indisponible, niveau non évalué.';
+    categories[1].advice = 'Consultez la vigilance officielle pour le vent.';
+  } else
   if (effectiveWind >= 70) {
     categories[1].level = 'red';
     categories[1].description = 'Tempête majeure avec risques de chutes d\'arbres massives et dégâts matériels importants.';
@@ -485,7 +462,8 @@ export function calculateVigilance(
  * Calculates current UV index dynamically depending on local time, sunrise and sunset.
  * This avoids showing high UV index during early morning or late evening.
  */
-export function calculateCurrentUv(uvIndexMax: number, sunriseStr: string = '06:00', sunsetStr: string = '21:30'): number {
+export function calculateCurrentUv(uvIndexMax: number | undefined, sunriseStr: string = '06:00', sunsetStr: string = '21:30'): number | undefined {
+  if (uvIndexMax === undefined) return undefined;
   if (!uvIndexMax) return 0;
 
   try {

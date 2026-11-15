@@ -23,12 +23,12 @@ function getUvRiskStyle(uv: number): { label: string; color: string } {
   return { label: 'Extrême', color: 'text-fuchsia-300 bg-fuchsia-500/20 border-fuchsia-500/30' };
 }
 
-function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }: WeatherStatsProps) {
-  const uvRisk = getUvRiskStyle(uvIndex);
+function WeatherStats({ current, uvIndex, hourlyData = [], dailyData = [] }: WeatherStatsProps) {
+  const uvRisk = uvIndex !== undefined ? getUvRiskStyle(uvIndex) : null;
   const [selectedUvDay, setSelectedUvDay] = useState<number | null>(null);
 
   // Calculate relative indicator representation
-  const windPercentage = Math.min(95, Math.max(5, (current.windSpeed / 50) * 100));
+  const windPercentage = Math.min(95, Math.max(5, ((current.windSpeed ?? 0) / 50) * 100));
   
   // Slice to the next 6 hours of forecasts
   const featuredHourly = hourlyData.slice(0, 6);
@@ -115,7 +115,7 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
     >
       <div className="space-y-2.5">
         <div className="flex justify-between items-center text-[12px] font-semibold text-white/85">
-          <span>Vent : {Math.round(current.windSpeed)} km/h</span>
+          <span>Vent : {current.windSpeed !== undefined ? `${Math.round(current.windSpeed)} km/h` : 'indisponible'}</span>
           <span>Ressenti : {Math.round(current.feelsLike)}°C</span>
         </div>
         
@@ -137,8 +137,8 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
       {/* Grid for minor parameters */}
       <div className="flex justify-between items-center text-[11px] font-semibold text-white/70 pt-0.5">
         <div className="flex items-center gap-1.5">
-          <span>UV : {uvIndex}</span>
-          <span className={`pill !py-0 border ${uvRisk.color}`}>{uvRisk.label}</span>
+          <span>UV : {uvIndex ?? 'indisponible'}</span>
+          {uvRisk && <span className={`pill !py-0 border ${uvRisk.color}`}>{uvRisk.label}</span>}
         </div>
         <div className="flex items-center gap-2">
           {current.windDirection !== undefined && (

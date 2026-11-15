@@ -1,5 +1,5 @@
 import { Commune, WeatherData, CurrentWeather, HourlyForecastItem, DailyForecastItem } from '../types';
-import { generateRainInTheHour, parseRealMinutelyRain, calculateVigilance, getWeatherUI } from './weatherUtils';
+import { parseRealMinutelyRain, calculateVigilance, getWeatherUI } from './weatherUtils';
 import { assessConfidence } from './forecastConfidence';
 import { fetchObservation } from './observationApi';
 
@@ -481,7 +481,14 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
     const tempStd = typeof rawCurrentStd.temperature_2m === 'number' ? rawCurrentStd.temperature_2m : null;
     const tempEcmwf = models.ecmwf.hourlyTemp[startIdx] ?? null;
     const currentSources = [tempMF, tempStd, tempEcmwf];
-    const modelTemp = consensus(currentSources) ?? 15;
+    // No invented value: if neither a model nor a station gave a temperature,
+    // fail so the caller falls back to the cached forecast (or the error state)
+    // instead of showing a plausible-looking 15 °C.
+    const modelTempOrNull = consensus(currentSources) ?? observed?.temperature ?? null;
+    if (modelTempOrNull === null) {
+      throw new Error('Aucune température disponible : tous les modèles ont échoué.');
+    }
+    const modelTemp: number = modelTempOrNull;
     const modelConfidence = assessConfidence(currentSources);
 
     const displayTemp = observed?.temperature ?? modelTemp;
@@ -502,8 +509,8 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       confidence: observed ? undefined : modelConfidence?.level,
       modelSpread: observed ? undefined : modelConfidence?.spread,
       observed: observed ?? undefined,
-      humidity: observed?.humidity ?? rawCurrentMF.relative_humidity_2m ?? rawCurrentStd.relative_humidity_2m ?? 50,
-      windSpeed: observed?.windSpeed ?? rawCurrentMF.wind_speed_10m ?? rawCurrentStd.wind_speed_10m ?? 0,
+      humidity: observed?.humidity ?? rawCurrentMF.relative_humidity_2m ?? rawCurrentStd.relative_humidity_2m ?? undefined,
+      windSpeed: observed?.windSpeed ?? rawCurrentMF.wind_speed_10m ?? rawCurrentStd.wind_speed_10m ?? undefined,
       windGusts: observed?.windGusts ?? rawCurrentMF.wind_gusts_10m ?? rawCurrentStd.wind_gusts_10m,
       windDirection: rawCurrentMF.wind_direction_10m ?? rawCurrentStd.wind_direction_10m,
       cloudCover: currentCloudCover ?? rawCurrentMF.cloud_cover ?? rawCurrentStd.cloud_cover,
@@ -538,12 +545,12 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
     const hourlyCloud = data.hourly?.cloud_cover || [];
 
     /** Consensus temperature for one hourly index, across the three models. */
-    const hourlyConsensusTemp = (idx: number): number =>
+    const hourlyConsensusTemp = (idx: number): number | null =>
       consensus([
         models.meteoFrance.hourlyTemp[idx],
         models.ecmwf.hourlyTemp[idx],
         models.blend.hourlyTemp[idx],
-      ]) ?? hourlyTemps[idx] ?? 15;
+      ]) ?? hourlyTemps[idx] ?? null;
 
     /** Consensus cloud cover for one hourly index, across the three models. */
     const hourlyConsensusCloud = (idx: number): number =>
@@ -556,6 +563,9 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
     for (let j = 0; j < 12; j++) {
       const idx = startIdx + j;
       if (idx < hourlyTimes.length) {
+        // A slot with no temperature is dropped, not filled with a made-up 15 °C.
+        const hTemp = hourlyConsensusTemp(idx);
+        if (hTemp === null) continue;
         const timeStr = hourlyTimes[idx];
         const hourLabel = timeStr ? timeStr.split('T')[1].substring(0, 5) : `${(localHour + j) % 24}:00`;
         let code = hourlyCodes[idx] ?? 0;
@@ -594,22 +604,13 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
 
         hourly.push({
           time: hourLabel,
-          temp: hourlyConsensusTemp(idx),
+          temp: hTemp,
           weatherCode: code,
           iconName: code.toString(),
           precipitationProbability: hourlyProb[idx] ?? 0,
           precipitation: hourlyPrecip[idx] ?? 0,
           windSpeed: hourlyWind[idx] ?? undefined,
           stormRisk
-        });
-      } else {
-        hourly.push({
-          time: `${(localHour + j) % 24}:00`,
-          temp: 15,
-          weatherCode: 0,
-          iconName: '0',
-          precipitationProbability: 0,
-          precipitation: 0
         });
       }
     }
@@ -687,9 +688,11 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
             hCode = skyCodeFromCloudCover(hCloud, hCode);
           }
 
+          const dTemp = hourlyConsensusTemp(idx);
+          if (dTemp === null) continue;
           dailyHourly.push({
             time: hourLabel,
-            temp: hourlyConsensusTemp(idx),
+            temp: dTemp,
             weatherCode: hCode,
             iconName: hCode.toString(),
             precipitationProbability: hourlyProb[idx] ?? 0,
@@ -737,13 +740,23 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
         }
       }
 
+      // Day indexes are offsets from today (daylight, selection, "Auj."), so a
+      // day is never skipped from the middle: stop at the first missing one.
+      const tMax = consensus(dayMaxSources) ?? dailyMax[k] ?? null;
+      const tMin = consensus(dayMinSources) ?? dailyMin[k] ?? null;
+      if (tMax === null || tMin === null) {
+        if (k === 0) throw new Error('Températures du jour indisponibles.');
+        break;
+      }
+
       daily.push({
         date: k === 0 ? "Auj." : dayName,
-        tempMax: consensus(dayMaxSources) ?? dailyMax[k] ?? 20,
-        tempMin: consensus(dayMinSources) ?? dailyMin[k] ?? 10,
+        tempMax: tMax,
+        tempMin: tMin,
         weatherCode: representativeCode,
         iconName: representativeCode.toString(),
-        uvIndex: dailyUv[k] ? Math.round(dailyUv[k] ?? 3) : 3,
+        // A real UV of 0 (winter, polar night) must stay 0; only a missing value is unknown.
+        uvIndex: typeof dailyUv[k] === 'number' ? Math.round(dailyUv[k]) : undefined,
         precipitationSum: dailyPrecipSum[k] ?? undefined,
         precipProbMax: dailyPrecipProbMax[k] ?? undefined,
         windMax: dailyWindMax[k] ?? undefined,
@@ -766,8 +779,9 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
           weather_code: minutely15.weather_code ?? [],
         })
       : null;
-    const prob = hourly.length > 0 ? hourly[0].precipitationProbability : 0;
-    const rainInTheHour = realRain ?? generateRainInTheHour(prob, 0);
+    // No minutely_15 data: leave it empty (the card says "indisponible") rather than
+    // draw a rain curve out of a probability.
+    const rainInTheHour = realRain ?? [];
 
     // Dynamic Vigilance Status calculation — includes today's accumulated
     // rain and current wind gusts for a more realistic risk assessment.

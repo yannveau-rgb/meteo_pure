@@ -32,7 +32,10 @@ export default function RainForecast({ rainData, onOpenRadar }: RainForecastProp
     return acc;
   }, 'none' as 'none' | 'light' | 'moderate' | 'heavy');
 
+  const unavailable = rainData.length === 0;
+
   const getSummaryMessage = () => {
+    if (unavailable) return 'Prévision indisponible';
     if (maxIntensity === 'none') return 'Aucune pluie prévue';
     if (maxIntensity === 'light') return 'Faibles bruines bientôt';
     if (maxIntensity === 'moderate') return 'Averses modérées attendues';
