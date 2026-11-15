@@ -41,6 +41,13 @@ interface PureDetailedCardsProps {
   onOpenRadar?: () => void;
 }
 
+/** Heure (Paris) d'une mesure de station, ex. « 14:30 ». Vide si la date est illisible. */
+function formatObservedTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
+}
+
 export default function PureDetailedCards({
   weather,
   currentCommune,
@@ -129,11 +136,11 @@ export default function PureDetailedCards({
                 <InfoBadge
                   className="pill !py-0.5 !bg-emerald-400/20 !border-emerald-400/30 !text-emerald-200"
                   label={
-                    `Relevé de la station ${weather.current.observed.station}, à ${weather.current.observed.distanceKm} km` +
+                    `Relevé de la station ${weather.current.observed.station}, à ${weather.current.observed.distanceKm} km, mesuré à ${formatObservedTime(weather.current.observed.observedAt)}` +
                     (weather.current.observed.lapseCorrected ? `, ajusté de ${weather.current.observed.altitudeDeltaM} m de dénivelé` : '')
                   }
                 >
-                  Station à {weather.current.observed.distanceKm} km
+                  Station à {weather.current.observed.distanceKm} km{formatObservedTime(weather.current.observed.observedAt) && ` · ${formatObservedTime(weather.current.observed.observedAt)}`}
                 </InfoBadge>
               )}
 
@@ -241,6 +248,7 @@ export default function PureDetailedCards({
       <ClimateComparison
         latitude={weather.latitude}
         longitude={weather.longitude}
+        elevation={weather.elevation}
         currentMin={weather.daily[0]?.tempMin ?? Math.round(weather.current.temperature - 4)}
         currentMax={weather.daily[0]?.tempMax ?? Math.round(weather.current.temperature + 4)}
       />

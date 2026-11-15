@@ -83,7 +83,7 @@ dégradé bleu azur.
 - Météo courante, horaire (12 h), 7 jours, avec cascade multi-modèles
 - Vigilances dynamiques (orages / vent / pluie-inondation / canicule-froid)
 - Pluie dans l'heure basée sur les vraies données `minutely_15`
-- Radar pluie & orages animé (passé + nowcast 30 min)
+- Radar de pluie animé (2 dernières heures, passé seulement)
 - Notifications push fonctionnelles **app fermée** (iOS + Android, confirmé)
 - Brief matinal 2 couches (ancre factuelle + punchline IA) + lecture audio, **météo uniquement** (plus d'horoscope)
 - **Design system unifié** dans `src/index.css` (`.card`, `.tile`, `.kicker`, `.meta`, `.pill`, `.icon-btn`, `.segmented`) appliqué à tous les onglets et modales
@@ -134,7 +134,7 @@ Idées évoquées et **non retenues pour l'instant** :
 |---|---|
 | **iOS Web Push** | Ne fonctionne que si la PWA est installée depuis Safari. Apple peut retarder/supprimer les push en arrière-plan — limite plateforme, pas de contournement |
 | **Android** | L'optimisation batterie retarde les push ; à désactiver pour Chrome côté utilisateur |
-| **Radar +30 min** | Limite de RainViewer, pas du code. Aucune source gratuite ne va au-delà |
+| **Radar passé seulement** | RainViewer a supprimé son nowcast gratuit (01/01/2026), zoom limité à 7, 100 requêtes/min/IP. L'heure qui vient vient du modèle AROME |
 | **`tsc --noEmit` lent** | ~4 min et gourmand en RAM. **Ne jamais lancer deux `tsc` en parallèle** → `JavaScript heap out of memory`. Utiliser `NODE_OPTIONS="--max-old-space-size=4096"` |
 | **HMR Tailwind v4 capricieux** | Les changements de `src/index.css` (surtout `@theme`/`@font-face`) ne sont souvent **pas** repris à chaud. Redémarrer le serveur de dev et ouvrir un **onglet neuf** |
 | **Panneau d'onglet sortant** | Reste monté à `opacity: 0` après transition (pré-existant, non visible par l'utilisateur, non corrigé) |

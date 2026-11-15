@@ -124,6 +124,10 @@ export interface LocalClimatology {
   seasonStatus: 'warmer' | 'colder' | 'normal';
 }
 
+/** Mean altitude of the reference stations, and the standard temperature lapse rate. */
+const REFERENCE_ELEVATION_M = 80;
+const LAPSE_C_PER_M = 0.0065;
+
 /**
  * Calculates local monthly temperature normals using IDW interpolation.
  * Then compares it with today's actual Min & Max temperatures.
@@ -132,7 +136,8 @@ export function getLocalClimatology(
   lat: number,
   lon: number,
   currentTempMin: number,
-  currentTempMax: number
+  currentTempMax: number,
+  elevationM?: number
 ): LocalClimatology {
   const date = new Date();
   const monthIdx = date.getMonth(); // 0-11
@@ -168,8 +173,13 @@ export function getLocalClimatology(
   }
   
   // Compute final interpolated climatological normal temperatures bounded to 1 decimal place
-  const normalMin = Math.round((interpolatedMin / totalWeight) * 10) / 10;
-  const normalMax = Math.round((interpolatedMax / totalWeight) * 10) / 10;
+  // The 5 reference stations all sit near sea level (~80 m). Above that, normals
+  // are lowered by the standard lapse rate, so a mountain commune is not
+  // compared with the coast. A gap under 100 m is left alone (noise).
+  const gapM = elevationM !== undefined ? elevationM - REFERENCE_ELEVATION_M : 0;
+  const lapseAdjust = Math.abs(gapM) > 100 ? gapM * LAPSE_C_PER_M : 0;
+  const normalMin = Math.round((interpolatedMin / totalWeight - lapseAdjust) * 10) / 10;
+  const normalMax = Math.round((interpolatedMax / totalWeight - lapseAdjust) * 10) / 10;
   const normalMean = Math.round(((normalMin + normalMax) / 2) * 10) / 10;
   
   // Calculate deviations

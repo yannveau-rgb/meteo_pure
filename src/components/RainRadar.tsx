@@ -19,7 +19,9 @@ function formatFrameLabel(frame: RadarFrame): string {
   const diffMin = Math.round((frame.time - nowSec) / 60);
   if (frame.isNowcast) return `+${Math.abs(diffMin)} min (prévu)`;
   if (diffMin === 0) return 'Maintenant';
-  return `il y a ${Math.abs(diffMin)} min`;
+  const ago = Math.abs(diffMin);
+  if (ago >= 90) return `il y a ${String(Math.round(ago / 30) / 2).replace('.', ',')} h`;
+  return `il y a ${ago} min`;
 }
 
 function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
@@ -56,7 +58,9 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
           center: [latitude, longitude],
           zoom: 7,
           minZoom: 4,
-          maxZoom: 10,
+          // RainViewer's free tiles stop at zoom 7 ("Zoom Level Not Supported" above);
+          // radar layers upscale their z7 tiles, so allow two extra levels at most.
+          maxZoom: 9,
           zoomControl: false,
           scrollWheelZoom: false,
           // Attribution stays enabled: OpenStreetMap tiles require it, and
@@ -99,24 +103,40 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
         if (!rv.ok) throw new Error('RainViewer unavailable');
         const data = await rv.json();
 
+        // Every frame costs a set of tile requests and RainViewer's free tier is
+        // capped at 100 requests/min per IP (shared by every phone on a mobile
+        // carrier). Keep the newest frame and every second one before it: ~7
+        // frames over 2 h instead of 13, 512 px tiles to quarter the request count.
+        const everyOther = <T,>(arr: T[]): T[] => arr.filter((_, i) => (arr.length - 1 - i) % 2 === 0);
         const allFrames: RadarFrame[] = [
-          ...(data.radar.past || []).map((f: any) => ({ ...f, isNowcast: false })),
+          ...everyOther<any>(data.radar.past || []).map((f: any) => ({ ...f, isNowcast: false })),
+          // Free nowcast was discontinued on 2026-01-01; kept in case it returns.
           ...(data.radar.nowcast || []).map((f: any) => ({ ...f, isNowcast: true })),
         ];
+        if (allFrames.length === 0) throw new Error('No radar frames');
 
         if (cancelled) return;
         setFrames(allFrames);
 
         // Show most recent past frame first
-        const lastPastIdx = (data.radar.past?.length ?? 1) - 1;
+        const lastPastIdx = allFrames.filter(f => !f.isNowcast).length - 1;
         const initIdx = Math.max(0, lastPastIdx);
 
         // Create every frame's tile layer once, up front, all at opacity 0
         // except the one being shown. showFrame() then only toggles opacity.
         layersRef.current = allFrames.map((f, i) =>
           L.tileLayer(
-            `https://tilecache.rainviewer.com${f.path}/256/{z}/{x}/{y}/6/1_1.png`,
-            { opacity: i === initIdx ? 0.8 : 0, maxZoom: 12, tileSize: 256 }
+            // Colour scheme 2 = Universal Blue, the only one still served (other
+            // numbers are silently mapped to it).
+            `https://tilecache.rainviewer.com${f.path}/512/{z}/{x}/{y}/2/1_1.png`,
+            {
+              opacity: i === initIdx ? 0.8 : 0,
+              tileSize: 512,
+              zoomOffset: -1,
+              maxNativeZoom: 8,
+              maxZoom: 9,
+              keepBuffer: 1,
+            }
           ).addTo(map)
         );
 
@@ -170,7 +190,7 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-2">
           <Radio className="w-4 h-4 text-sky-400" />
-          <span className="kicker text-white/75">Radar pluie & orages</span>
+          <span className="kicker text-white/75">Radar de pluie · 2 h</span>
         </div>
         <div className="flex items-center gap-2">
           {currentFrame && (
@@ -226,12 +246,16 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
             aria-label="Curseur radar"
           />
           <div className="flex justify-between text-[11px] text-white/60 font-bold">
-            <span>Passé</span>
-            <span className="text-amber-400/70">
-              {pastCount < frames.length && `◆ Nowcast (${frames.length - pastCount} pas)`}
-            </span>
-            <span>+30 min</span>
+            <span>{formatFrameLabel(frames[0])}</span>
+            {pastCount < frames.length && (
+              <span className="text-amber-400/70">◆ Prévu ({frames.length - pastCount} pas)</span>
+            )}
+            <span>{pastCount < frames.length ? formatFrameLabel(frames[frames.length - 1]) : 'Maintenant'}</span>
           </div>
+          <p className="text-[11px] text-white/50 leading-snug">
+            Observations passées uniquement (mosaïque de radars, source RainViewer) : le radar ne prévoit pas la suite.
+            Pour l'heure qui vient, voyez « Pluie dans l'heure ».
+          </p>
         </div>
       )}
     </div>

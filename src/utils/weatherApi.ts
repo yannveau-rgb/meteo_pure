@@ -179,6 +179,8 @@ const FORECAST_DAYS = 7;
 
 /** Longest the forecast waits for a station observation before shipping without it. */
 export const OBSERVATION_BUDGET_MS = 1500;
+/** Beyond this distance a station only informs the temperature, never wind, humidity or rain. */
+export const OBSERVATION_LOCAL_KM = 10;
 
 /** Resolves with `promise`, or with `fallback` once `ms` have elapsed — whichever comes first. */
 export function withBudget<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
@@ -233,7 +235,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
   const [longitude, latitude] = commune.centre.coordinates;
 
   // Primary: Météo-France AROME model (1.3 km resolution over France — highest precision available)
-  const currentVars = 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,surface_pressure,visibility';
+  const currentVars = 'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,pressure_msl,visibility';
   const hourlyVars  = 'temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,cloud_cover,cape';
   const dailyVars   = 'weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,sunrise,sunset,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max';
   const minuteVars  = 'precipitation,weather_code,lightning_potential';
@@ -466,7 +468,11 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
     // Measured rain settles what the models were getting wrong. Keyed on the
     // rate, not the hourly total: an hour that collected 3 mm at dawn reads the
     // same as one still pouring at noon, and only the second should show rain.
-    const observedRate = observed?.precipitationRateMmH;
+    // Wind, humidity and rain are local: a station 30 km away says little about
+    // this commune, so beyond OBSERVATION_LOCAL_KM only its (altitude-corrected)
+    // temperature is used; the models keep the rest.
+    const observedLocal = observed && observed.distanceKm <= OBSERVATION_LOCAL_KM ? observed : null;
+    const observedRate = observedLocal?.precipitationRateMmH;
     if (observedRate !== undefined && observedRate > 0 && currentCode < 50) {
       currentCode = observedRate >= 2.5 ? 63 : 61; // pluie modérée / faible
     }
@@ -509,17 +515,19 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       confidence: observed ? undefined : modelConfidence?.level,
       modelSpread: observed ? undefined : modelConfidence?.spread,
       observed: observed ?? undefined,
-      humidity: observed?.humidity ?? rawCurrentMF.relative_humidity_2m ?? rawCurrentStd.relative_humidity_2m ?? undefined,
-      windSpeed: observed?.windSpeed ?? rawCurrentMF.wind_speed_10m ?? rawCurrentStd.wind_speed_10m ?? undefined,
-      windGusts: observed?.windGusts ?? rawCurrentMF.wind_gusts_10m ?? rawCurrentStd.wind_gusts_10m ?? undefined,
+      humidity: observedLocal?.humidity ?? rawCurrentMF.relative_humidity_2m ?? rawCurrentStd.relative_humidity_2m ?? undefined,
+      windSpeed: observedLocal?.windSpeed ?? rawCurrentMF.wind_speed_10m ?? rawCurrentStd.wind_speed_10m ?? undefined,
+      windGusts: observedLocal?.windGusts ?? rawCurrentMF.wind_gusts_10m ?? rawCurrentStd.wind_gusts_10m ?? undefined,
       windDirection: rawCurrentMF.wind_direction_10m ?? rawCurrentStd.wind_direction_10m ?? undefined,
       cloudCover: currentCloudCover ?? rawCurrentMF.cloud_cover ?? rawCurrentStd.cloud_cover ?? undefined,
-      pressure: rawCurrentMF.surface_pressure ?? rawCurrentStd.surface_pressure ?? undefined,
+      // Sea-level pressure (what a barometer app or a forecast quotes), not the station
+      // pressure, which reads ~12 hPa lower per 100 m of altitude.
+      pressure: rawCurrentMF.pressure_msl ?? rawCurrentStd.pressure_msl ?? undefined,
       visibility: rawCurrentMF.visibility ?? rawCurrentStd.visibility ?? undefined,
       weatherCode: currentCode,
       weatherDesc: ui.label,
       iconName: currentCode.toString(),
-      precipitation: observed?.precipitation1h ?? rawCurrentMF.precipitation ?? rawCurrentStd.precipitation ?? 0,
+      precipitation: observedLocal?.precipitation1h ?? rawCurrentMF.precipitation ?? rawCurrentStd.precipitation ?? 0,
       time: rawCurrentMF.time ?? rawCurrentStd.time ?? ''
     };
 
@@ -812,7 +820,8 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       rainInTheHour,
       vigilance,
       sunrise,
-      sunset
+      sunset,
+      elevation: typeof data.elevation === 'number' ? data.elevation : undefined
     };
   } catch (parseError) {
     console.error('Error parsing weather API data:', parseError);

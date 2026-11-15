@@ -26,6 +26,8 @@ const ELEVATION_URL = 'https://api.open-meteo.com/v1/elevation';
 
 /** Stations further than this are not describing the user's sky any more. */
 const MAX_STATION_DISTANCE_KM = 35;
+/** With an unknown altitude gap, a station further than this is not trusted for temperature. */
+const UNKNOWN_ALTITUDE_MAX_KM = 5;
 /** Past this, the reading is stale enough to mislead rather than inform. */
 const MAX_OBSERVATION_AGE_MIN = 90;
 /**
@@ -112,7 +114,8 @@ interface Station {
   name: string;
   lat: number;
   lon: number;
-  altitude: number;
+  /** undefined when the station list gives none: never defaulted to 0 m (sea level). */
+  altitude: number | undefined;
 }
 
 // Module-level caches. On Vercel these live for the lifetime of a warm lambda
@@ -283,7 +286,7 @@ async function getStations(): Promise<Station[]> {
       name: (cells[iName] ?? id).trim(),
       lat,
       lon,
-      altitude: num(cells[iAlt]) ?? 0,
+      altitude: num(cells[iAlt]),
     });
   }
 
@@ -365,8 +368,15 @@ function parseObservation(
 
   let altitudeDeltaM: number | undefined;
   let lapseCorrected = false;
-  if (communeElevation !== null) {
-    const delta = communeElevation - station.altitude;
+  // Without both altitudes the vertical gap is unknowable: a station with no
+  // listed altitude is not at 0 m, and a commune with no elevation is not at
+  // the station's. Only a very close station may then speak for the commune.
+  const gapKnown = communeElevation !== null && station.altitude !== undefined;
+  if (!gapKnown && temperature !== undefined && distanceKm > UNKNOWN_ALTITUDE_MAX_KM) {
+    temperature = undefined;
+  }
+  if (gapKnown) {
+    const delta = (communeElevation as number) - (station.altitude as number);
     altitudeDeltaM = Math.round(delta);
     const gap = Math.abs(delta);
     if (gap > ALT_CORRECTABLE_MAX_M) {
@@ -432,7 +442,7 @@ export async function getNearestObservation(lat: number, lon: number): Promise<S
     const ranked = stations
       .map(station => {
         const distanceKm = haversineKm(lat, lon, station.lat, station.lon);
-        const altGap = communeElevation === null ? 0 : Math.abs(communeElevation - station.altitude);
+        const altGap = communeElevation === null || station.altitude === undefined ? 0 : Math.abs(communeElevation - station.altitude);
         return { station, distanceKm, score: distanceKm + altGap / ALT_PENALTY_M_PER_KM };
       })
       .filter(c => c.distanceKm <= MAX_STATION_DISTANCE_KM)

@@ -13,7 +13,7 @@ PWA météo française avec alertes push, brief matinal IA et vigilances Météo
 - 📊 Indice de confiance affiché quand les modèles divergent
 - ⚠️ Vigilances Météo-France calculées dynamiquement (orages, vent, pluie, canicule)
 - 🌧️ Pluie dans l'heure (données réelles `minutely_15`, mm par tranche de 15 min)
-- 📡 Radar pluie & orages animé (RainViewer, passé + nowcast 30 min)
+- 📡 Radar de pluie animé (RainViewer, 2 dernières heures ; plus de prévision radar depuis janvier 2026)
 - 🔔 Notifications push même app fermée (Web Push API + VAPID)
 - ☀️ Brief matinal météo en 2 couches : ancre factuelle calculée en code + punchline IA (Mistral)
 - 🔊 Lecture audio du brief (Web Speech API, natif navigateur)
@@ -135,7 +135,7 @@ Les doublons sont neutralisés côté serveur (clés de date par abonné + coold
 
 - **iOS** : Web Push ne fonctionne que si la PWA est **installée** depuis Safari (Partager → Écran d'accueil).
 - **Android** : l'optimisation batterie peut retarder les push ; désactiver l'optimisation pour Chrome.
-- **Radar** : le nowcast RainViewer plafonne à **+30 min** (limite du fournisseur, pas du code).
+- **Radar** : RainViewer a supprimé son nowcast gratuit et limité le zoom à 7 au 01/01/2026. Le radar affiche donc le passé seulement ; l'heure qui vient vient du modèle AROME (« Pluie dans l'heure »).
 - **Météo-France** : AROME couvre ~2 jours, ARPEGE ~4 jours. Au-delà, ECMWF prend le relais.
 
 ## Licence

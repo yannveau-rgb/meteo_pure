@@ -110,6 +110,8 @@ export interface WeatherData {
   current: CurrentWeather;
   hourly: HourlyForecastItem[];
   daily: DailyForecastItem[];
+  /** Altitude (m) du point de prévision, telle que la renvoie le fournisseur. */
+  elevation?: number;
   rainInTheHour: RainInTheHour[];
   vigilance: VigilanceStatus;
   sunrise?: string;

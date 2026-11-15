@@ -7,15 +7,17 @@ interface ClimateComparisonProps {
   longitude: number;
   currentMin: number;
   currentMax: number;
+  elevation?: number;
 }
 
 function ClimateComparison({
   latitude,
   longitude,
   currentMin,
-  currentMax
+  currentMax,
+  elevation
 }: ClimateComparisonProps) {
-  const stats = getLocalClimatology(latitude, longitude, currentMin, currentMax);
+  const stats = getLocalClimatology(latitude, longitude, currentMin, currentMax, elevation);
 
   // Styling based on season anomalies
   const statusConfig = {
@@ -128,7 +130,7 @@ function ClimateComparison({
           </div>
         </div>
         <div className="text-[11px] text-white/60 text-center select-none pt-0.5">
-          Aide de lecture : le point marque le niveau d'écart moyen face aux normales de 1991-2020.
+          Aide de lecture : le point marque l'écart moyen face aux normales 1991-2020, estimées d'après 5 stations de référence et corrigées de l'altitude. Indicatif.
         </div>
       </div>
 

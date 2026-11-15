@@ -36,6 +36,7 @@ interface Opts {
   humidity?: number | null;
   wind?: number | null;
   minutely?: boolean;
+  observation?: { distanceKm: number } | null;
 }
 
 function payload(o: Opts = {}) {
@@ -58,7 +59,8 @@ function payload(o: Opts = {}) {
       wind_gusts_10m: o.wind === undefined ? 20 : o.wind,
       wind_direction_10m: 90,
       cloud_cover: 20,
-      surface_pressure: 1013,
+      pressure_msl: 1018,
+      surface_pressure: 990,
       visibility: 20000,
     },
     hourly: {
@@ -100,7 +102,18 @@ function mockFetch(o: Opts) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) => {
-      if (String(url).includes('/api/observation')) return { ok: false, status: 204, json: async () => null };
+      if (String(url).includes('/api/observation')) {
+        if (!o.observation) return { ok: false, status: 204, json: async () => null };
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            station: 'Station test', stationId: '1', distanceKm: o.observation!.distanceKm,
+            observedAt: new Date().toISOString(), sampling: '6min',
+            temperature: 25, humidity: 33, windSpeed: 40, windGusts: 70, precipitation1h: 4,
+          }),
+        };
+      }
       // Chaque appel reçoit sa propre copie : le code fusionne les séries en place.
       return { ok: true, status: 200, json: async () => structuredClone(body) };
     }),
@@ -161,6 +174,32 @@ describe('fetchWeatherData — pas de valeur inventée', () => {
       dayMin: [null, 11, 11, 11, 11, 11, 11],
     });
     await expect(fetchWeatherData(commune)).rejects.toThrow();
+  });
+});
+
+describe('fetchWeatherData — observation de station', () => {
+  it('une station proche (≤ 10 km) fournit température, humidité, vent et pluie', async () => {
+    mockFetch({ observation: { distanceKm: 4 } });
+    const w = await fetchWeatherData(commune);
+    expect(w.current.temperature).toBe(25);
+    expect(w.current.humidity).toBe(33);
+    expect(w.current.windSpeed).toBe(40);
+    expect(w.current.windGusts).toBe(70);
+  });
+
+  it("une station lointaine (> 10 km) ne donne que la température, pas le vent ni l'humidité", async () => {
+    mockFetch({ observation: { distanceKm: 25 } });
+    const w = await fetchWeatherData(commune);
+    expect(w.current.temperature).toBe(25);
+    expect(w.current.humidity).toBe(60); // modèle
+    expect(w.current.windSpeed).toBe(12); // modèle
+    expect(w.current.precipitation).toBe(0); // modèle, pas les 4 mm de la station
+  });
+
+  it('affiche la pression ramenée au niveau de la mer, pas la pression de surface', async () => {
+    mockFetch({});
+    const w = await fetchWeatherData(commune);
+    expect(w.current.pressure).toBe(1018);
   });
 });
 
