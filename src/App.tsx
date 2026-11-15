@@ -1080,7 +1080,7 @@ export default function App() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-[13px] font-bold text-white">Alertes de vigilance</h3>
-                        <p className="meta">Niveaux officiels Météo-France.</p>
+                        <p className="meta">Niveaux estimés d'après les prévisions.</p>
                       </div>
                       <Toggle
                         checked={notifSettings.alertNotificationsEnabled !== false}

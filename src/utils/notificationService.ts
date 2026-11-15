@@ -146,38 +146,38 @@ const RAIN_MESSAGES: Record<
   },
   alert_yellow: {
     safe: [
-      "Mise en place d'une vigilance jaune de Météo-France. Soyez attentifs lors de vos déplacements.",
-      "Vigilance jaune déclarée pour votre secteur. Tenez-vous au courant de l'évolution de la situation.",
-      "Alerte de niveau jaune. Des phénomènes météo habituels mais localement dangereux sont possibles."
+      "Risque jaune estimé d'après nos prévisions. Soyez attentifs lors de vos déplacements.",
+      "Vigilance jaune estimée pour votre secteur. Tenez-vous au courant de l'évolution de la situation.",
+      "Alerte de niveau jaune estimée. Des phénomènes météo habituels mais localement dangereux sont possibles."
     ],
     spicy: [
-      "Vigilance jaune activée par Météo-France. Restez prudents dehors !",
+      "Risque jaune estimé d'après nos prévisions. Restez prudents dehors !",
       "Alerte jaune : restez attentifs à l'évolution des conditions météo."
     ],
     vulgar: [
-      "Mise en place d'une vigilance jaune de Météo-France. Soyez attentifs lors de vos déplacements."
+      "Risque jaune estimé d'après nos prévisions. Soyez attentifs lors de vos déplacements."
     ]
   },
   alert_orange: {
     safe: [
       "Vigilance Orange : phénomènes météo très dangereux prévus. Soyez extrêmement vigilants !",
-      "Alerte orange déclarée. Évitez les déplacements non indispensables et les activités extérieures.",
-      "Météo-France conseille la plus grande vigilance. Suivez scrupuleusement les consignes de sécurité."
+      "Alerte orange estimée. Évitez les déplacements non indispensables et les activités extérieures.",
+      "Nos prévisions annoncent un risque élevé. Suivez les consignes de sécurité et consultez vigilance.meteofrance.fr."
     ],
     spicy: [
-      "Alerte Orange Météo-France ! Conditions météo délicates, limitez vos sorties au strict nécessaire.",
+      "Risque orange estimé d'après nos prévisions ! Conditions météo délicates, limitez vos sorties au strict nécessaire.",
       "Vigilance orange active : mettez vos biens à l'abri et restez prudents."
     ],
     vulgar: [
       "Vigilance Orange : phénomènes météo très dangereux prévus. Soyez extrêmement vigilants !",
-      "Alerte orange déclarée. Évitez les déplacements non indispensables."
+      "Alerte orange estimée. Évitez les déplacements non indispensables."
     ]
   },
   alert_red: {
     safe: [
       "ALERTE ROUGE VIGILANCE ABSOLUE : Phénomènes météorologiques d'intensité exceptionnelle en cours ou prévus.",
-      "Danger extrême déclaré. Restez impérativement à l'abri, ne vous déplacez sous aucun prétexte.",
-      "Météo-France alerte de dangers majeurs pour la sécurité des personnes. Respectez les consignes des autorités."
+      "Danger extrême estimé. Restez impérativement à l'abri, ne vous déplacez sous aucun prétexte.",
+      "Nos prévisions annoncent des dangers majeurs pour la sécurité des personnes. Respectez les consignes des autorités et consultez vigilance.meteofrance.fr."
     ],
     spicy: [
       "VIGILANCE ROUGE ABSOLUE : Danger météorologique majeur. Restez impérativement en sécurité chez vous !",
@@ -262,7 +262,7 @@ const ALERT_YELLOW_TITLES: Record<HumorLevel, string[]> = {
 };
 
 const ALERT_ORANGE_TITLES: Record<HumorLevel, string[]> = {
-  safe: ["🟠 Vigilance Orange", "🚨 Soyez très vigilants", "⚠️ Alerte Météo-France"],
+  safe: ["🟠 Vigilance Orange", "🚨 Soyez très vigilants", "⚠️ Alerte météo estimée"],
   spicy: ["🟠 Vigilance Orange : Prudence renforcée", "🚨 Alerte météo importante", "⚠️ Restez bien vigilants"],
   vulgar: ["🟠 Vigilance Orange", "🚨 Soyez très vigilants"]
 };

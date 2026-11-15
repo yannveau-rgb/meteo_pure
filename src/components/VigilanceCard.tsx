@@ -145,7 +145,7 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
                           </p>
                           {cat.level !== 'green' && (
                             <div className="mt-2.5 bg-black/20 p-2.5 rounded-xl border border-white/10 text-[11px] text-white/80 leading-relaxed">
-                              <strong className="text-white">Conseil Météo-France : </strong>
+                              <strong className="text-white">Conseil : </strong>
                               {cat.advice}
                             </div>
                           )}
@@ -158,7 +158,7 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
                 {/* FIXED INTERNAL FOOTER */}
                 <div className="px-5 py-4 border-t border-white/15 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between shrink-0">
                   <span className="text-[11px] text-white/50 select-none">
-                    Modèles de prévisions numériques Météo-France (AROME).
+                    Niveaux estimés par Météo Pure d'après les modèles Météo-France (AROME). Vigilance officielle : vigilance.meteofrance.fr
                   </span>
                   <button
                     type="button"

@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react';
-import { Bell, ShieldAlert, PhoneCall, CheckCircle2 } from 'lucide-react';
+import { Bell, ShieldAlert, PhoneCall, Info } from 'lucide-react';
 import { VigilanceStatus } from '../types';
 import { getLevelStyle } from '../utils/levelStyles';
 
@@ -167,9 +167,17 @@ export default function AlertsView({ vigilance, cityName }: AlertsViewProps) {
       </div>
 
       <div className="tile !p-3 text-center flex items-center justify-center gap-1.5">
-        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <Info className="w-4 h-4 text-sky-300 shrink-0" />
         <span className="text-[11px] text-white/90 font-bold leading-normal">
-          Données officielles de vigilance Météo-France.
+          Niveaux estimés par Météo Pure d'après les prévisions, pas la vigilance officielle.{' '}
+          <a
+            href="https://vigilance.meteofrance.fr"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sky-300 underline"
+          >
+            Voir la vigilance officielle
+          </a>
         </span>
       </div>
     </div>
