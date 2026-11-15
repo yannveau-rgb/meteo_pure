@@ -59,8 +59,12 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
           maxZoom: 10,
           zoomControl: false,
           scrollWheelZoom: false,
-          attributionControl: false,
+          // Attribution stays enabled: OpenStreetMap tiles require it, and
+          // hiding it was a licensing problem, not a design choice.
+          attributionControl: true,
         });
+        map.attributionControl.setPrefix(false);
+        map.attributionControl.getContainer()?.classList.add('radar-attribution');
         mapRef.current = map;
 
         // Basemap: Use Carto if an API key is configured, otherwise fallback to OpenStreetMap
@@ -161,19 +165,19 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
   const pastCount = frames.filter(f => !f.isNowcast).length;
 
   return (
-    <div className="glass-premium rounded-3xl overflow-hidden shadow-lg select-none">
+    <div className="card card--flush overflow-hidden select-none">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-2">
           <Radio className="w-4 h-4 text-sky-400" />
-          <span className="text-[10px] font-bold text-white/70 uppercase tracking-widest">Radar pluie & orages</span>
+          <span className="kicker text-white/75">Radar pluie & orages</span>
         </div>
         <div className="flex items-center gap-2">
           {currentFrame && (
-            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+            <span className={`pill !text-[10px] ${
               currentFrame.isNowcast
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                : 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                ? '!bg-amber-500/20 !border-amber-500/30 !text-amber-300'
+                : '!bg-sky-500/20 !border-sky-500/30 !text-sky-300'
             }`}>
               {formatFrameLabel(currentFrame)}
             </span>
@@ -181,7 +185,7 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
           <button
             onClick={() => setIsPlaying(p => !p)}
             aria-label={isPlaying ? 'Pause' : 'Lecture'}
-            className="flex items-center justify-center w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white transition-all active:scale-95"
+            className="icon-btn icon-btn--sm"
           >
             {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
           </button>
@@ -194,7 +198,7 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-2">
               <div className="w-6 h-6 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
-              <span className="text-[10px] text-white/60 font-medium">Chargement radar…</span>
+              <span className="meta">Chargement radar…</span>
             </div>
           </div>
         )}
@@ -221,7 +225,7 @@ function RainRadar({ latitude, longitude, cityName }: RainRadarProps) {
             className="w-full h-1 accent-sky-400 cursor-pointer"
             aria-label="Curseur radar"
           />
-          <div className="flex justify-between text-[9px] text-white/60 font-bold">
+          <div className="flex justify-between text-[11px] text-white/60 font-bold">
             <span>Passé</span>
             <span className="text-amber-400/70">◆ Nowcast ({frames.length - pastCount} pas)</span>
             <span>+30 min</span>

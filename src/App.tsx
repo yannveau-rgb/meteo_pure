@@ -16,7 +16,6 @@ import {
   Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { getWeatherUI, isNightTime } from './utils/weatherUtils';
 import { getSaintDuJour } from './utils/ephemeris';
 import {
   loadNotificationSettings,
@@ -57,7 +56,7 @@ import { lazyWithRetry } from './utils/lazyWithRetry';
 
 // Pure minimalist components — unified single-page forecast, kept eager.
 import CelestialSky, { getSkyTopColor } from './components/pure/CelestialSky';
-import TimeScrubber from './components/pure/TimeScrubber';
+import HourlyForecast from './components/HourlyForecast';
 import PureWeatherHero from './components/pure/PureWeatherHero';
 import PureDetailedCards from './components/pure/PureDetailedCards';
 
@@ -67,7 +66,7 @@ const CityComparison = lazyWithRetry(() => import('./components/CityComparison')
 const AlertsView = lazyWithRetry(() => import('./components/AlertsView'));
 const PwaInstallWizard = lazyWithRetry(() => import('./components/PwaInstallWizard'));
 const SharePreviewModal = lazyWithRetry(() => import('./components/SharePreviewModal'));
-const HoroscopeModal = lazyWithRetry(() => import('./components/HoroscopeModal'));
+const MorningBriefModal = lazyWithRetry(() => import('./components/modals/MorningBriefModal'));
 const MoonPhasesModal = lazyWithRetry(() => import('./components/modals/MoonPhasesModal'));
 const WelcomePrompt = lazyWithRetry(() => import('./components/modals/WelcomePrompt'));
 const PrivacyPolicy = lazyWithRetry(() => import('./components/PrivacyPolicy'));
@@ -97,7 +96,6 @@ const LazyFallback = () => (
 export default function App() {
   // Navigation & Screen tab state
   const [activeTab, setActiveTab] = useState<AppTab>('meteo');
-  const [selectedHourIndex, setSelectedHourIndex] = useState<number>(0);
   const [heroMode, setHeroMode] = useState<'weather' | 'aqi'>('weather');
   const [cartesMode, setCartesMode] = useState<'radar' | 'compare'>('radar');
 
@@ -115,7 +113,7 @@ export default function App() {
   } = useCitySearch();
 
   // Traditional Feast Day lookup (saint du jour) — once per mount, not per render
-  // (App re-renders on every scrubber tick).
+  // (App re-renders on every weather refresh).
   const saintDuJour = React.useMemo(() => getSaintDuJour(), []);
 
   // PWA install prompt
@@ -140,23 +138,15 @@ export default function App() {
   // Geolocation active indicator + handler
   const { geoLocating, handleGeolocation } = useGeolocation(setCurrentCommune, setActiveTab, setErrorMsg);
 
-  // Reset selected forecast day and hour scrubber whenever commune changes
-  useEffect(() => { 
-    setSelectedDayIndex(0); 
-    setSelectedHourIndex(0);
+  // Reset selected forecast day whenever the commune changes
+  useEffect(() => {
+    setSelectedDayIndex(0);
   }, [currentCommune]);
 
-  // Scrubbed hour item & celestial time calculation
-  const scrubbedHourItem = weather?.hourly?.[selectedHourIndex];
-
-  const currentFloatHour = React.useMemo(() => {
-    if (selectedHourIndex === 0 || !scrubbedHourItem) {
-      const now = new Date();
-      return now.getHours() + now.getMinutes() / 60;
-    }
-    const parts = scrubbedHourItem.time.split(':');
-    return parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
-  }, [selectedHourIndex, scrubbedHourItem]);
+  // Position of the sun in the sky. The hour-by-hour ruler was removed, so the
+  // sky always reflects the live hour (stable within a given minute).
+  const now = new Date();
+  const currentFloatHour = now.getHours() + now.getMinutes() / 60;
 
   const sunriseFloat = React.useMemo(() => {
     if (!weather?.sunrise) return 7.0;
@@ -170,10 +160,7 @@ export default function App() {
     return parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
   }, [weather?.sunset]);
 
-  const isScrubbedDaytime = currentFloatHour >= sunriseFloat && currentFloatHour <= sunsetFloat;
-  const activeScrubbedCode = (selectedHourIndex > 0 && scrubbedHourItem)
-    ? scrubbedHourItem.weatherCode
-    : (weather?.current.weatherCode ?? 0);
+  const activeWeatherCode = weather?.current.weatherCode ?? 0;
   const {
     showMoonModal, setShowMoonModal,
     showMorningBriefModal, setShowMorningBriefModal,
@@ -229,19 +216,18 @@ export default function App() {
       currentCommune,
       notifSettings.humorLevel,
       weatherRef.current,
-      notifSettings.birthDate,
       {
         rainNotificationsEnabled: notifSettings.rainNotificationsEnabled,
         stormNotificationsEnabled: notifSettings.stormNotificationsEnabled,
         alertNotificationsEnabled: notifSettings.alertNotificationsEnabled,
-        minMinutesBetweenAlerts: notifSettings.minMinutesBetweenAlerts
+        minMinutesBetweenAlerts: notifSettings.minMinutesBetweenAlerts,
+        morningBriefEnabled: notifSettings.morningBriefEnabled
       }
     );
-  }, [notifSettings.systemEnabled, currentCommune, notifSettings.humorLevel, notifSettings.birthDate, notifSettings.rainNotificationsEnabled, notifSettings.stormNotificationsEnabled, notifSettings.alertNotificationsEnabled, notifSettings.minMinutesBetweenAlerts]);
+  }, [notifSettings.systemEnabled, currentCommune, notifSettings.humorLevel, notifSettings.morningBriefEnabled, notifSettings.rainNotificationsEnabled, notifSettings.stormNotificationsEnabled, notifSettings.alertNotificationsEnabled, notifSettings.minMinutesBetweenAlerts]);
 
   const handleOpenMorningBrief = () =>
     openMorningBrief(
-      notifSettings.birthDate || '',
       weather?.current.weatherCode || 0,
       notifSettings.humorLevel,
       currentCommune?.nom || 'Inconnu',
@@ -386,12 +372,12 @@ export default function App() {
     refreshPushSubscription(
       currentCommune,
       notifSettings.humorLevel,
-      notifSettings.birthDate,
       {
         rainNotificationsEnabled: notifSettings.rainNotificationsEnabled,
         stormNotificationsEnabled: notifSettings.stormNotificationsEnabled,
         alertNotificationsEnabled: notifSettings.alertNotificationsEnabled,
-        minMinutesBetweenAlerts: notifSettings.minMinutesBetweenAlerts
+        minMinutesBetweenAlerts: notifSettings.minMinutesBetweenAlerts,
+        morningBriefEnabled: notifSettings.morningBriefEnabled
       }
     );
     // Intentionally narrow: only re-run on city change, not on every 10-min
@@ -439,34 +425,20 @@ export default function App() {
   };
 
 
-  // Resolve background style from WMO code of active weather
-  const currentCode = weather?.current.weatherCode ?? 0;
-  // Let's check weather hour is night or not, using real sunrise/sunset when available
-  const isNightTimeNow = isNightTime(weather?.sunrise, weather?.sunset);
-
-  const weatherStyle = getWeatherUI(currentCode, isNightTimeNow);
-  const ActiveWeatherIcon = weatherStyle.icon;
-
-  // Active inspected weather for details drawer (synchronised with TimeScrubber)
-  const inspectedHourItem = selectedHourIndex === 0 ? undefined : scrubbedHourItem;
-  const isInspectedNight = inspectedHourItem ? !isScrubbedDaytime : isNightTimeNow;
-  const inspectedWeatherStyle = getWeatherUI(activeScrubbedCode, isInspectedNight);
-  const InspectedWeatherIcon = inspectedWeatherStyle.icon;
-
   const topSkyColor = React.useMemo(() => {
-    return getSkyTopColor(currentFloatHour, activeScrubbedCode, sunriseFloat, sunsetFloat);
-  }, [currentFloatHour, activeScrubbedCode, sunriseFloat, sunsetFloat]);
+    return getSkyTopColor(currentFloatHour, activeWeatherCode, sunriseFloat, sunsetFloat);
+  }, [currentFloatHour, activeWeatherCode, sunriseFloat, sunsetFloat]);
 
   useEffect(() => {
     document.body.style.background = topSkyColor;
     document.documentElement.style.background = topSkyColor;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', topSkyColor);
-    // Only the live sky is remembered — a scrubbed hour is not "the" sky.
-    if (selectedHourIndex === 0 && weather) {
+    // Remember the live sky so the first paint of the next visit matches.
+    if (weather) {
       try { localStorage.setItem(SKY_COLOR_KEY, topSkyColor); } catch { /* optional */ }
     }
-  }, [topSkyColor, selectedHourIndex, weather]);
+  }, [topSkyColor, weather]);
 
   // Modals: chunk fetched on first open only, then kept mounted for exit animations.
   const moonModalMounted = useMountedOnce(showMoonModal);
@@ -496,7 +468,7 @@ export default function App() {
       {/* Container Principal : AUCUNE bordure sur mobile (border-0), bordure uniquement sur desktop (sm:border) */}
       <main
         id="applet-main-frame"
-        className="relative w-full max-w-md h-[100dvh] sm:h-[880px] sm:max-h-[920px] sm:rounded-[40px] shadow-2xl overflow-hidden border-0 sm:border sm:border-white/20 sm:bg-white/5 sm:backdrop-blur-2xl box-border flex flex-col justify-between pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] px-5 sm:p-6"
+        className="app-shell shadow-2xl"
       >
         
         {/* MOON PHASES MODAL */}
@@ -506,21 +478,20 @@ export default function App() {
           </Suspense>
         )}
 
-        {/* HOROSCOPE MODAL */}
+        {/* MORNING BRIEF MODAL (weather-only, no astrology) */}
         {briefModalMounted && (
           <Suspense fallback={null}>
-            <HoroscopeModal
+            <MorningBriefModal
               isOpen={showMorningBriefModal}
               onClose={() => setShowMorningBriefModal(false)}
-              loading={loadingBrief}
-              brief={aiBrief}
-              hasBirthDate={Boolean(notifSettings.birthDate)}
+              loadingBrief={loadingBrief}
+              aiBrief={aiBrief}
               onOpenSettings={() => {
                 setShowMorningBriefModal(false);
                 setActiveTab('reglages');
               }}
               cityName={currentCommune?.nom}
-              speech={briefSpeech}
+              briefSpeech={briefSpeech}
             />
           </Suspense>
         )}
@@ -541,7 +512,7 @@ export default function App() {
 
         {/* PRIVACY POLICY MODAL */}
         <AnimatePresence>
-          {showPrivacyPolicy && (
+          {privacyMounted && (
             <Suspense fallback={null}>
               <PrivacyPolicy
                 isOpen={showPrivacyPolicy}
@@ -560,7 +531,7 @@ export default function App() {
           hour={currentFloatHour}
           sunriseHour={sunriseFloat}
           sunsetHour={sunsetFloat}
-          weatherCode={activeScrubbedCode}
+          weatherCode={activeWeatherCode}
         />
 
         {/* TOP PANEL: Auto-suggest Search and Geolocation pin (Shown on Villes tab or secondary tabs) */}
@@ -710,7 +681,7 @@ export default function App() {
         <div id="main-content" className="flex-1 min-h-0 flex flex-col relative z-10 overflow-y-auto no-scrollbar">
           <AnimatePresence mode="wait">
             
-            {/* SCREEN 1: UNIFIED METEO VIEW (HERO + TIME-SCRUBBER + 7-DAY & DETAILS ON ONE PAGE) */}
+            {/* SCREEN 1: UNIFIED METEO VIEW (HERO + HOURLY + 7-DAY & DETAILS ON ONE PAGE) */}
             {activeTab === 'meteo' && (
               <motion.div
                 key="meteo-tab-screen"
@@ -735,7 +706,6 @@ export default function App() {
                     {/* The signature minimalist Hero view */}
                     <PureWeatherHero
                       weather={weather}
-                      selectedHour={selectedHourIndex === 0 ? undefined : scrubbedHourItem}
                       cityName={currentCommune.nom}
                       mode={heroMode}
                       onToggleMode={setHeroMode}
@@ -746,15 +716,34 @@ export default function App() {
                       onSelectFavorite={setCurrentCommune}
                     />
 
-                    {/* The signature interactive Time-Scrubber ruler */}
-                    <div className="w-full glass-premium rounded-3xl py-0.5 z-20">
-                      <TimeScrubber
-                        hourly={weather.hourly || []}
-                        selectedIndex={selectedHourIndex}
-                        onSelectIndex={setSelectedHourIndex}
-                        isDaytime={isScrubbedDaytime}
-                      />
-                    </div>
+                    {/* Real hour-by-hour strip for the selected day */}
+                    <HourlyForecast
+                      hourlyData={
+                        selectedDayIndex === 0
+                          ? weather.hourly
+                          : (weather.daily[selectedDayIndex]?.hourly || [])
+                      }
+                      humidity={
+                        selectedDayIndex === 0
+                          ? weather.current.humidity
+                          : (weather.daily[selectedDayIndex]?.humidity ?? weather.current.humidity)
+                      }
+                      dayName={
+                        selectedDayIndex === 0
+                          ? "Aujourd'hui"
+                          : (weather.daily[selectedDayIndex]?.date || 'Sélectionné')
+                      }
+                      sunrise={
+                        selectedDayIndex === 0
+                          ? weather.sunrise
+                          : (weather.daily[selectedDayIndex]?.sunrise || weather.sunrise)
+                      }
+                      sunset={
+                        selectedDayIndex === 0
+                          ? weather.sunset
+                          : (weather.daily[selectedDayIndex]?.sunset || weather.sunset)
+                      }
+                    />
 
                     {/* All 7-day forecast, daylight gain/loss, hourly & detailed cards on the same page */}
                     <PureDetailedCards
@@ -766,15 +755,10 @@ export default function App() {
                       saintDuJour={saintDuJour}
                       staleSince={staleSince}
                       refreshing={refreshing}
-                      currentCode={activeScrubbedCode}
-                      isNightTimeNow={isInspectedNight}
-                      weatherStyle={inspectedWeatherStyle}
-                      ActiveWeatherIcon={InspectedWeatherIcon}
                       selectedDayIndex={selectedDayIndex}
                       setSelectedDayIndex={setSelectedDayIndex}
                       setShowMoonModal={setShowMoonModal}
                       airQuality={airQuality}
-                      selectedHour={inspectedHourItem}
                     />
                   </>
                 ) : (
@@ -801,15 +785,15 @@ export default function App() {
                 className="flex-1 flex flex-col space-y-4 text-white focus:outline-none pt-2"
               >
                 {/* Active City Card */}
-                <div className="glass-premium rounded-2xl p-4 flex items-center justify-between">
+                <div className="card flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-white/60 font-semibold uppercase tracking-wider block">Ville active</span>
-                    <h3 className="text-xl font-bold text-white">{currentCommune.nom}</h3>
-                    <p className="text-xs text-white/70">Dép. {currentCommune.codeDepartement}</p>
+                    <span className="kicker text-white/60">Ville active</span>
+                    <h3 className="text-xl font-bold text-white mt-1">{currentCommune.nom}</h3>
+                    <p className="meta">Dép. {currentCommune.codeDepartement}</p>
                   </div>
                   <button
                     onClick={() => toggleFavorite(currentCommune)}
-                    className="p-2 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-white cursor-pointer"
+                    className="icon-btn"
                     title={favorites.some(fav => fav.code === currentCommune.code) ? "Retirer des favoris" : "Ajouter aux favoris"}
                   >
                     <Star
@@ -820,7 +804,7 @@ export default function App() {
 
                 {/* Saved Favorite Cities */}
                 <div className="flex-1 flex flex-col space-y-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-1.5 pt-2">
+                  <h4 className="kicker text-white/70 flex items-center gap-1.5 pt-2">
                     <Star className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
                     <span>Mes villes favorites ({favorites.length})</span>
                   </h4>
@@ -838,10 +822,10 @@ export default function App() {
                             setCurrentCommune(fav);
                             setActiveTab('meteo');
                           }}
-                          className={`w-full p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                          className={`tile w-full cursor-pointer flex items-center justify-between transition-all ${
                             currentCommune.code === fav.code
                               ? 'bg-sky-500/30 border-sky-400/50 shadow-md'
-                              : 'bg-white/10 hover:bg-white/15 border-white/15'
+                              : 'hover:bg-white/10'
                           }`}
                         >
                           <div className="text-left">
@@ -854,7 +838,7 @@ export default function App() {
                                 e.stopPropagation();
                                 setFavorites(favorites.filter(f => f.code !== fav.code));
                               }}
-                              className="p-1.5 rounded-full hover:bg-white/20 text-white/60 hover:text-rose-300 transition-colors"
+                              className="icon-btn icon-btn--sm"
                               title="Supprimer des favoris"
                             >
                               <X className="w-4 h-4" />
@@ -883,25 +867,19 @@ export default function App() {
                 className="flex-1 flex flex-col space-y-3 text-white focus:outline-none pt-1"
               >
                 {/* Segmented Control Radar Live vs Comparateur */}
-                <div className="flex bg-black/30 backdrop-blur-md p-1 rounded-2xl border border-white/15 w-full shrink-0 shadow-md">
+                <div className="segmented w-full shrink-0">
                   <button
                     onClick={() => setCartesMode('radar')}
-                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      cartesMode === 'radar'
-                        ? 'bg-sky-500 text-white shadow-md'
-                        : 'text-white/70 hover:text-white'
-                    }`}
+                    data-active={cartesMode === 'radar'}
+                    className="segmented-item"
                   >
                     <CloudRain className="w-3.5 h-3.5" />
-                    <span>Radar Pluie Live</span>
+                    <span>Radar pluie live</span>
                   </button>
                   <button
                     onClick={() => setCartesMode('compare')}
-                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      cartesMode === 'compare'
-                        ? 'bg-sky-500 text-white shadow-md'
-                        : 'text-white/70 hover:text-white'
-                    }`}
+                    data-active={cartesMode === 'compare'}
+                    className="segmented-item"
                   >
                     <Navigation className="w-3.5 h-3.5 rotate-45" />
                     <span>Comparateur</span>
@@ -912,7 +890,7 @@ export default function App() {
                 {cartesMode === 'radar' ? (
                   weather ? (
                     <Suspense fallback={<LazyFallback />}>
-                      <div className="glass-premium rounded-3xl p-3 flex-1 flex flex-col min-h-[380px] overflow-hidden">
+                      <div className="card card--tight flex-1 flex flex-col min-h-[380px] overflow-hidden">
                         <RainRadar
                           latitude={weather.latitude}
                           longitude={weather.longitude}
@@ -985,128 +963,64 @@ export default function App() {
                 transition={{ duration: 0.15 }}
                 className="flex-1 flex flex-col text-white space-y-4 pb-6 focus:outline-none"
               >
-                {/* Unified Alert Settings Panel */}
-                <div className="glass-premium rounded-3xl p-5 shadow-lg space-y-4 overflow-hidden relative">
-                  <div className="flex items-center gap-1.5 pb-2 border-b border-white/10 z-10 relative">
-                    <Bell className="w-5 h-5 text-sky-300 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)] animate-bounce" />
-                    <h4 className="text-[12px] font-extrabold uppercase tracking-widest text-sky-200">
-                      Alertes & Récurrences
-                    </h4>
+                {/* Alert settings */}
+                <section className="card space-y-4">
+                  <div className="flex items-center gap-2.5 pb-3 border-b border-white/10">
+                    <div className="w-9 h-9 rounded-2xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center shrink-0">
+                      <Bell className="w-[18px] h-[18px] text-sky-300" />
+                    </div>
+                    <div>
+                      <h2 className="kicker text-sky-200">Alertes & notifications</h2>
+                      <p className="meta mt-0.5">Pluie, orages, vigilance et brief matinal.</p>
+                    </div>
                   </div>
-                  
-                  <p className="text-[11px] text-white/70 leading-relaxed italic z-10 relative">
-                    Gérez vos alertes météo et la récurrence de votre dose d'ironie quotidienne ou des transitions météorologiques importantes.
-                  </p>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {/* 1. System Push toggle */}
-                    <div className="bg-white/10 p-4 rounded-2xl border border-white/15 flex flex-col gap-3">
-                      <div className="flex justify-between items-center gap-3">
-                        <div className="flex-1">
-                          <h5 className="text-[11px] font-bold text-white flex items-center gap-1.5 uppercase tracking-wide">
-                            <Bell className="w-3.5 h-3.5 text-sky-400" /> Notifications en Arrière-Plan (Web Push)
-                          </h5>
-                          <p className="text-[9.5px] text-white/80 leading-normal mt-1">
-                            Recevez des alertes automatiques d'ironie météo même lorsque votre téléphone est verrouillé ou que l'application est totalement fermée !
-                          </p>
-                        </div>
-                        <Toggle
-                          checked={notifSettings.systemEnabled}
-                          onChange={handleToggleSystemNotifications}
-                          label="Notifications en arrière-plan"
-                        />
+                    <div className="tile flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-[13px] font-bold text-white flex items-center gap-1.5">
+                          <Bell className="w-3.5 h-3.5 text-sky-400" /> Notifications en arrière-plan
+                        </h3>
+                        <p className="meta mt-1">
+                          Recevez les alertes même téléphone verrouillé ou application fermée.
+                        </p>
                       </div>
-
-                      {/* Informative helper tips for bulletproof push notifications */}
-                      <div className="bg-black/30 p-2.5 rounded-xl border border-white/5 space-y-1.5 text-[9px] text-white/60 leading-normal">
-                        <div className="flex items-start gap-1.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-sky-400 mt-1 shrink-0" />
-                          <p>
-                            <strong className="text-white">Fonctionnement autonome :</strong> Vos abonnements sont stockés de manière sécurisée sur notre serveur cloud. Toutes les 15 minutes, notre serveur interroge en arrière-plan les API météo de votre commune et déclenche une notification si le temps change brusquement.
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-1.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-sky-400 mt-1 shrink-0" />
-                          <p>
-                            <strong className="text-white">Conseil d'installation (PWA) :</strong> Sur mobile (iOS/Android), installez l'application sur votre écran d'accueil (via le bouton d'installation ou "Ajouter à l'écran d'accueil" de Safari/Chrome) pour garantir un fonctionnement parfait en arrière-plan sans restrictions du système.
-                          </p>
-                        </div>
-                        {window.self !== window.top && (
-                          <div className="flex items-start gap-1.5 text-amber-300/90 font-medium">
-                            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1 shrink-0" />
-                            <p>
-                              <strong className="text-amber-200">Attention Aperçu :</strong> En mode aperçu de l'éditeur d'IA (dans cette fenêtre), le navigateur bloque les services de notification système. 
-                              <a href={window.location.href} target="_blank" rel="noopener noreferrer" className="ml-1 text-sky-400 underline hover:text-sky-300 font-semibold cursor-pointer">
-                                Cliquez ici pour ouvrir l'application en grand écran
-                              </a> pour pouvoir tester et activer les alertes en direct !
-                            </p>
-                          </div>
-                        )}
-                      </div>
+                      <Toggle
+                        checked={notifSettings.systemEnabled}
+                        onChange={handleToggleSystemNotifications}
+                        label="Notifications en arrière-plan"
+                      />
                     </div>
 
-                    {/* 2. Morning Brief (BirthDate) */}
-                    <div className="bg-white/10 p-4 rounded-2xl border border-white/15 flex flex-col gap-3">
-                      <div className="flex justify-between items-start gap-3">
-                        <div>
-                          <h5 className="text-xs font-bold text-sky-300 flex items-center gap-1.5 uppercase tracking-wide">
-                            ⭐ Brief & Horoscope Matinal (Astro-Météo)
-                          </h5>
-                          <p className="text-xs text-white/80 leading-relaxed mt-1">
-                            Recevez chaque matin à 8h00 votre récapitulatif ultra-personnalisé mêlant les prévisions météo du jour et une touche d'inspiration positive !
-                          </p>
-                          <p className="text-[11px] text-white/60 leading-relaxed mt-1 italic">
-                            Pour activer cette fonctionnalité, veuillez renseigner votre date de naissance complète ci-dessous :
-                          </p>
-                        </div>
-                        {notifSettings.birthDate && (
-                          <span className="text-[10px] bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded-md font-bold tracking-wider uppercase shrink-0">
-                            ACTIF
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 pt-1.5 border-t border-white/10">
-                        <label htmlFor="birthdate-input" className="text-xs font-semibold text-white/90 shrink-0">
-                          Votre date de naissance :
-                        </label>
-                        <div className="relative w-full sm:w-auto flex-1 max-w-[200px]">
-                          <input
-                            id="birthdate-input"
-                            type="date"
-                            value={notifSettings.birthDate || ''}
-                            onChange={(e) => {
-                              const updated = { ...notifSettings, birthDate: e.target.value };
-                              setNotifSettings(updated);
-                              saveNotificationSettings(updated);
-                            }}
-                            className="text-xs bg-black/50 border border-white/20 rounded-xl px-3 py-1.5 text-white focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400/40 w-full font-mono"
-                          />
-                        </div>
-                      </div>
-
-                      {notifSettings.birthDate && (
-                        <button
-                          onClick={handleOpenMorningBrief}
-                          className="w-full mt-1 py-2 px-3 rounded-xl bg-sky-500/25 hover:bg-sky-500/35 border border-sky-400/40 text-xs font-bold text-sky-200 flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm cursor-pointer"
-                        >
-                          <Sparkles className="w-4 h-4 text-amber-300" />
-                          <span>Écouter mon Brief Astro-Météo du jour</span>
-                        </button>
+                    {/* Helper tips */}
+                    <div className="rounded-2xl bg-black/25 border border-white/5 p-3 space-y-2 text-[11px] leading-relaxed text-white/65">
+                      <p>
+                        <strong className="text-white">Fonctionnement :</strong> votre abonnement est stocké sur notre serveur. Toutes les <strong className="text-white">10 minutes</strong>, il interroge les API météo de votre commune et déclenche une alerte si le temps change nettement.
+                      </p>
+                      <p>
+                        <strong className="text-white">Conseil PWA :</strong> sur mobile, installez l'application sur l'écran d'accueil pour un fonctionnement fiable en arrière-plan.
+                      </p>
+                      {window.self !== window.top && (
+                        <p className="text-amber-200/90">
+                          <strong className="text-amber-200">Aperçu :</strong> le navigateur bloque les notifications dans cette fenêtre.{' '}
+                          <a href={window.location.href} target="_blank" rel="noopener noreferrer" className="text-sky-300 underline hover:text-sky-200">
+                            Ouvrir en plein écran
+                          </a>
+                        </p>
                       )}
                     </div>
+                  </div>
 
-                    {/* 3. Rain choice toggle */}
-                    <div className={`bg-white/10 p-3 rounded-2xl border border-white/15 flex justify-between items-center gap-3 transition-opacity duration-300 ${
-                      !notifSettings.systemEnabled ? 'opacity-40' : ''
-                    }`}>
-                      <div className="flex-1">
-                        <h5 className="text-[11px] font-bold text-white flex items-center gap-1.5">
-                          <CloudRain className="w-3.5 h-3.5 text-sky-300" /> Pluies & Averses
-                        </h5>
-                        <p className="text-[9px] text-white/60 leading-none mt-1">
-                          {!notifSettings.systemEnabled ? 'Inactive car globale coupée' : 'Crachins, déluges & accalmies'}
-                        </p>
+                  {/* Categories */}
+                  <div className="space-y-2">
+                    <div className={`tile flex items-center gap-3 transition-opacity duration-300 ${!notifSettings.systemEnabled ? 'opacity-40' : ''}`}>
+                      <div className="w-8 h-8 rounded-xl bg-sky-500/15 border border-sky-400/20 flex items-center justify-center shrink-0">
+                        <CloudRain className="w-4 h-4 text-sky-300" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-[13px] font-bold text-white">Pluies & averses</h3>
+                        <p className="meta">Crachins, déluges et accalmies.</p>
                       </div>
                       <Toggle
                         checked={notifSettings.rainNotificationsEnabled !== false}
@@ -1115,17 +1029,13 @@ export default function App() {
                       />
                     </div>
 
-                    {/* 4. Thunderstorm / Storm choice toggle */}
-                    <div className={`bg-white/10 p-3 rounded-2xl border border-white/15 flex justify-between items-center gap-3 transition-opacity duration-300 ${
-                      !notifSettings.systemEnabled ? 'opacity-40' : ''
-                    }`}>
-                      <div className="flex-1">
-                        <h5 className="text-[11px] font-bold text-white flex items-center gap-1.5">
-                          <CloudLightning className="w-3.5 h-3.5 text-amber-300" /> Orages & Tempêtes
-                        </h5>
-                        <p className="text-[9px] text-white/60 leading-none mt-1">
-                          {!notifSettings.systemEnabled ? 'Inactive car globale coupée' : 'Impacts de foudre & fin d\'orage'}
-                        </p>
+                    <div className={`tile flex items-center gap-3 transition-opacity duration-300 ${!notifSettings.systemEnabled ? 'opacity-40' : ''}`}>
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-400/20 flex items-center justify-center shrink-0">
+                        <CloudLightning className="w-4 h-4 text-amber-300" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-[13px] font-bold text-white">Orages & tempêtes</h3>
+                        <p className="meta">Foudre et fin d'orage.</p>
                       </div>
                       <Toggle
                         checked={notifSettings.stormNotificationsEnabled !== false}
@@ -1135,17 +1045,13 @@ export default function App() {
                       />
                     </div>
 
-                    {/* 5. Vigilance Alert choice toggle */}
-                    <div className={`bg-white/10 p-3 rounded-2xl border border-white/15 flex justify-between items-center gap-3 transition-opacity duration-300 ${
-                      !notifSettings.systemEnabled ? 'opacity-40' : ''
-                    }`}>
-                      <div className="flex-1">
-                        <h5 className="text-[11px] font-bold text-white flex items-center gap-1.5">
-                          <AlertTriangle className="w-3.5 h-3.5 text-rose-400" /> Alertes de Vigilance
-                        </h5>
-                        <p className="text-[9px] text-white/60 leading-none mt-1">
-                          {!notifSettings.systemEnabled ? 'Inactive car globale coupée' : 'Vigilances Locales (Météo-France)'}
-                        </p>
+                    <div className={`tile flex items-center gap-3 transition-opacity duration-300 ${!notifSettings.systemEnabled ? 'opacity-40' : ''}`}>
+                      <div className="w-8 h-8 rounded-xl bg-rose-500/15 border border-rose-400/20 flex items-center justify-center shrink-0">
+                        <AlertTriangle className="w-4 h-4 text-rose-300" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-[13px] font-bold text-white">Alertes de vigilance</h3>
+                        <p className="meta">Niveaux officiels Météo-France.</p>
                       </div>
                       <Toggle
                         checked={notifSettings.alertNotificationsEnabled !== false}
@@ -1155,21 +1061,86 @@ export default function App() {
                       />
                     </div>
                   </div>
-                </div>
+
+                  {/* Humor level — drives every notification and brief punchline */}
+                  <div className="space-y-2 pt-1">
+                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+                      Ton des messages
+                    </h3>
+                    <div className="segmented" role="group" aria-label="Ton des messages">
+                      {([
+                        ['safe', 'Sobre'],
+                        ['spicy', 'Taquin'],
+                        ['vulgar', 'Sans filtre'],
+                      ] as const).map(([level, label]) => (
+                        <button
+                          key={level}
+                          type="button"
+                          data-active={notifSettings.humorLevel === level}
+                          aria-pressed={notifSettings.humorLevel === level}
+                          onClick={() => {
+                            const updated = { ...notifSettings, humorLevel: level };
+                            setNotifSettings(updated);
+                            saveNotificationSettings(updated);
+                          }}
+                          className="segmented-item"
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+
+                {/* Morning brief (weather only) */}
+                <section className="card space-y-3">
+                  <div className="flex items-center gap-2.5 pb-3 border-b border-white/10">
+                    <div className="w-9 h-9 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-[18px] h-[18px] text-amber-300" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h2 className="kicker text-amber-200">Brief matinal</h2>
+                      <p className="meta mt-0.5">La météo du jour, puis une phrase pour démarrer.</p>
+                    </div>
+                    <Toggle
+                      checked={notifSettings.morningBriefEnabled !== false}
+                      onChange={() => {
+                        const updated = { ...notifSettings, morningBriefEnabled: notifSettings.morningBriefEnabled === false };
+                        setNotifSettings(updated);
+                        saveNotificationSettings(updated);
+                      }}
+                      label="Brief matinal quotidien"
+                      activeColorClass="bg-amber-500"
+                    />
+                  </div>
+
+                  <p className="text-[12px] leading-relaxed text-white/75">
+                    Chaque matin entre 6h et 10h : température, pluie, vent et conseil pratique, suivis d'une courte phrase générée par IA. Sans astrologie, sans date de naissance.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={handleOpenMorningBrief}
+                    disabled={!weather}
+                    className="w-full py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 disabled:opacity-40 disabled:cursor-not-allowed border border-amber-400/40 text-[12px] font-bold text-amber-100 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>Lire / écouter le brief du jour</span>
+                  </button>
+                </section>
 
                 {/* Section de Test des Notifications — admin only */}
                 {isAdmin && (
-                <div className="glass-premium rounded-3xl p-5 shadow-lg space-y-4 overflow-hidden relative">
-                  <div className="flex items-center gap-1.5 pb-2 border-b border-white/10 z-10 relative">
-                    <Sparkles className="w-5 h-5 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
-                    <h4 className="text-[12px] font-extrabold uppercase tracking-widest text-amber-200">
-                      🧪 Labo de Test des Notifications
-                    </h4>
+                <section className="card space-y-3">
+                  <div className="flex items-center gap-2.5 pb-3 border-b border-white/10">
+                    <div className="w-9 h-9 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-[18px] h-[18px] text-amber-300" />
+                    </div>
+                    <div>
+                      <h2 className="kicker text-amber-200">Labo de test</h2>
+                      <p className="meta mt-0.5">Validez les notifications locales et serveur.</p>
+                    </div>
                   </div>
-
-                  <p className="text-[11px] text-white/70 leading-relaxed italic z-10 relative">
-                    Validez le bon fonctionnement de votre système de notifications (directes et en arrière-plan) en un clic.
-                  </p>
 
                   <div className="flex flex-col gap-2.5">
                     {/* Test local */}
@@ -1183,7 +1154,7 @@ export default function App() {
                         <Bell className="w-4 h-4 text-sky-400" />
                         Tester en Direct (Notification Locale)
                       </span>
-                      <span className="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-md font-mono font-bold">
+                      <span className="text-[11px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-md font-mono font-bold">
                         LOCAL
                       </span>
                     </button>
@@ -1244,7 +1215,7 @@ export default function App() {
                         )}
                         Tester le Web Push (Serveur Cloud)
                       </span>
-                      <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-md font-mono font-bold">
+                      <span className="text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-md font-mono font-bold">
                         CLOUD
                       </span>
                     </button>
@@ -1297,12 +1268,12 @@ export default function App() {
                         )}
                         Forcer la Vérification Météo (CRON API)
                       </span>
-                      <span className="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-md font-mono font-bold">
+                      <span className="text-[11px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-md font-mono font-bold">
                         CRON
                       </span>
                     </button>
                   </div>
-                </div>
+                </section>
                 )}
 
                 {/* Guide d'installation de la PWA mobile */}
@@ -1317,12 +1288,12 @@ export default function App() {
                 {/* Legal & Privacy */}
                 <button
                   onClick={() => setShowPrivacyPolicy(true)}
-                  className="glass-premium rounded-3xl p-4 shadow-sm text-center hover:bg-white/10 transition-colors active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-400/60 w-full"
+                  className="card text-center hover:bg-white/10 transition-colors active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-400/60 w-full"
                   aria-label="Confidentialité et mentions légales"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <ShieldAlert className="w-4 h-4 text-sky-300" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/70">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-white/70">
                       Confidentialité & Mentions légales
                     </span>
                   </div>
@@ -1330,7 +1301,7 @@ export default function App() {
 
                 {/* Dev / Application information */}
                 <div className="text-center py-1">
-                  <span className="text-[9px] text-white/60 font-bold uppercase tracking-widest">
+                  <span className="text-[11px] text-white/60 font-bold uppercase tracking-widest">
                     Météo Pure v3.0
                   </span>
                 </div>

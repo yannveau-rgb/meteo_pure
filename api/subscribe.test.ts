@@ -33,7 +33,7 @@ describe('POST /api/subscribe', () => {
       subscription: { endpoint: 'https://push.example/sub-1' },
       commune: { nom: 'Rennes' },
       humorLevel: 'spicy',
-      birthDate: '',
+      morningBriefEnabled: true,
       prevHot: false,
       prevRain: true,
       prevStorm: false,
@@ -72,5 +72,16 @@ describe('POST /api/subscribe', () => {
 
     expect(state.subs[0].prevHot).toBe(true);
     expect(state.subs[0].prevRain).toBe(false);
+  });
+
+  it('keeps the morning brief opt-out when the client sends morningBriefEnabled: false', async () => {
+    await handler(mockReq({
+      subscription: { endpoint: 'https://push.example/sub-1' },
+      commune: { nom: 'Rennes' },
+      humorLevel: 'safe',
+      morningBriefEnabled: false,
+    }), mockRes());
+
+    expect(state.subs[0].morningBriefEnabled).toBe(false);
   });
 });

@@ -71,31 +71,32 @@ export default function SharePreviewModal({
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 15, opacity: 0 }}
             transition={{ type: 'spring', duration: 0.4 }}
-            className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl glass-premium border border-white/20 shadow-2xl flex flex-col max-h-[90vh] focus:outline-none focus:ring-2 focus:ring-sky-400/60"
+            className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl card card--flush border border-white/20 shadow-2xl flex flex-col max-h-[90vh] focus:outline-none"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/15">
-              <h3 id="share-modal-title" className="text-sm font-bold text-sky-200 tracking-wider uppercase">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/15">
+              <h3 id="share-modal-title" className="kicker text-sky-200">
                 {title}
               </h3>
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer"
+                className="icon-btn icon-btn--sm"
                 type="button"
+                aria-label="Fermer l'aperçu de partage"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Body */}
-            <div className="p-6 overflow-y-auto space-y-5 flex flex-col items-center">
+            <div className="p-5 overflow-y-auto space-y-4 flex flex-col items-center">
               {isGenerating ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-4">
                   <div className="relative flex items-center justify-center">
                     <div className="w-12 h-12 rounded-full border-4 border-sky-400/20 border-t-sky-400 animate-spin" />
                   </div>
-                  <p className="text-white/80 text-xs font-semibold tracking-wide uppercase animate-pulse">
-                    Génération de l'image en cours...
+                  <p className="meta font-semibold tracking-wide uppercase animate-pulse">
+                    Génération de l'image en cours…
                   </p>
                 </div>
               ) : imageSrc ? (
@@ -119,10 +120,10 @@ export default function SharePreviewModal({
                   </div>
 
                   {/* Informative Tip Banner */}
-                  <div className="w-full bg-sky-500/10 border border-sky-500/20 rounded-2xl p-3.5 flex items-start gap-2.5 text-left">
+                  <div className="w-full tile !bg-sky-500/10 !border-sky-500/20 flex items-start gap-2.5 text-left">
                     <AlertCircle className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
                     <div className="space-y-0.5 animate-fade-in">
-                      <h4 className="text-xs font-bold text-sky-200">Conseil de partage</h4>
+                      <h4 className="text-[12px] font-bold text-sky-200">Conseil de partage</h4>
                       <p className="text-[11px] text-white/70 leading-relaxed">
                         Si la copie automatique ne fonctionne pas, vous pouvez toujours <strong>faire un clic droit</strong> ou <strong>un appui long</strong> sur l'image ci-dessus pour la copier ou l'enregistrer, ou cliquer sur <strong>« Télécharger »</strong> ci-dessous !
                       </p>
@@ -130,7 +131,7 @@ export default function SharePreviewModal({
                   </div>
                 </>
               ) : (
-                <div className="text-center py-12 text-rose-300 text-xs font-bold">
+                <div className="text-center py-12 text-rose-300 text-[12px] font-bold">
                   ⚠️ Échec de la génération de l'image. Veuillez réessayer.
                 </div>
               )}
@@ -138,11 +139,11 @@ export default function SharePreviewModal({
 
             {/* Footer Buttons */}
             {imageSrc && !isGenerating && (
-              <div className="px-6 py-4 border-t border-white/15 bg-slate-950 flex flex-col gap-3">
+              <div className="px-5 py-4 border-t border-white/15 bg-slate-950/80 flex flex-col gap-3">
                 <div className="flex flex-row gap-3">
                   <button
                     onClick={onCopy}
-                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer shadow-md ${
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-[12px] flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer shadow-md ${
                       copyStatus === 'copied'
                         ? 'bg-emerald-600 text-white'
                         : copyStatus === 'error'
@@ -154,12 +155,12 @@ export default function SharePreviewModal({
                     {copyStatus === 'copied' ? (
                       <>
                         <Check className="w-4 h-4 text-white animate-bounce" />
-                        <span>Copié dans le presse-papiers !</span>
+                        <span>Copié !</span>
                       </>
                     ) : copyStatus === 'error' ? (
                       <>
                         <AlertCircle className="w-4 h-4 text-white" />
-                        <span>Copie bloquée (téléchargez à la place)</span>
+                        <span>Copie bloquée</span>
                       </>
                     ) : (
                       <>
@@ -171,7 +172,7 @@ export default function SharePreviewModal({
 
                   <button
                     onClick={onDownload}
-                    className="py-3 px-5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
+                    className="py-3 px-5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-bold text-[12px] flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
                     title="Télécharger le fichier PNG"
                     type="button"
                   >
@@ -193,7 +194,7 @@ export default function SharePreviewModal({
                 {canNativeShare && (
                   <button
                     onClick={handleNativeShare}
-                    className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
+                    className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-[12px] flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
                     type="button"
                   >
                     {nativeShareStatus ? (

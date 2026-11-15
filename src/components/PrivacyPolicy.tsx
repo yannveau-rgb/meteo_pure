@@ -77,13 +77,9 @@ export default function PrivacyPolicy({ isOpen, onClose, onDeleteAllData }: Priv
                 (nécessaire au fonctionnement du service).
               </li>
               <li>
-                <strong>Date de naissance</strong> — optionnelle, utilisée uniquement pour
-                le signe astrologique du brief matinal. Base légale : consentement
-                explicite (vous la saisissez volontairement).
-              </li>
-              <li>
                 <strong>Préférences de notifications</strong> — niveau d'humour,
-                catégories d'alertes. Stockées localement uniquement.
+                catégories d'alertes, activation du brief matinal. Stockées localement
+                uniquement.
               </li>
               <li>
                 <strong>Données techniques</strong> — l'endpoint de notification push

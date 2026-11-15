@@ -4,7 +4,7 @@ import { StoredSubscription, withSubscriptionsLock } from './_lib/storage.js';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const {
-    subscription, commune, humorLevel, currentConditions, birthDate,
+    subscription, commune, humorLevel, currentConditions, morningBriefEnabled,
     rainNotificationsEnabled, stormNotificationsEnabled, alertNotificationsEnabled,
     minMinutesBetweenAlerts
   } = req.body || {};
@@ -20,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       subscription,
       commune,
       humorLevel: humorLevel || 'spicy',
-      birthDate: birthDate || '',
+      morningBriefEnabled: morningBriefEnabled !== false,
       // currentConditions is only sent on first subscribe (App.tsx's silent
       // refresh omits it). Falling back to `false` here used to wipe the
       // tracked state on every resync, making the next cron pass think rain/

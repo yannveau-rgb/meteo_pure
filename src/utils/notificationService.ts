@@ -23,7 +23,8 @@ export interface NotificationSettings {
   rainNotificationsEnabled?: boolean;
   stormNotificationsEnabled?: boolean;
   alertNotificationsEnabled?: boolean;
-  birthDate?: string;
+  /** Daily AI weather brief (push + in-app). Opt-out, on by default. */
+  morningBriefEnabled?: boolean;
 }
 
 // Default settings
@@ -34,7 +35,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   rainNotificationsEnabled: true,
   stormNotificationsEnabled: true,
   alertNotificationsEnabled: true,
-  birthDate: '',
+  morningBriefEnabled: true,
 };
 
 /**
@@ -459,29 +460,6 @@ export async function checkAndFireFullMoonNotification(humorLevel: HumorLevel = 
   }
 }
 
-export function getZodiacSign(dateStr: string): string {
-  if (!dateStr) return 'Inconnu';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return 'Inconnu';
-  
-  const d = date.getDate();
-  const m = date.getMonth() + 1; // 1-12
-  
-  if ((m === 3 && d >= 21) || (m === 4 && d <= 19)) return 'Bélier';
-  if ((m === 4 && d >= 20) || (m === 5 && d <= 20)) return 'Taureau';
-  if ((m === 5 && d >= 21) || (m === 6 && d <= 20)) return 'Gémeaux';
-  if ((m === 6 && d >= 21) || (m === 7 && d <= 22)) return 'Cancer';
-  if ((m === 7 && d >= 23) || (m === 8 && d <= 22)) return 'Lion';
-  if ((m === 8 && d >= 23) || (m === 9 && d <= 22)) return 'Vierge';
-  if ((m === 9 && d >= 23) || (m === 10 && d <= 22)) return 'Balance';
-  if ((m === 10 && d >= 23) || (m === 11 && d <= 21)) return 'Scorpion';
-  if ((m === 11 && d >= 22) || (m === 12 && d <= 21)) return 'Sagittaire';
-  if ((m === 12 && d >= 22) || (m === 1 && d <= 19)) return 'Capricorne';
-  if ((m === 1 && d >= 20) || (m === 2 && d <= 18)) return 'Verseau';
-  if ((m === 2 && d >= 19) || (m === 3 && d <= 20)) return 'Poissons';
-  return 'Inconnu';
-}
-
 export function getDaysUntilChristmas(now: Date): number {
   const currentYear = now.getFullYear();
   let christmasDate = new Date(currentYear, 11, 25, 0, 0, 0, 0); // Dec 25
@@ -646,19 +624,36 @@ export function getMonthlyChristmasCountdown(now: Date, humorLevel: HumorLevel):
   return { title: t[month], body: b[month] };
 }
 
-export function getMorningBriefContent(humorLevel: HumorLevel, birthDate: string, weatherCode: number): { title: string, body: string } | null {
-  const sign = getZodiacSign(birthDate);
-  if (sign === 'Inconnu') return null;
-
+/**
+ * Static, weather-only fallback for the morning brief.
+ *
+ * This used to be keyed on the user's zodiac sign. Astrology is gone, so the
+ * punchline is now derived from the actual weather: it works for everyone and
+ * never asks for a birth date. The factual numbers live in
+ * utils/morningAnchor.ts and are never produced here.
+ */
+export function getMorningBriefContent(
+  humorLevel: HumorLevel,
+  weatherCode: number
+): { title: string; body: string } {
   const isRaining = [51, 53, 55, 61, 63, 65, 80, 81, 82].includes(weatherCode);
   const isStorming = [95, 96, 99].includes(weatherCode);
+  const isSnowing = [71, 73, 75, 77, 85, 86].includes(weatherCode);
   const isSunny = [0, 1].includes(weatherCode);
-  const weatherType = isStorming ? 'storm' : isRaining ? 'rain' : isSunny ? 'sun' : 'cloud';
+  const weatherType = isStorming
+    ? 'storm'
+    : isSnowing
+      ? 'snow'
+      : isRaining
+        ? 'rain'
+        : isSunny
+          ? 'sun'
+          : 'cloud';
 
   const dayOfMonth = new Date().getDate();
   const dayOfWeek = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'][new Date().getDay()];
 
-  const weatherPhrases: Record<string, Record<string, string[]>> = {
+  const weatherPhrases: Record<HumorLevel, Record<string, string[]>> = {
     safe: {
       sun: [
         "Belle journée ensoleillée en perspective.",
@@ -677,6 +672,11 @@ export function getMorningBriefContent(humorLevel: HumorLevel, birthDate: string
         "Activité orageuse prévue : mettez-vous à l'abri lors des averses.",
         "Temps agité avec risque de tonnerre sur votre secteur.",
         "Atmosphère électrique ce matin, la prudence est de mise."
+      ],
+      snow: [
+        "La neige s'invite : habillez-vous chaudement et prudence sur les routes.",
+        "Paysage blanc en perspective, prévoyez des chaussures adaptées.",
+        "Quelques flocons attendus, gardez vos gants à portée de main."
       ],
       cloud: [
         "Ciel couvert mais temps calme et doux.",
@@ -703,6 +703,11 @@ export function getMorningBriefContent(humorLevel: HumorLevel, birthDate: string
         "Temps dynamique et orageux : prudence lors de vos sorties.",
         "Éclairs à l'horizon, un spectacle impressionnant en sécurité chez soi."
       ],
+      snow: [
+        "La neige fait son show : bonhomme de neige ou plaid, il faudra choisir.",
+        "Flocons en vue, sortez le grand manteau et le sourire.",
+        "Route glissante et ciel blanc : on ralentit, on profite du paysage."
+      ],
       cloud: [
         "Ciel doux et nuageux, parfait pour une journée productive.",
         "Les nuages s'installent en douceur sans troubler votre rythme.",
@@ -711,157 +716,44 @@ export function getMorningBriefContent(humorLevel: HumorLevel, birthDate: string
     },
     vulgar: {
       sun: [
-        "Belle journée ensoleillée en perspective.",
-        "Le soleil brille, profitez-en !"
+        "Soleil franc : profitez-en, ça ne durera peut-être pas.",
+        "Grand beau temps. Sortez, ça vous fera du bien.",
+        "Ciel bleu, café noir, journée lancée."
       ],
       rain: [
-        "La pluie arrose votre journée, pensez au parapluie.",
-        "Journée humide mais cosy."
+        "Il pleut. Le parapluie n'est pas une option.",
+        "Route mouillée, chaussures trempées : journée classique.",
+        "Averse en vue. Restez au sec si vous pouvez."
       ],
       storm: [
-        "Attention aux orages aujourd'hui, restez prudents.",
-        "Activité orageuse prévue."
+        "Orage en approche : on range le parasol et on rentre.",
+        "Ça va tonner. Évitez de jouer au héros dehors.",
+        "Ciel électrique, prudence, pas de bêtises."
+      ],
+      snow: [
+        "Neige au programme : ça glisse, ralentissez.",
+        "Flocons et routes blanches : sortez couverts et prudents.",
+        "La neige arrive. Bonhomme ou galère, à vous de voir."
       ],
       cloud: [
-        "Ciel couvert mais temps calme et doux.",
-        "Journée nuageuse mais sereine."
+        "Ciel gris, mais rien de dramatique.",
+        "Journée couverte et calme.",
+        "Nuages partout, café quand même."
       ]
     }
   };
 
-  const signPhrases: Record<string, string[]> = {
-    'Bélier': [
-      "Votre dynamisme naturel et votre enthousiasme vous ouvrent de belles portes.",
-      "Une belle énergie aujourd'hui : foncez avec confiance dans vos projets !",
-      "Votre esprit d'initiative saura faire la différence auprès de votre entourage.",
-      "Plein cap sur vos objectifs avec votre audace habituelle.",
-      "Votre motivation communicative apporte un élan positif à votre journée."
-    ],
-    'Taureau': [
-      "Votre constance et votre sérénité sont vos meilleurs atouts du jour.",
-      "Prenez le temps de savourer les petits bonheurs simples de la journée.",
-      "Votre détermination posée et efficace vous mène droit au succès.",
-      "Une belle journée pour consolider vos acquis en toute quiétude.",
-      "Votre fiabilité naturelle inspire confiance et respect autour de vous."
-    ],
-    'Gémeaux': [
-      "Votre curiosité vive et votre esprit d'adaptation ouvrent de belles perspectives.",
-      "Une journée idéale pour échanger, créer des liens et partager de bonnes idées.",
-      "Votre vivacité d'esprit saura débloquer facilement toutes les situations.",
-      "Votre sens de la communication apporte de la fraîcheur à vos échanges.",
-      "Votre créativité pétillante est au rendez-vous aujourd'hui !"
-    ],
-    'Cancer': [
-      "Votre intuition fine et votre bienveillance illuminent votre entourage.",
-      "Prenez soin de vous et accordez-vous un moment de détente bien mérité.",
-      "Une belle journée tout en écoute, en douceur et en harmonie.",
-      "Votre grande générosité de cœur crée des moments précieux aujourd'hui.",
-      "Faites confiance à votre ressenti : il vous guide avec justesse."
-    ],
-    'Lion': [
-      "Votre chaleur naturelle et votre générosité rayonnent autour de vous.",
-      "Une belle journée pour inspirer les autres et exprimer votre talent.",
-      "Votre leadership bienveillant donne confiance à tous ceux qui vous entourent.",
-      "Rayonnez avec élégance et partagez votre bel enthousiasme du jour.",
-      "Faites confiance à votre créativité : elle sera remarquée et appréciée."
-    ],
-    'Vierge': [
-      "Votre sens du détail et votre organisation sans faille feront des merveilles.",
-      "Une journée idéale pour avancer méthodiquement et voir clair dans vos projets.",
-      "Votre efficacité bienveillante est un précieux repère pour vos proches.",
-      "La clarté de vos idées vous permet de réussir ce que vous entreprenez.",
-      "Votre pragmatisme et votre sens pratique vous garantissent une belle réussite."
-    ],
-    'Balance': [
-      "Votre recherche d'harmonie et d'équilibre apporte la paix autour de vous.",
-      "Votre diplomatie naturelle et votre tact résolvent tout avec élégance.",
-      "Cultivez la beauté et la bonne entente tout au long de votre journée.",
-      "Votre sourire et votre écoute bienveillante font l'unanimité aujourd'hui.",
-      "Une belle journée sous le signe de la justice, de l'équilibre et du partage."
-    ],
-    'Scorpion': [
-      "Votre intuition profonde et votre détermination inébranlable guident vos pas.",
-      "Une énergie puissante et concentrée pour mener à bien vos ambitions.",
-      "Votre perspicacité et votre authenticité vous permettent d'aller à l'essentiel.",
-      "Votre magnétisme et votre force tranquille inspirent votre entourage.",
-      "Transformez les défis du jour en opportunités grâce à votre courage."
-    ],
-    'Sagittaire': [
-      "Votre optimisme chaleureux et votre enthousiasme soufflent un vent d'air frais.",
-      "Une excellente journée pour élargir vos horizons et découvrir de nouvelles choses.",
-      "Partagez votre bonne humeur contagieuse avec tous ceux que vous croisez !",
-      "Votre vision positive de la vie vous ouvre de magnifiques perspectives.",
-      "Avancez avec confiance : l'avenir vous sourit et de belles opportunités arrivent."
-    ],
-    'Capricorne': [
-      "Votre persévérance et votre sens des responsabilités forcent l'admiration.",
-      "Chaque effort consenti aujourd'hui consolide vos belles réussites de demain.",
-      "Construisez vos projets avec votre rigueur, votre patience et votre calme habituels.",
-      "Votre sagesse et votre maturité sont de précieux repères pour vos proches.",
-      "Une belle journée productive où votre rigueur portera pleinement ses fruits."
-    ],
-    'Verseau': [
-      "Votre esprit novateur et votre créativité apportent des solutions inspirantes.",
-      "Une belle journée pour penser différemment et lancer de belles idées.",
-      "Votre ouverture d'esprit et votre humanisme font chaud au cœur.",
-      "Votre regard tourné vers l'avenir ouvre de nouveaux horizons stimulants.",
-      "Cultivez votre originalité : c'est précisément ce qui fait votre force !"
-    ],
-    'Poissons': [
-      "Votre sensibilité artistique et votre grande empathie créent de précieux liens.",
-      "Laissez libre cours à votre imagination féconde et bienveillante.",
-      "Votre douceur naturelle apporte réconfort et sérénité à votre entourage.",
-      "Une journée propice à l'inspiration, au calme et aux belles rencontres.",
-      "Écoutez votre petite voix intérieure : elle vous guide avec sagesse et poésie."
-    ]
-  };
-
-  const weatherPool = weatherPhrases[humorLevel]?.[weatherType] || weatherPhrases.safe[weatherType];
-  const signPool = signPhrases[sign] || ["Passez une excellente et radieuse journée !"];
-
-  const wIdx = dayOfMonth % weatherPool.length;
-  const sIdx = (dayOfMonth * 7 + sign.length) % signPool.length;
-
-  const weatherLine = weatherPool[wIdx];
-  const signLine = signPool[sIdx];
+  const pool = weatherPhrases[humorLevel]?.[weatherType] || weatherPhrases.safe[weatherType];
+  const body = pool[dayOfMonth % pool.length];
 
   const titles = [
-    `🔮 ${dayOfWeek} ${sign}`,
-    `☕ ${sign} — ${dayOfWeek}`,
-    `⚡ Brief ${sign}`,
-    `🌀 ${dayOfWeek} pour ${sign}`,
+    `☕ Brief du ${dayOfWeek}`,
+    `🌤️ ${dayOfWeek}, on s'organise`,
+    `⚡ Le point météo du ${dayOfWeek}`
   ];
   const title = titles[dayOfMonth % titles.length];
 
-  // The factual weather line now lives in the brief's "anchor" (see
-  // utils/morningAnchor.ts), so the body stays a single punchline. Repeating
-  // the weather here is what used to make the brief feel long and muddled.
-  const body = humorLevel === 'safe'
-    ? `${weatherLine} ${signLine}`
-    : signLine;
-
   return { title, body };
-}
-
-export async function checkAndFireMorningBrief(humorLevel: HumorLevel, birthDate: string, weatherCode: number): Promise<void> {
-  const LAST_BRIEF_KEY = 'meteo_pure_last_morning_brief';
-  const todayStr = new Date().toISOString().split('T')[0];
-  const lastAlert = localStorage.getItem(LAST_BRIEF_KEY);
-  
-  if (lastAlert === todayStr) return; // Already sent today
-  
-  const now = new Date();
-  const hour = now.getHours();
-  // Only fire between 8h00 and 10h00
-  if (hour < 8 || hour > 10) return;
-  
-  const brief = getMorningBriefContent(humorLevel, birthDate, weatherCode);
-  if (!brief) return;
-
-  const delivered = await fireSystemNotification(brief.title, brief.body);
-  if (delivered) {
-    localStorage.setItem(LAST_BRIEF_KEY, todayStr);
-  }
 }
 
 export async function fireSystemNotification(title: string, body: string): Promise<boolean> {
@@ -930,13 +822,20 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray;
 }
 
+export interface PushNotificationPrefs {
+  rainNotificationsEnabled?: boolean;
+  stormNotificationsEnabled?: boolean;
+  alertNotificationsEnabled?: boolean;
+  minMinutesBetweenAlerts?: number;
+  morningBriefEnabled?: boolean;
+}
+
 export async function syncPushSubscription(
   enabled: boolean,
   commune: any,
   humorLevel: HumorLevel,
   weather: any,
-  birthDate?: string,
-  prefs?: { rainNotificationsEnabled?: boolean; stormNotificationsEnabled?: boolean; alertNotificationsEnabled?: boolean; minMinutesBetweenAlerts?: number }
+  prefs?: PushNotificationPrefs
 ): Promise<boolean> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
     return false;
@@ -985,11 +884,11 @@ export async function syncPushSubscription(
           subscription: sub,
           commune,
           humorLevel,
-          birthDate,
           rainNotificationsEnabled: prefs?.rainNotificationsEnabled,
           stormNotificationsEnabled: prefs?.stormNotificationsEnabled,
           alertNotificationsEnabled: prefs?.alertNotificationsEnabled,
           minMinutesBetweenAlerts: prefs?.minMinutesBetweenAlerts,
+          morningBriefEnabled: prefs?.morningBriefEnabled,
           currentConditions: weather ? {
             temperature: weather.current.temperature,
             precipitation: weather.current.precipitation,
@@ -997,7 +896,7 @@ export async function syncPushSubscription(
           } : null
         })
       });
-      await persistSubscriptionMeta(commune, humorLevel, birthDate);
+      await persistSubscriptionMeta(commune, humorLevel);
       return true;
     }
   } catch (err) {
@@ -1007,14 +906,14 @@ export async function syncPushSubscription(
 }
 
 /**
- * Persist commune/humorLevel/birthDate in Cache Storage so the Service Worker
- * can re-read them from `pushsubscriptionchange` (SW has no access to localStorage).
+ * Persist commune/humorLevel in Cache Storage so the Service Worker can
+ * re-read them from `pushsubscriptionchange` (SW has no access to localStorage).
  */
-async function persistSubscriptionMeta(commune: any, humorLevel: HumorLevel, birthDate?: string): Promise<void> {
+async function persistSubscriptionMeta(commune: any, humorLevel: HumorLevel): Promise<void> {
   try {
     if (!('caches' in window)) return;
     const cache = await caches.open('meteo-pure-meta');
-    const body = JSON.stringify({ commune, humorLevel, birthDate: birthDate || '' });
+    const body = JSON.stringify({ commune, humorLevel });
     await cache.put('/meta/subscription-info', new Response(body, { headers: { 'Content-Type': 'application/json' } }));
   } catch {
     // Non-critical: worst case pushsubscriptionchange falls back to a placeholder commune
@@ -1029,8 +928,7 @@ async function persistSubscriptionMeta(commune: any, humorLevel: HumorLevel, bir
 export async function refreshPushSubscription(
   commune: any,
   humorLevel: HumorLevel,
-  birthDate?: string,
-  prefs?: { rainNotificationsEnabled?: boolean; stormNotificationsEnabled?: boolean; alertNotificationsEnabled?: boolean; minMinutesBetweenAlerts?: number }
+  prefs?: PushNotificationPrefs
 ): Promise<void> {
   try {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -1058,14 +956,14 @@ export async function refreshPushSubscription(
           subscription: sub,
           commune,
           humorLevel,
-          birthDate,
           rainNotificationsEnabled: prefs?.rainNotificationsEnabled,
           stormNotificationsEnabled: prefs?.stormNotificationsEnabled,
           alertNotificationsEnabled: prefs?.alertNotificationsEnabled,
-          minMinutesBetweenAlerts: prefs?.minMinutesBetweenAlerts
+          minMinutesBetweenAlerts: prefs?.minMinutesBetweenAlerts,
+          morningBriefEnabled: prefs?.morningBriefEnabled
         })
       });
-      await persistSubscriptionMeta(commune, humorLevel, birthDate);
+      await persistSubscriptionMeta(commune, humorLevel);
     }
   } catch (e) {
     console.warn('[PUSH] silent refresh failed:', e);

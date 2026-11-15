@@ -18,15 +18,15 @@ function HourlyForecast({ hourlyData, humidity, dayName = "Aujourd'hui", sunrise
   return (
     <div 
       id="hourly-forecast-container"
-      className="glass-premium rounded-3xl p-5 shadow-lg select-none space-y-4 text-white"
+      className="card select-none space-y-4"
     >
       {/* Title area displaying the selected day */}
-      <div className="flex justify-between items-center text-[10px] font-bold text-sky-200 uppercase tracking-widest pb-1 border-b border-white/10">
-        <span>Heure par heure — {dayName}</span>
-        {displayItems.length > 6 && <span className="text-[9px] text-white/60 normal-case">(Défilez ➔)</span>}
+      <div className="flex justify-between items-center pb-2 border-b border-white/10 gap-2">
+        <span className="kicker text-sky-200">Heure par heure — {dayName}</span>
+        {displayItems.length > 6 && <span className="meta whitespace-nowrap">(Défilez →)</span>}
       </div>
 
-      {/* Sliding Row of beautiful Pill items */}
+      {/* Sliding row of hourly slots */}
       <div 
         className="flex justify-start items-center gap-2.5 overflow-x-auto no-scrollbar py-1" 
         id="hourly-forecast-scroll"
@@ -45,7 +45,7 @@ function HourlyForecast({ hourlyData, humidity, dayName = "Aujourd'hui", sunrise
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: Math.min(index * 0.035, 0.5), ease: 'easeOut' }}
               whileTap={{ scale: 0.93 }}
-              className={`relative flex flex-col items-center justify-between h-24 min-w-[54px] py-1.5 rounded-2xl border shadow-sm transition-colors hover:bg-white/20 ${
+              className={`relative flex flex-col items-center justify-between h-24 min-w-[56px] py-1.5 rounded-2xl border shadow-sm transition-colors hover:bg-white/20 ${
                 hour.stormRisk
                   ? 'bg-amber-500/15 border-amber-400/40'
                   : 'bg-white/10 border-white/15'
@@ -57,7 +57,7 @@ function HourlyForecast({ hourlyData, humidity, dayName = "Aujourd'hui", sunrise
               )}
 
               {/* Hour time */}
-              <span className="text-[9px] text-white/50 font-bold">
+              <span className="text-[11px] text-white/60 font-bold tabular-figures">
                 {hour.time}
               </span>
 
@@ -67,7 +67,7 @@ function HourlyForecast({ hourlyData, humidity, dayName = "Aujourd'hui", sunrise
               </div>
 
               {/* Hour Temp */}
-              <span className="text-[11px] text-white font-bold">
+              <span className="text-[12px] text-white font-bold tabular-figures">
                 {Math.round(hour.temp)}°
               </span>
             </motion.div>
@@ -75,11 +75,11 @@ function HourlyForecast({ hourlyData, humidity, dayName = "Aujourd'hui", sunrise
         })}
       </div>
 
-      {/* Humidity progress slider line exactly matching mockup placement at bottom of hourly section */}
-      <div className="space-y-2 pt-1 border-t border-white/10">
-        <div className="flex justify-between items-center text-[10px] font-bold text-white/50 tracking-wider">
+      {/* Humidity progress slider line */}
+      <div className="space-y-2 pt-2 border-t border-white/10">
+        <div className="flex justify-between items-center text-[11px] font-bold text-white/50 tracking-wider">
           <span className="uppercase">Modèle AROME</span>
-          <span className="text-white/80">Humidité: {humidity}%</span>
+          <span className="text-white/80">Humidité : {humidity}%</span>
         </div>
         <div className="relative w-full h-[3px] bg-white/15 rounded-full overflow-hidden">
           <div 

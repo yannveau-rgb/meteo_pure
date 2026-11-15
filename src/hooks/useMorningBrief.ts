@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { getMorningBriefContent, HumorLevel } from '../utils/notificationService';
 import { buildMorningAnchor, analyzeRainTiming, MorningAnchorInput } from '../utils/morningAnchor';
-import { getDailyHoroscope, HoroscopeData } from '../utils/horoscopeService';
 import { WeatherData } from '../types';
 
 export interface MorningBriefView {
@@ -9,7 +8,6 @@ export interface MorningBriefView {
   anchor: string;
   punchline: string;
   ai?: boolean;
-  horoscope?: HoroscopeData;
 }
 
 /**
@@ -45,17 +43,12 @@ export function useMorningBrief() {
   const [loadingBrief, setLoadingBrief] = useState<boolean>(false);
 
   async function openMorningBrief(
-    birthDate: string,
     weatherCode: number,
     humorLevel: HumorLevel,
     cityName: string,
     weather?: WeatherData | null
   ) {
     setShowMorningBriefModal(true);
-    if (!birthDate) {
-      setAiBrief(null);
-      return;
-    }
     setLoadingBrief(true);
     setAiBrief(null);
 
@@ -64,13 +57,12 @@ export function useMorningBrief() {
     const localAnchor = buildMorningAnchor(anchorInput ?? { weatherCode });
 
     const fallback = (): MorningBriefView => {
-      const fb = getMorningBriefContent(humorLevel, birthDate, weatherCode);
+      const fb = getMorningBriefContent(humorLevel, weatherCode);
       return {
-        title: fb?.title ?? '🔮 Horoscope du jour',
+        title: fb.title,
         anchor: localAnchor,
-        punchline: fb?.body ?? 'Passez une excellente et radieuse journée.',
+        punchline: fb.body,
         ai: false,
-        horoscope: getDailyHoroscope(birthDate),
       };
     };
 
@@ -78,16 +70,15 @@ export function useMorningBrief() {
       const res = await fetch('/api/morning-brief', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ birthDate, weatherCode, humorLevel, cityName, anchorInput })
+        body: JSON.stringify({ weatherCode, humorLevel, cityName, anchorInput })
       });
       if (res.ok) {
         const data = await res.json();
         setAiBrief({
-          title: data.title,
+          title: data.title || fallback().title,
           anchor: anchorInput ? localAnchor : (data.anchor || localAnchor),
           punchline: data.punchline || data.body,
           ai: data.ai !== false,
-          horoscope: data.horoscope || getDailyHoroscope(birthDate),
         });
       } else {
         setAiBrief(fallback());

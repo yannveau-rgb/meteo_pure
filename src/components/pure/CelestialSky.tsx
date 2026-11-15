@@ -74,7 +74,6 @@ export default function CelestialSky({
   const isDusk = hour > sunsetHour - 1 && hour <= sunsetHour + 1.5;
 
   // Weather condition flags based on WMO standard codes
-  const isClear = weatherCode === 0;
   const isMostlyClear = weatherCode === 1;
   const isPartlyCloudy = weatherCode === 2;
   const isOvercast = weatherCode === 3;

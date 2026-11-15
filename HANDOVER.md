@@ -3,7 +3,7 @@
 > Document de passation destiné à une nouvelle session Claude Code sans accès à
 > l'historique des conversations précédentes.
 >
-> **Dernière mise à jour** : 26 juillet 2026 · commit `3397192`
+> **Dernière mise à jour** : 15 novembre 2026
 
 ---
 
@@ -21,7 +21,7 @@ L'objectif n'est pas d'être une n-ième app météo, mais de combiner :
 1. **Une fiabilité de données supérieure** au grand public (modèle AROME 1,5 km
    de Météo-France, le même que celui utilisé sur le site officiel).
 2. **Un ton humoristique assumé** (notifications sarcastiques, brief matinal
-   mêlant horoscope et météo), avec 3 niveaux d'humour : `safe`, `spicy`,
+   météo avec punchline IA), avec 3 niveaux d'humour : `safe`, `spicy`,
    `vulgar`.
 3. **Des informations actionnables** plutôt que des chiffres bruts.
 
@@ -42,6 +42,7 @@ dégradé bleu azur.
 | — | Brief matinal audio (Web Speech API) |
 | — | **Résolution du bug majeur de notifications** (voir §8) |
 | Dernière session | Audit produit complet en 10 axes — 9 livrés, 1 écarté avec justification |
+| Session actuelle | Refonte design unifiée, suppression de l'horoscope, retour de l'heure par heure à la place du curseur horaire, minutes de soleil hiérarchisées |
 
 ### Choix techniques et justifications
 
@@ -84,7 +85,8 @@ dégradé bleu azur.
 - Pluie dans l'heure basée sur les vraies données `minutely_15`
 - Radar pluie & orages animé (passé + nowcast 30 min)
 - Notifications push fonctionnelles **app fermée** (iOS + Android, confirmé)
-- Brief matinal 2 couches (ancre factuelle + punchline IA) + lecture audio
+- Brief matinal 2 couches (ancre factuelle + punchline IA) + lecture audio, **météo uniquement** (plus d'horoscope)
+- **Design system unifié** dans `src/index.css` (`.card`, `.tile`, `.kicker`, `.meta`, `.pill`, `.icon-btn`, `.segmented`) appliqué à tous les onglets et modales
 - Qualité de l'air + pollens avec seuils par espèce
 - Indice de confiance multi-modèles
 - Cache offline avec badge « Hors-ligne · relevé de HH:MM »
@@ -97,7 +99,7 @@ dégradé bleu azur.
   - **Prévention du flash blanc** : restauration immédiate de la couleur du ciel (`meteo_pure_sky_color`) et `color-scheme: dark` dès le `<head>` de `index.html`.
   - **Code-splitting & Préchargement idle** : modals et tiroir 7 jours chargés à la demande (`lazyWithRetry`), tiroir préchauffé sur temps mort (`requestIdleCallback`).
   - **Auto-locate idempotente** : mémoisation de la commune actuelle pour éviter d'avorter et relancer la requête météo au démarrage.
-- **125 tests** au vert (11 suites vitest), typecheck à 0, build propre
+- **119 tests** au vert (11 suites vitest), typecheck à 0, build propre
 
 ### 🟡 Partiellement terminé
 
@@ -117,7 +119,7 @@ Idées évoquées et **non retenues pour l'instant** :
   coût/quota n'a pas été jugé justifié ; **l'utilisateur a dit « c ok »**
 - Notifications : digest du soir, alerte de révision J-1→J, alerte gel/plantes
   (recommandés dans l'audit, non implémentés)
-- Refactor de `src/App.tsx` (~1600 lignes, monolithique)
+- Refactor de `src/App.tsx` (~1330 lignes, monolithique)
 
 ### 🎯 Priorités suggérées pour les prochaines sessions
 
@@ -177,7 +179,7 @@ météo que pour le cron de notifications.
 | CSS | Tailwind | v4 (`@tailwindcss/vite`, config CSS-first) |
 | Animations | `motion` (ex-Framer Motion) | 12 |
 | Icônes | `lucide-react` | 0.546 |
-| Graphiques | `recharts` | 3 |
+| Graphiques | SVG natif (courbes dessinées dans les composants) | — |
 | Cartes | `leaflet` | 1.9 |
 | Capture image | `html2canvas` | 1.4 |
 | Push | `web-push` | 3.6 |
@@ -212,7 +214,7 @@ météo que pour le cron de notifications.
 │   ├── fonts/                            Inter + Instrument Serif (woff2)
 │   ├── manifest.json, icon-192.png, icon-512.png, icon.svg
 ├── src/
-│   ├── App.tsx                           ★ Racine, ~1600 lignes
+│   ├── App.tsx                           ★ Racine, ~1330 lignes
 │   ├── main.tsx                          Entrée + StrictMode + SW register
 │   ├── index.css                         Tailwind v4 + glassmorphism + keyframes
 │   ├── types.ts                          Types partagés
@@ -221,7 +223,7 @@ météo que pour le cron de notifications.
 │   └── utils/                            Logique métier + __tests__/
 ├── server.ts                             Dev uniquement (Express + Vite)
 ├── vercel.json                           Build, rewrites, cron Vercel
-└── vite.config.ts                        manualChunks (motion, recharts)
+└── vite.config.ts                        manualChunks (motion)
 ```
 
 ### Fichiers essentiels
@@ -251,7 +253,7 @@ cp .env.example .env.local     # puis remplir
 npm run dev
 
 # Tests
-npm run test                   # 64 tests, ~5 s
+npm run test                   # 119 tests, ~2 s
 npm run test:watch
 
 # Vérification de types (LENT : ~4 min)
@@ -450,6 +452,8 @@ Les panneaux d'onglets sortants restent montés à `opacity: 0`. Un test basé s
 
 ### 🧠 Logique métier à connaître
 
+- **Pas d'horoscope** : retiré du produit (le brief matinal est purement
+  météo, sans date de naissance). Ne pas le réintroduire sans demande explicite.
 - **3 niveaux d'humour** : `safe` / `spicy` / `vulgar`. Le niveau `vulgar` est
   volontairement grossier — c'est un choix produit assumé, pas un bug.
 - **Le brief matinal est en 2 couches** : ancre factuelle (code) + punchline (IA).
@@ -494,7 +498,7 @@ Les panneaux d'onglets sortants restent montés à `opacity: 0`. Un test basé s
 
 ### ✅ Prêt immédiatement
 
-- Dépôt complet, arbre de travail **propre**, tout est poussé (`3397192`)
+- Dépôt complet, arbre de travail **propre**, tout est poussé
 - `npm install` suffit pour démarrer
 - Tests, build, typecheck fonctionnels
 - Déploiement automatique opérationnel
@@ -561,7 +565,7 @@ RÈGLES DE TRAVAIL :
   manuelles (Vercel, GitHub, cron) en étapes numérotées.
 
 ÉTAT ACTUEL : le projet est stable, entièrement committé et poussé, aucune tâche
-en cours. Les 64 tests passent.
+en cours. Les 119 tests passent.
 
 Commence par lire HANDOVER.md, puis fais-moi un point : confirme que le code est
 cohérent avec la documentation, signale les écarts, et propose les prochaines
@@ -570,4 +574,4 @@ cohérent avec la documentation, signale les écarts, et propose les prochaines
 
 ---
 
-*Document généré le 26 juillet 2026 — commit `3397192`.*
+*Document généré le 15 novembre 2026.*

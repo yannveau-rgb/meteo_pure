@@ -15,7 +15,7 @@ PWA météo française avec alertes push, brief matinal IA et vigilances Météo
 - 🌧️ Pluie dans l'heure (données réelles `minutely_15`, mm par tranche de 15 min)
 - 📡 Radar pluie & orages animé (RainViewer, passé + nowcast 30 min)
 - 🔔 Notifications push même app fermée (Web Push API + VAPID)
-- 🔮 Brief matinal en 2 couches : ancre factuelle + punchline IA (Mistral)
+- ☀️ Brief matinal météo en 2 couches : ancre factuelle calculée en code + punchline IA (Mistral)
 - 🔊 Lecture audio du brief (Web Speech API, natif navigateur)
 - 🌬️ Qualité de l'air + pollens par espèce (Open-Meteo Air Quality / CAMS)
 - 📴 Fonctionne hors-ligne (dernières prévisions en cache + badge explicite)
@@ -36,10 +36,10 @@ PWA météo française avec alertes push, brief matinal IA et vigilances Météo
 | IA | **Mistral** (`mistral-small-latest`, fallback `open-mistral-nemo`) |
 | Animations | Motion (ex-Framer Motion) + keyframes CSS |
 | Cartes | Leaflet + RainViewer |
-| Graphiques | Recharts |
+| Graphiques | SVG natif (courbes dessinées dans les composants) |
 | Icônes | Lucide React |
 | Typographie | Inter Variable + Instrument Serif (auto-hébergées) |
-| Tests | Vitest + V8 coverage (64 tests) |
+| Tests | Vitest + V8 coverage (119 tests) |
 | Lint | ESLint 9 (flat config) + typescript-eslint |
 | CI/CD | Push GitHub → Vercel auto-deploy |
 
@@ -50,7 +50,7 @@ api/                     Vercel Serverless Functions (PRODUCTION)
   _lib/                  Helpers partagés (Redis, VAPID, IA, auth, rate-limit, weather check)
     gemini.ts            ⚠️ nom historique — contient le client MISTRAL
   cron/check-weather.ts  Endpoint de vérification météo + envoi des push
-  morning-brief.ts       POST: brief matinal personnalisé
+  morning-brief.ts       POST: brief matinal météo (sans date de naissance)
   subscribe.ts           POST: enregistre/met à jour un abonnement push
   unsubscribe.ts         POST: retire un abonnement
   test-push.ts           POST: envoi de test (admin)
@@ -58,7 +58,7 @@ api/                     Vercel Serverless Functions (PRODUCTION)
   health.ts              GET: ping + nb d'abonnés
 
 src/
-  App.tsx                Composant racine (~1600 lignes)
+  App.tsx                Composant racine (~1330 lignes)
   hooks/                 useWeatherFetch, useAirQuality, useMorningBrief, ...
   components/            Composants UI
   utils/                 Logique métier + tests unitaires

@@ -1,6 +1,5 @@
-import { getMorningBriefContent, getZodiacSign } from '../../src/utils/notificationService.js';
+import { getMorningBriefContent } from '../../src/utils/notificationService.js';
 import { buildMorningAnchor, MorningAnchorInput } from '../../src/utils/morningAnchor.js';
-import { getDailyHoroscope, HoroscopeData, ZODIAC_METAS } from '../../src/utils/horoscopeService.js';
 
 function getWeatherDescription(code: number): string {
   if (code === 0) return 'Ciel totalement dégagé, grand soleil';
@@ -18,114 +17,39 @@ export interface MorningBrief {
   title: string;
   /** Factual, actionable line — computed in code, never by the model. */
   anchor: string;
-  /** Short inspirational line tying the sign to the real weather. */
+  /** Short weather-tied line for the day. */
   punchline: string;
   /** Alias of `punchline`, kept so older consumers keep working. */
   body: string;
   ai?: boolean;
   model?: string;
-  horoscope?: HoroscopeData;
-}
-
-export async function generateAiHoroscope(birthDate: string): Promise<HoroscopeData> {
-  const fallback = getDailyHoroscope(birthDate);
-  if (!process.env.MISTRAL_API_KEY) return fallback;
-
-  const meta = ZODIAC_METAS[fallback.sign] || ZODIAC_METAS['Bélier'];
-  const todayStr = new Date().toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
-
-  const prompt = `Rédige l'horoscope du jour en français pour le signe du ${meta.sign} (élément ${meta.element}, gouverné par ${meta.planet}).
-Date : ${todayStr}.
-
-Règles de rédaction :
-1. Ton : bienveillant, inspirant, constructif et digne des meilleurs astrologues professionnels.
-2. Pas de fatalisme, pas de prédictions anxiogènes ou irréalistes. Des conseils de sagesse et de dynamisme.
-3. Chaque domaine doit comporter 2 à 3 phrases claires, harmonieuses et fluides.
-
-Réponds UNIQUEMENT avec un JSON strict respectant cette structure exacte :
-{
-  "general": "Climat astral et ambiance générale de la journée",
-  "love": "Conseils et tendances pour la vie affective et relationnelle",
-  "career": "Dynamique professionnelle, projets et opportunités",
-  "vitality": "Forme, énergie et équilibre bien-être",
-  "advice": "Conseil clé ou mantra sage pour la journée"
-}`;
-
-  const models = ['mistral-small-latest', 'open-mistral-nemo'];
-
-  for (const model of models) {
-    try {
-      const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: 'user', content: prompt }],
-          response_format: { type: 'json_object' },
-          temperature: 0.75,
-          max_tokens: 500,
-        }),
-      });
-
-      if (!res.ok) continue;
-
-      const data = await res.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (content) {
-        const parsed = JSON.parse(content);
-        if (parsed.general && parsed.love && parsed.career && parsed.vitality && parsed.advice) {
-          return {
-            ...fallback,
-            general: String(parsed.general).trim(),
-            love: String(parsed.love).trim(),
-            career: String(parsed.career).trim(),
-            vitality: String(parsed.vitality).trim(),
-            advice: String(parsed.advice).trim(),
-            ai: true,
-          };
-        }
-      }
-    } catch (e: any) {
-      console.error(`[HOROSCOPE MISTRAL] ${model} failed:`, e.message || e);
-    }
-  }
-
-  return fallback;
 }
 
 export async function generateAiMorningBrief(
-  birthDate: string,
   weatherCode: number,
   humorLevel: string,
   cityName: string,
   anchorInput?: MorningAnchorInput
 ): Promise<MorningBrief> {
-  const sign = getZodiacSign(birthDate);
   const weatherDesc = getWeatherDescription(weatherCode);
+  const dayOfWeek = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'][new Date().getDay()];
+  const title = `Brief du ${dayOfWeek}`;
 
   // The factual line is always computed locally, whether or not the AI answers.
   const anchor = buildMorningAnchor(anchorInput ?? { weatherCode });
-  const title = `${sign}`;
 
   const staticFallback = (): MorningBrief => {
-    const fb = getMorningBriefContent(humorLevel as any, birthDate, weatherCode);
-    const punchline = fb?.body ?? 'Journée ordinaire en perspective.';
-    return { title, anchor, punchline, body: punchline, ai: false, horoscope: getDailyHoroscope(birthDate) };
+    const fb = getMorningBriefContent(humorLevel as any, weatherCode);
+    return { title, anchor, punchline: fb.body, body: fb.body, ai: false };
   };
 
   if (!process.env.MISTRAL_API_KEY) return staticFallback();
 
   let toneInstruction = '';
-  if (humorLevel === 'spicy') {
-    toneInstruction = 'souriant, dynamique et plein d\'énergie positive';
+  if (humorLevel === 'vulgar') {
+    toneInstruction = 'franc, direct, un peu mordant, jamais insultant';
+  } else if (humorLevel === 'spicy') {
+    toneInstruction = 'souriant, taquin et plein d\'énergie positive';
   } else {
     toneInstruction = 'doux, bienveillant, encourageant et lumineux';
   }
@@ -134,17 +58,17 @@ export async function generateAiMorningBrief(
 
   // The model writes ONLY the punchline. Facts are already handled by `anchor`,
   // so there is nothing here it could get numerically wrong.
-  const prompt = `Écris UNE phrase courte, inspirante et positive en français, pour un ${sign}. SEED:${seed}
+  const prompt = `Écris UNE phrase courte en français pour accompagner la météo du jour. SEED:${seed}
 
 Contexte météo réel à ${cityName} : ${weatherDesc}
 Ton : ${toneInstruction}
 
 Règles :
 1. Une seule phrase de 12 à 15 mots. Pas de mise en scène, pas de développement.
-2. Relie un trait positif du caractère du ${sign} à la météo réelle ci-dessus pour encourager sa journée.
-3. Reste toujours bienveillant, chaleureux et respectueux (aucun sarcasme, aucune moquerie).
+2. Appuie-toi sur la météo réelle ci-dessus pour donner envie de bien démarrer la journée.
+3. Reste toujours respectueux (aucune insulte, aucune moquerie ciblée).
 4. Ne donne AUCUN chiffre (température, heure, pourcentage) — ils sont affichés ailleurs.
-5. INTERDIT : "les astres", "alignement", "les étoiles vous réservent", "sous l'influence de".
+5. INTERDIT : "les astres", "alignement", "les étoiles vous réservent", "sous l'influence de", toute référence astrologique.
 
 Réponds UNIQUEMENT avec un JSON valide : {"punchline": "..."}`;
 
@@ -179,7 +103,7 @@ Réponds UNIQUEMENT avec un JSON valide : {"punchline": "..."}`;
         const parsed = JSON.parse(content);
         const punchline = typeof parsed.punchline === 'string' ? parsed.punchline.trim() : '';
         if (punchline.length >= 10) {
-          return { title, anchor, punchline, body: punchline, ai: true, model, horoscope: getDailyHoroscope(birthDate) };
+          return { title, anchor, punchline, body: punchline, ai: true, model };
         }
         console.error(`[MISTRAL] ${model} returned invalid content:`, content.slice(0, 200));
       }

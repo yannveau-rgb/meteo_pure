@@ -55,7 +55,7 @@ export function useCurrentCommune() {
    *
    * The silent auto-locate below resolves, for most people, to the very commune
    * already restored from storage — but as a *new object*. Every consumer keyed
-   * on the object (weather fetch, push sync, scrubber reset) then fired again:
+   * on the object (weather fetch, push sync, forecast day reset) then fired again:
    * the in-flight startup forecast was aborted and re-requested a few seconds
    * into the launch, and /api/subscribe was re-POSTed. Same for tapping the
    * favourite chip of the current city.

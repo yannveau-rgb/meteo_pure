@@ -111,12 +111,12 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
   return (
     <div 
       id="weather-details-card"
-      className="glass-premium rounded-3xl p-5 shadow-lg space-y-3.5 text-white/90 select-none"
+      className="card space-y-3.5 select-none"
     >
       <div className="space-y-2.5">
-        <div className="flex justify-between items-center text-xs font-semibold text-white/85">
-          <span>Vitesse du vent: {Math.round(current.windSpeed)} km/h</span>
-          <span>Ressenti: {Math.round(current.feelsLike)}°C</span>
+        <div className="flex justify-between items-center text-[12px] font-semibold text-white/85">
+          <span>Vent : {Math.round(current.windSpeed)} km/h</span>
+          <span>Ressenti : {Math.round(current.feelsLike)}°C</span>
         </div>
         
         {/* Elite glowing glassmorphic custom slider track with mercury bead */}
@@ -137,20 +137,20 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
       {/* Grid for minor parameters */}
       <div className="flex justify-between items-center text-[11px] font-semibold text-white/70 pt-0.5">
         <div className="flex items-center gap-1.5">
-          <span>Index UV: {uvIndex}</span>
-          <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${uvRisk.color}`}>{uvRisk.label}</span>
+          <span>UV : {uvIndex}</span>
+          <span className={`pill !text-[10px] !py-0 border ${uvRisk.color}`}>{uvRisk.label}</span>
         </div>
         <div className="flex items-center gap-2">
           {current.windDirection !== undefined && (
             <span className="text-white/50">{getWindDir(current.windDirection)}</span>
           )}
-          <span>Précip: {current.precipitation.toFixed(1)} mm</span>
+          <span>Précip. : {current.precipitation.toFixed(1)} mm</span>
         </div>
       </div>
 
       {/* Extra precision fields */}
       {(current.pressure !== undefined || current.visibility !== undefined || current.cloudCover !== undefined) && (
-        <div className="flex justify-between items-center text-[10px] text-white/50 pt-0.5">
+        <div className="flex justify-between items-center text-[11px] text-white/55 pt-0.5">
           {current.pressure !== undefined && (
             <span>{Math.round(current.pressure)} hPa</span>
           )}
@@ -166,12 +166,12 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
       {/* Exquisite inline SVG Sparkline to show the temperature curve for the next 6 hours */}
       {spark && (
         <div className="pt-3.5 border-t border-white/10 space-y-1.5">
-          <div className="flex justify-between items-center text-[10px] font-bold text-sky-200 uppercase tracking-widest">
-            <span>Tendance Temp. (6h venir)</span>
-            <span className="text-[9px] text-white/60 normal-case font-medium">Jusqu'à {featuredHourly[featuredHourly.length - 1].time}</span>
+          <div className="flex justify-between items-center gap-2">
+            <span className="kicker text-sky-200">Tendance temp. (6 h)</span>
+            <span className="meta">Jusqu'à {featuredHourly[featuredHourly.length - 1].time}</span>
           </div>
           
-          <div className="relative bg-white/5 rounded-2xl p-2.5 border border-white/10 overflow-hidden">
+          <div className="relative tile overflow-hidden">
             {/* Sparkline canvas graph */}
             <svg viewBox={`0 0 ${spark.width} ${spark.height}`} className="w-full h-10 overflow-visible">
               <defs>
@@ -221,7 +221,7 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
                     x={pt.x} 
                     y={pt.y - 6} 
                     textAnchor="middle" 
-                    className="text-[9px] font-bold fill-white/95 select-none"
+                    className="text-[10px] font-bold fill-white/95 select-none"
                   >
                     {Math.round(pt.temp)}°
                   </text>
@@ -230,7 +230,7 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
             </svg>
             
             {/* Highly legible and aligned hours array row */}
-            <div className="flex justify-between px-1.5 text-[9px] font-bold text-white/60 pt-1.5 border-t border-white/5">
+            <div className="flex justify-between px-1.5 text-[11px] font-bold text-white/60 pt-1.5 border-t border-white/5 tabular-figures">
               {spark.points.map((pt, idx) => (
                 <span key={idx} className="w-8 text-center">{pt.time}</span>
               ))}
@@ -241,14 +241,14 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
 
       {uvChart && (
         <div className="pt-3.5 border-t border-white/10 space-y-1.5">
-          <div className="flex justify-between items-center text-[10px] font-bold text-amber-200 uppercase tracking-widest">
-            <span>Indice UV (7 jours à venir)</span>
-            <span className="text-[9px] text-white/60 normal-case font-medium">
+          <div className="flex justify-between items-center gap-2">
+            <span className="kicker text-amber-200">Indice UV (7 jours)</span>
+            <span className="meta">
               {selectedUv ? `${selectedUv.label} · UV ${selectedUv.uv}` : 'Évolution prévue'}
             </span>
           </div>
 
-          <div className="relative bg-white/5 rounded-2xl p-2 border border-white/10 overflow-hidden">
+          <div className="relative tile p-2 overflow-hidden">
             <svg
               viewBox={`0 0 ${uvChart.width} ${uvChart.height}`}
               className="w-full h-20"
@@ -275,7 +275,7 @@ function WeatherStats({ current, uvIndex = 3, hourlyData = [], dailyData = [] }:
                 </g>
               ))}
             </svg>
-            <div className="flex justify-between px-1.5 text-[8px] font-bold text-white/50 uppercase">
+            <div className="flex justify-between px-1.5 text-[10px] font-bold text-white/50 uppercase">
               {uvChart.points.map((pt, idx) => (
                 <span key={idx} className={selectedUvDay === idx ? 'text-amber-200' : ''}>{pt.label}</span>
               ))}

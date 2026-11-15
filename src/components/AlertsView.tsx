@@ -8,68 +8,84 @@ interface AlertsViewProps {
   cityName: string;
 }
 
+type AlertTab = 'current' | 'safety' | 'numbers';
+
+const SAFETY_GUIDES = [
+  {
+    emoji: '⚡',
+    title: 'Vigilance orages',
+    tone: 'text-amber-300',
+    body: "Mettez à l'abri les objets sensibles au vent. Ne vous abritez pas sous un arbre ni près de pylônes. Débranchez les appareils électriques sensibles.",
+  },
+  {
+    emoji: '🌊',
+    title: 'Vigilance pluie-inondation',
+    tone: 'text-sky-300',
+    body: "Ne descendez pas dans les sous-sols. Évitez les cours d'eau. Ne vous engagez absolument pas — en voiture comme à pied — sur une voie immergée.",
+  },
+  {
+    emoji: '🌡️',
+    title: 'Températures extrêmes',
+    tone: 'text-rose-300',
+    body: "Gardez votre habitation au frais en fermant volets et fenêtres de jour. Buvez régulièrement de l'eau. En cas de grand froid, multipliez les épaisseurs et protégez vos extrémités.",
+  },
+];
+
+const EMERGENCY_NUMBERS = [
+  { number: '112', label: "Numéro d'urgence européen", note: 'Appel prioritaire', accent: 'text-rose-400' },
+  { number: '15', label: 'SAMU (urgences médicales)', note: '24 h/24 & 7 j/7', accent: 'text-white' },
+  { number: '18', label: 'Sapeurs-pompiers', note: 'Incendies & secours', accent: 'text-white' },
+  { number: '3250', label: 'Météo-France Audiotel', note: 'Météo par téléphone', accent: 'text-white' },
+];
+
 export default function AlertsView({ vigilance, cityName }: AlertsViewProps) {
-  const [activeTab, setActiveTab] = useState<'current' | 'safety' | 'numbers'>('current');
+  const [activeTab, setActiveTab] = useState<AlertTab>('current');
 
   const getAlertLabelText = (level: string) => {
     switch (level) {
-      case 'red': return 'Niveau d\'alerte maximal - TRÈS GRAND DANGER';
-      case 'orange': return 'Niveau d\'alerte orange - SOYEZ TRÈS VIGILANTS';
-      case 'yellow': return 'Niveau d\'alerte jaune - SOYEZ ATTENTIFS';
-      default: return 'Situation normale - AUCUN RISQUE MAJEUR';
+      case 'red': return 'Niveau d\'alerte maximal — très grand danger';
+      case 'orange': return 'Niveau d\'alerte orange — soyez très vigilants';
+      case 'yellow': return 'Niveau d\'alerte jaune — soyez attentifs';
+      default: return 'Situation normale — aucun risque majeur';
     }
   };
 
   return (
     <div 
       id="alerts-panel-tab"
-      className="glass-premium rounded-3xl p-5 shadow-lg flex flex-col justify-between flex-1 space-y-4 text-white select-none"
+      className="card flex flex-col justify-between flex-1 space-y-4 select-none"
     >
       {/* Header */}
       <div className="flex justify-between items-center pb-2.5 border-b border-white/15">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
             <Bell className="w-5 h-5 text-rose-400 animate-pulse" />
-            Alertes & Infos
+            Alertes & infos
           </h2>
-          <p className="text-[10px] text-white/70 uppercase tracking-widest mt-1">
+          <p className="kicker text-white/70 mt-1">
             Sécurité civile & prévisions
           </p>
         </div>
       </div>
 
       {/* Segmented control tabs */}
-      <div className="grid grid-cols-3 gap-1 bg-black/15 backdrop-blur-md p-1 rounded-xl border border-white/10">
-        <button
-          onClick={() => setActiveTab('current')}
-          className={`text-[11px] font-bold py-1.5 rounded-lg transition-all ${
-            activeTab === 'current' 
-              ? 'bg-white/15 text-white border border-white/10 shadow-sm' 
-              : 'text-white/60 hover:text-white/95 hover:bg-white/5'
-          }`}
-        >
-          {cityName}
-        </button>
-        <button
-          onClick={() => setActiveTab('safety')}
-          className={`text-[11px] font-bold py-1.5 rounded-lg transition-all ${
-            activeTab === 'safety' 
-              ? 'bg-white/15 text-white border border-white/10 shadow-sm' 
-              : 'text-white/60 hover:text-white/95 hover:bg-white/5'
-          }`}
-        >
-          Consignes
-        </button>
-        <button
-          onClick={() => setActiveTab('numbers')}
-          className={`text-[11px] font-bold py-1.5 rounded-lg transition-all ${
-            activeTab === 'numbers' 
-              ? 'bg-white/15 text-white border border-white/10 shadow-sm' 
-              : 'text-white/60 hover:text-white/95 hover:bg-white/5'
-          }`}
-        >
-          Urgences
-        </button>
+      <div className="segmented" role="group" aria-label="Sections d'alerte">
+        {([
+          ['current', cityName],
+          ['safety', 'Consignes'],
+          ['numbers', 'Urgences'],
+        ] as const).map(([tab, label]) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            data-active={activeTab === tab}
+            aria-pressed={activeTab === tab}
+            className="segmented-item truncate"
+          >
+            <span className="truncate">{label}</span>
+          </button>
+        ))}
       </div>
 
       {/* Tab contents */}
@@ -77,10 +93,10 @@ export default function AlertsView({ vigilance, cityName }: AlertsViewProps) {
         {activeTab === 'current' && (
           <div className="space-y-3">
             {/* Main Status Badge */}
-            <div className={`p-4 rounded-xl border flex items-center gap-3 shadow-md ${getLevelStyle(vigilance.globalLevel).banner}`}>
-              <ShieldAlert className="w-5 h-5 text-white drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)]" />
+            <div className={`tile !p-3.5 flex items-center gap-3 shadow-md ${getLevelStyle(vigilance.globalLevel).banner}`}>
+              <ShieldAlert className="w-5 h-5 text-white drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] shrink-0" />
               <div>
-                <h3 className="font-bold text-xs uppercase tracking-widest">Vigilance active à {cityName}</h3>
+                <h3 className="font-bold text-[12px] uppercase tracking-widest">Vigilance active à {cityName}</h3>
                 <p className="text-[11px] font-bold leading-relaxed mt-0.5 text-white">
                   {getAlertLabelText(vigilance.globalLevel)}
                 </p>
@@ -92,14 +108,14 @@ export default function AlertsView({ vigilance, cityName }: AlertsViewProps) {
               {vigilance.categories.map((cat, idx) => {
                 const catStyle = getLevelStyle(cat.level);
                 return (
-                  <div key={idx} className="bg-white/10 p-3.5 rounded-xl border border-white/10 flex justify-between items-start gap-4">
+                  <div key={idx} className="tile flex justify-between items-start gap-4">
                     <div className="flex-1">
-                      <h4 className="font-bold text-xs text-white">{cat.name}</h4>
+                      <h4 className="font-bold text-[12px] text-white">{cat.name}</h4>
                       <p className="text-[11px] text-white/80 mt-1 leading-relaxed">
                         {cat.description}
                       </p>
                     </div>
-                    <span className={`text-[9px] font-extrabold px-2.5 py-0.5 rounded-full border ${catStyle.badge}`}>
+                    <span className={`pill !text-[10px] ${catStyle.badge}`}>
                       {catStyle.label.toUpperCase()}
                     </span>
                   </div>
@@ -111,89 +127,48 @@ export default function AlertsView({ vigilance, cityName }: AlertsViewProps) {
 
         {activeTab === 'safety' && (
           <div className="space-y-3">
-            <h3 className="text-xs font-bold text-sky-200 uppercase tracking-widest pl-1 header-shadow">
+            <h3 className="kicker text-sky-200 pl-1">
               Consignes d'urgence France
             </h3>
 
-            {/* Orage Conseils */}
-            <div className="bg-white/10 p-3.5 rounded-xl border border-white/10 space-y-1.5">
-              <h4 className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                ⚡ Vigilance Orages
-              </h4>
-              <p className="text-[11px] text-white/80 leading-relaxed">
-                Mettez à l'abri les objets sensibles au vent. Ne vous abritez pas sous un arbre ni près de pylônes. Débranchez les appareils électriques sensibles.
-              </p>
-            </div>
-
-            {/* Inondation Conseils */}
-            <div className="bg-white/10 p-3.5 rounded-xl border border-white/10 space-y-1.5">
-              <h4 className="text-xs font-bold text-sky-300 flex items-center gap-1.5">
-                🌊 Vigilance Pluie-Inondation
-              </h4>
-              <p className="text-[11px] text-white/80 leading-relaxed">
-                Ne descendez pas dans les sous-sols. Évitez les cours d'eau. Ne vous engagez absolument pas - en voiture comme à pied - sur une voie immergée.
-              </p>
-            </div>
-
-            {/* Canicule/Grand Froid Conseils */}
-            <div className="bg-white/10 p-3.5 rounded-xl border border-white/10 space-y-1.5">
-              <h4 className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
-                🌡️ Températures Extrêmes (Canicule/Froid)
-              </h4>
-              <p className="text-[11px] text-white/80 leading-relaxed">
-                Gardez votre habitation au frais en fermant volets et fenêtres de jour. Buvez régulièrement de l'eau. En cas de grand froid, multipliez les épaisseurs et protégez vos extrémités.
-              </p>
-            </div>
+            {SAFETY_GUIDES.map((guide) => (
+              <div key={guide.title} className="tile space-y-1.5">
+                <h4 className={`text-[12px] font-bold flex items-center gap-1.5 ${guide.tone}`}>
+                  <span aria-hidden="true">{guide.emoji}</span> {guide.title}
+                </h4>
+                <p className="text-[11px] text-white/80 leading-relaxed">
+                  {guide.body}
+                </p>
+              </div>
+            ))}
           </div>
         )}
 
         {activeTab === 'numbers' && (
           <div className="space-y-3">
-            <h3 className="text-xs font-bold text-sky-200 uppercase tracking-widest pl-1 flex items-center gap-1.5 header-shadow">
+            <h3 className="kicker text-sky-200 pl-1 flex items-center gap-1.5">
               <PhoneCall className="w-3.5 h-3.5 text-sky-300" />
-              Numéros Nationaux (Appel Gratuit)
+              Numéros nationaux (appel gratuit)
             </h3>
             
             <div className="grid grid-cols-1 gap-2">
-              <div className="bg-white/10 p-3 rounded-xl border border-white/10 flex justify-between items-center transition-all hover:bg-white/15">
-                <div>
-                  <span className="text-lg font-black text-rose-400 tracking-tight block">112</span>
-                  <span className="text-[10px] text-white/70 font-semibold">Numéro d'urgence Européen</span>
+              {EMERGENCY_NUMBERS.map((item) => (
+                <div key={item.number} className="tile flex justify-between items-center transition-all hover:bg-white/10">
+                  <div>
+                    <span className={`text-lg font-black tracking-tight block ${item.accent}`}>{item.number}</span>
+                    <span className="text-[11px] text-white/70 font-semibold">{item.label}</span>
+                  </div>
+                  <span className="text-[11px] text-white/60 italic text-right">{item.note}</span>
                 </div>
-                <span className="text-[10px] text-white/60 italic">Appel prioritaire</span>
-              </div>
-
-              <div className="bg-white/10 p-3 rounded-xl border border-white/10 flex justify-between items-center transition-all hover:bg-white/15">
-                <div>
-                  <span className="text-lg font-black text-white tracking-tight block">15</span>
-                  <span className="text-[10px] text-white/70 font-semibold">SAMU (Urgences Médicales)</span>
-                </div>
-                <span className="text-[10px] text-white/60 italic">24h/24 & 7j/7</span>
-              </div>
-
-              <div className="bg-white/10 p-3 rounded-xl border border-white/10 flex justify-between items-center transition-all hover:bg-white/15">
-                <div>
-                  <span className="text-lg font-black text-white tracking-tight block">18</span>
-                  <span className="text-[10px] text-white/70 font-semibold">Sapeurs-pompiers</span>
-                </div>
-                <span className="text-[10px] text-white/60 italic">Incendies & Secours</span>
-              </div>
-
-              <div className="bg-white/10 p-3 rounded-xl border border-white/10 flex justify-between items-center transition-all hover:bg-white/15">
-                <div>
-                  <span className="text-lg font-black text-white tracking-tight block">3250</span>
-                  <span className="text-[10px] text-white/70 font-semibold">Météo-France Audiotel</span>
-                </div>
-                <span className="text-[10px] text-white/60 italic">Météo par téléphone</span>
-              </div>
+              ))}
             </div>
           </div>
         )}
       </div>
 
-      <div className="p-3 bg-white/10 rounded-xl border border-white/10 text-center flex items-center justify-center gap-1.5 shadow-inner">
-        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-        <span className="text-[10px] text-white/90 font-bold leading-normal">
+      <div className="tile !p-3 text-center flex items-center justify-center gap-1.5">
+        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <span className="text-[11px] text-white/90 font-bold leading-normal">
           Données officielles de vigilance Météo-France.
         </span>
       </div>

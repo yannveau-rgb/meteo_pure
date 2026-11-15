@@ -56,8 +56,8 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
       );
       const currentVigilance = vigilanceStatus.globalLevel || 'green';
 
-      // 8 AM morning brief (Europe/Paris)
-      if (sub.birthDate) {
+      // Morning brief (Europe/Paris). Opt-out: on unless explicitly disabled.
+      if (sub.morningBriefEnabled !== false) {
         const now = new Date();
         const pStr = now.toLocaleTimeString('en-US', { timeZone: 'Europe/Paris', hour: '2-digit', hour12: false });
         const parisHour = parseInt(pStr, 10);
@@ -88,20 +88,13 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
           };
 
           const brief = await generateAiMorningBrief(
-            sub.birthDate, weather.current.weather_code || 0, sub.humorLevel, sub.commune.nom, anchorInput
+            weather.current.weather_code || 0, sub.humorLevel, sub.commune.nom, anchorInput
           );
           if (brief) {
             try {
-              const pushTitle = brief.horoscope?.sign
-                ? `✨ Horoscope ${brief.horoscope.sign} · ${brief.title}`
-                : brief.anchor;
-              const pushBody = brief.horoscope
-                ? `${brief.horoscope.general} 💡 Conseil : ${brief.horoscope.advice}`
-                : brief.punchline;
-
               await webPush.sendNotification(sub.subscription, JSON.stringify({
-                title: pushTitle,
-                message: pushBody,
+                title: brief.anchor,
+                message: brief.punchline,
                 intensity: 'morning_brief',
                 city: sub.commune.nom
               }), { urgency: 'high', TTL: 3600 });

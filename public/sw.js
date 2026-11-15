@@ -1,5 +1,5 @@
 // Météo Pure Service Worker - Offline cache + Web Push
-const CACHE_NAME = 'meteo-pure-v10';
+const CACHE_NAME = 'meteo-pure-v11';
 const META_CACHE_NAME = 'meteo-pure-meta';
 const ASSETS_TO_CACHE = [
   '/',
@@ -177,7 +177,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
             subscription: newSub,
             commune: meta.commune,
             humorLevel: meta.humorLevel || 'spicy',
-            birthDate: meta.birthDate || ''
+            morningBriefEnabled: meta.morningBriefEnabled !== false
           })
         });
       })

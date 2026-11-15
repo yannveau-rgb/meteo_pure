@@ -254,6 +254,16 @@ export async function generateElementDataUrl(elementId: string): Promise<string>
   tempContainer.appendChild(clonedElement);
   document.body.appendChild(tempContainer);
 
+  // Fonts and entrance animations must settle before capture: the 7-day rows
+  // are motion buttons with staggered delays, and html2canvas snapshots their
+  // mid-animation offsets (which read as "cut off" rows).
+  if (document.fonts?.ready) {
+    try { await document.fonts.ready; } catch { /* non-blocking */ }
+  }
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+
   const runCapture = async (scale: number, safeMode: boolean) => {
     const { default: html2canvas } = await import('html2canvas');
     return await html2canvas(clonedElement, {
@@ -262,6 +272,13 @@ export async function generateElementDataUrl(elementId: string): Promise<string>
       backgroundColor: '#0b1329',
       scrollX: 0,
       scrollY: 0,
+      // Capture the whole rendered box, never the clipped viewport: without
+      // these, a clone taller/wider than the temporary container lost its
+      // header and its last day row.
+      width: clonedElement.scrollWidth,
+      height: clonedElement.scrollHeight,
+      windowWidth: Math.max(document.documentElement.clientWidth, 480),
+      windowHeight: Math.max(document.documentElement.clientHeight, clonedElement.scrollHeight),
       logging: false,
       onclone: (clonedDoc) => {
         // 1. Remove all external stylesheet link tags from the cloned document to prevent html2canvas parsing errors
@@ -318,6 +335,9 @@ export async function generateElementDataUrl(elementId: string): Promise<string>
           docElement.style.filter = 'none';
           docElement.style.backdropFilter = 'none';
           (docElement.style as any).webkitBackdropFilter = 'none';
+          // A card that clips for a scrolling UI must not clip in a still
+          // image: the header was losing its title to `overflow: hidden`.
+          docElement.style.overflow = 'visible';
 
           // Recursively clean all child styles that might crash html2canvas's parser
           const allChildren = docElement.getElementsByTagName('*');
@@ -349,6 +369,15 @@ export async function generateElementDataUrl(elementId: string): Promise<string>
             
             // Clean classes on elements (both HTML and SVG)
             const className = child.getAttribute('class') || '';
+
+            // `truncate` exists for narrow phone screens; in the fixed-width
+            // share image it truncates the card title for no reason.
+            if (className.includes('truncate')) {
+              child.style.whiteSpace = 'normal';
+              child.style.overflow = 'visible';
+              child.style.textOverflow = 'clip';
+            }
+
             if (className.includes('drop-shadow') || className.includes('blur') || className.includes('shadow')) {
               child.style.filter = 'none';
               child.style.boxShadow = 'none';

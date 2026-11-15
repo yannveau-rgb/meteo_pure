@@ -177,22 +177,22 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
   return (
     <div 
       id="city-comparison-tab" 
-      className="glass-premium rounded-3xl p-5 shadow-lg flex flex-col flex-1 space-y-4 text-white select-none"
+      className="card flex flex-col flex-1 space-y-4 select-none"
     >
       {/* Header */}
       <div className="flex justify-between items-center pb-3 border-b border-white/15">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
             <ArrowRightLeft className="w-5 h-5 text-sky-400 rotate-45" />
-            Double Station AROME
+            Double station AROME
           </h2>
-          <p className="text-[10px] text-white/70 uppercase tracking-widest mt-1">
+          <p className="kicker text-white/70 mt-1">
             Comparatif instantané multi-villes
           </p>
         </div>
-        <span className="text-[10px] bg-sky-500/20 text-sky-300 font-bold px-2.5 py-1 rounded-full border border-sky-500/30 flex items-center gap-1">
+        <span className="pill !bg-sky-500/20 !border-sky-500/30 !text-sky-300">
           <Zap className="w-3 h-3 text-sky-300 animate-pulse" />
-          Temps Réel
+          Temps réel
         </span>
       </div>
 
@@ -235,10 +235,10 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
                     <Building2 className="w-4 h-4 text-sky-400" />
                     <div>
                       <span className="font-semibold text-white">{commune.nom}</span>
-                      <span className="text-[10px] text-white/50 ml-2 font-mono">({commune.codesPostaux[0]})</span>
+                      <span className="text-[11px] text-white/50 ml-2 font-mono">({commune.codesPostaux[0]})</span>
                     </div>
                   </div>
-                  <span className="text-xs bg-white/10 text-white/60 px-2 py-0.5 rounded-full uppercase font-mono font-bold">
+                  <span className="pill !text-[10px] uppercase font-mono">
                     {commune.codeDepartement}
                   </span>
                 </button>
@@ -250,7 +250,7 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
 
       {/* Preset Suggestions */}
       <div className="space-y-1.5">
-        <span className="text-[10px] text-white/50 uppercase tracking-wider font-mono">Comparaisons rapides :</span>
+        <span className="kicker text-white/50">Comparaisons rapides</span>
         <div className="flex flex-wrap gap-2">
           {PRESET_COMMUNES.map((preset) => {
             const isSelf = preset.nom.toLowerCase() === currentCommune.nom.toLowerCase();
@@ -261,12 +261,12 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
                 key={preset.code}
                 disabled={isSelf}
                 onClick={() => handlePresetClick(preset)}
-                className={`text-xs px-3 py-1.5 rounded-xl border transition-all duration-200 flex items-center gap-1.5 ${
+                className={`pill !py-1.5 !text-[11px] transition-all duration-200 ${
                   isSelf
                     ? 'hidden'
                     : isCompared
-                    ? 'bg-sky-500 text-white border-sky-400 font-semibold shadow-md'
-                    : 'bg-white/5 hover:bg-white/10 text-white/80 border-white/10 hover:border-white/25'
+                    ? '!bg-sky-500 !border-sky-400 !text-white shadow-md'
+                    : 'hover:!bg-white/15 !text-white/80'
                 }`}
               >
                 <MapPin className="w-3 h-3 text-sky-400" />
@@ -309,61 +309,61 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
               {/* Dual Cards side-by-side */}
               <div className="grid grid-cols-2 gap-3.5">
                 {/* Left Card: Main Commune */}
-                <div className="bg-gradient-to-br from-indigo-950/40 to-slate-900/50 border border-white/10 p-4 rounded-2xl flex flex-col items-center text-center space-y-2.5 relative overflow-hidden">
-                  <div className="absolute top-2.5 left-2.5 bg-sky-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase">
+                <div className="tile !p-4 flex flex-col items-center text-center space-y-2.5 relative overflow-hidden !bg-gradient-to-br !from-indigo-950/40 !to-slate-900/50">
+                  <div className="absolute top-2.5 left-2.5 pill !text-[10px] !py-0.5 !bg-sky-500 !border-sky-400 !text-white uppercase">
                     Ici
                   </div>
-                  <span className="text-xs uppercase font-bold tracking-wider text-slate-300 mt-1 truncate max-w-full">
+                  <span className="text-[12px] uppercase font-bold tracking-wider text-slate-300 mt-1 truncate max-w-full">
                     {currentCommune.nom}
                   </span>
                   {renderWeatherIcon(currentWeather.current.weatherCode, isNightTime(currentWeather.sunrise, currentWeather.sunset), "w-11 h-11")}
                   <div>
-                    <span className="text-3xl font-extralight tracking-tighter text-white">
+                    <span className="text-3xl font-extralight tracking-tighter text-white tabular-figures">
                       {Math.round(currentWeather.current.temperature)}
                     </span>
-                    <span className="text-xs text-white/70 ml-0.5">°C</span>
+                    <span className="text-[12px] text-white/70 ml-0.5">°C</span>
                   </div>
-                  <span className="text-[10px] text-white/60 font-semibold truncate max-w-full">
+                  <span className="text-[11px] text-white/60 font-semibold truncate max-w-full">
                     {currentWeather.current.weatherDesc}
                   </span>
                 </div>
 
                 {/* Right Card: Compared Commune */}
-                <div className="bg-gradient-to-br from-sky-950/40 to-slate-900/50 border border-sky-500/20 p-4 rounded-2xl flex flex-col items-center text-center space-y-2.5 relative overflow-hidden">
-                  <div className="absolute top-2.5 right-2.5 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase">
+                <div className="tile !p-4 flex flex-col items-center text-center space-y-2.5 relative overflow-hidden !bg-gradient-to-br !from-sky-950/40 !to-slate-900/50 !border-sky-500/20">
+                  <div className="absolute top-2.5 right-2.5 pill !text-[10px] !py-0.5 !bg-orange-500 !border-orange-400 !text-white uppercase">
                     Cible
                   </div>
-                  <span className="text-xs uppercase font-bold tracking-wider text-amber-300 mt-1 truncate max-w-full">
+                  <span className="text-[12px] uppercase font-bold tracking-wider text-amber-300 mt-1 truncate max-w-full">
                     {comparedCommune.nom}
                   </span>
                   {renderWeatherIcon(comparedWeather.current.weatherCode, isNightTime(comparedWeather.sunrise, comparedWeather.sunset), "w-11 h-11")}
                   <div>
-                    <span className="text-3xl font-extralight tracking-tighter text-white">
+                    <span className="text-3xl font-extralight tracking-tighter text-white tabular-figures">
                       {Math.round(comparedWeather.current.temperature)}
                     </span>
-                    <span className="text-xs text-white/70 ml-0.5">°C</span>
+                    <span className="text-[12px] text-white/70 ml-0.5">°C</span>
                   </div>
-                  <span className="text-[10px] text-white/60 font-semibold truncate max-w-full">
+                  <span className="text-[11px] text-white/60 font-semibold truncate max-w-full">
                     {comparedWeather.current.weatherDesc}
                   </span>
                 </div>
               </div>
 
               {/* Dynamic scales comparisons */}
-              <div className="glass-premium rounded-2xl p-4 space-y-3.5 border border-white/10">
-                <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-white/5">
+              <div className="card card--tight space-y-3.5">
+                <h3 className="kicker text-slate-300 flex items-center gap-1.5 pb-2 border-b border-white/5">
                   <ArrowRightLeft className="w-3.5 h-3.5 text-sky-400" />
-                  Indicateurs Comparatifs
+                  Indicateurs comparatifs
                 </h3>
 
                 {/* Temperature bars comparison */}
                 <div className="space-y-1.5">
-                  <div className="flex justify-between text-[11px] text-slate-300">
-                    <span className="font-mono">{Math.round(currentWeather.current.temperature)}°C</span>
-                    <span className="flex items-center gap-1 text-[10px] text-white/60 font-medium uppercase font-mono">
+                  <div className="flex justify-between items-center text-[11px] text-slate-300">
+                    <span className="font-mono tabular-figures">{Math.round(currentWeather.current.temperature)}°C</span>
+                    <span className="flex items-center gap-1 text-[11px] text-white/60 font-medium uppercase">
                       <Thermometer className="w-3 h-3 text-red-400" /> Température
                     </span>
-                    <span className="font-mono">{Math.round(comparedWeather.current.temperature)}°C</span>
+                    <span className="font-mono tabular-figures">{Math.round(comparedWeather.current.temperature)}°C</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 relative h-2">
                     {/* Left side progress */}
@@ -385,12 +385,12 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
 
                 {/* Humidity Comparison */}
                 <div className="space-y-1.5">
-                  <div className="flex justify-between text-[11px] text-slate-300">
-                    <span className="font-mono">{currentWeather.current.humidity}%</span>
-                    <span className="flex items-center gap-1 text-[10px] text-white/60 font-medium uppercase font-mono">
+                  <div className="flex justify-between items-center text-[11px] text-slate-300">
+                    <span className="font-mono tabular-figures">{currentWeather.current.humidity}%</span>
+                    <span className="flex items-center gap-1 text-[11px] text-white/60 font-medium uppercase">
                       <Droplets className="w-3 h-3 text-sky-400" /> Humidité
                     </span>
-                    <span className="font-mono">{comparedWeather.current.humidity}%</span>
+                    <span className="font-mono tabular-figures">{comparedWeather.current.humidity}%</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 relative h-2">
                     {/* Left side progress */}
@@ -412,12 +412,12 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
 
                 {/* Wind speed */}
                 <div className="space-y-1.5">
-                  <div className="flex justify-between text-[11px] text-slate-300">
-                    <span className="font-mono">{Math.round(currentWeather.current.windSpeed)} km/h</span>
-                    <span className="flex items-center gap-1 text-[10px] text-white/60 font-medium uppercase font-mono">
+                  <div className="flex justify-between items-center text-[11px] text-slate-300">
+                    <span className="font-mono tabular-figures">{Math.round(currentWeather.current.windSpeed)} km/h</span>
+                    <span className="flex items-center gap-1 text-[11px] text-white/60 font-medium uppercase">
                       <Wind className="w-3 h-3 text-emerald-400" /> Vent
                     </span>
-                    <span className="font-mono">{Math.round(comparedWeather.current.windSpeed)} km/h</span>
+                    <span className="font-mono tabular-figures">{Math.round(comparedWeather.current.windSpeed)} km/h</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 relative h-2">
                     {/* Left side progress */}
@@ -444,19 +444,19 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.1 }}
-                  className="bg-indigo-950/50 border border-indigo-500/25 rounded-2xl p-4 space-y-2 relative overflow-hidden"
+                  className="tile !bg-indigo-950/50 !border-indigo-500/25 !p-4 space-y-2 relative overflow-hidden"
                 >
                   <div className="absolute -right-3 -top-3 opacity-25">
                     <Sparkles className="w-12 h-12 text-indigo-400 animate-spin" style={{ animationDuration: '6s' }} />
                   </div>
-                  <span className="text-xs font-bold text-indigo-300 flex items-center gap-1">
+                  <span className="text-[12px] font-bold text-indigo-300 flex items-center gap-1">
                     <ThumbsUp className="w-3.5 h-3.5 text-indigo-400" />
                     Le verdict de l'expert
                   </span>
                   <p className="text-sm font-semibold text-white leading-snug">
                     {verdict.title}
                   </p>
-                  <p className="text-xs text-white/80 leading-relaxed font-sans">
+                  <p className="text-[12px] text-white/80 leading-relaxed font-sans">
                     {verdict.text}
                   </p>
                 </motion.div>
@@ -475,7 +475,7 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-white">Aucune ville cible sélectionnée</h3>
-                <p className="text-xs text-white/50 px-8 mt-1.5 leading-relaxed">
+                <p className="text-[12px] text-white/50 px-8 mt-1.5 leading-relaxed">
                   Utilisez la recherche ci-dessus ou choisissez l'une des suggestions rapides pour comparer immédiatement {currentCommune.nom} à une autre ville.
                 </p>
               </div>

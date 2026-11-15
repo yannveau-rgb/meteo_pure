@@ -63,7 +63,8 @@ export interface StoredSubscription {
   subscription: any;
   commune: any;
   humorLevel: string;
-  birthDate: string;
+  /** Daily AI brief opt-out. Absent on older records = enabled. */
+  morningBriefEnabled?: boolean;
   prevHot: boolean;
   prevRain: boolean;
   prevStorm: boolean;

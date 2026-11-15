@@ -1,40 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
-  getZodiacSign,
   getDaysUntilChristmas,
   getFunnyRainMessage,
   getSarcasticChristmasCountdownMessage,
   getMonthlyChristmasCountdown,
   getMorningBriefContent
 } from '../notificationService';
-
-describe('getZodiacSign', () => {
-  it('returns Bélier for late March', () => {
-    expect(getZodiacSign('1990-03-25')).toBe('Bélier');
-  });
-
-  it('returns Poissons for early March', () => {
-    expect(getZodiacSign('1990-03-10')).toBe('Poissons');
-  });
-
-  it('returns Capricorne for early January', () => {
-    expect(getZodiacSign('1990-01-05')).toBe('Capricorne');
-  });
-
-  it('returns Verseau for late January', () => {
-    expect(getZodiacSign('1990-01-25')).toBe('Verseau');
-  });
-
-  it('handles boundary date Lion -> Vierge', () => {
-    expect(getZodiacSign('1990-08-22')).toBe('Lion');
-    expect(getZodiacSign('1990-08-23')).toBe('Vierge');
-  });
-
-  it('returns Inconnu for empty or invalid input', () => {
-    expect(getZodiacSign('')).toBe('Inconnu');
-    expect(getZodiacSign('not-a-date')).toBe('Inconnu');
-  });
-});
 
 describe('getDaysUntilChristmas', () => {
   it('returns positive count before Dec 25 same year', () => {
@@ -122,16 +93,31 @@ describe('Christmas Countdown & Morning Brief (normalized tone)', () => {
     }
   });
 
-  it('getMorningBriefContent provides uplifting and polite messages', () => {
-    const brief = getMorningBriefContent('safe', '1995-04-10', 0); // Bélier, sunny
-    expect(brief).not.toBeNull();
-    if (brief) {
-      expect(brief.title).toContain('Bélier');
-      expect(brief.body.length).toBeGreaterThan(10);
-      const fullText = `${brief.title} ${brief.body}`.toLowerCase();
-      for (const badWord of BANNED_WORDS) {
-        expect(fullText).not.toContain(badWord);
+  it('getMorningBriefContent provides uplifting and polite weather-only messages', () => {
+    // No birth date, no zodiac: the brief now works for every user and is
+    // driven solely by the WMO weather code.
+    for (const weatherCode of [0, 61, 95, 71, 3]) {
+      for (const level of ['safe', 'spicy', 'vulgar'] as const) {
+        const brief = getMorningBriefContent(level, weatherCode);
+        expect(brief.title).toBeTruthy();
+        expect(brief.body.length).toBeGreaterThan(10);
+        const fullText = `${brief.title} ${brief.body}`.toLowerCase();
+        for (const badWord of BANNED_WORDS) {
+          expect(fullText).not.toContain(badWord);
+        }
       }
+    }
+  });
+
+  it('getMorningBriefContent keys the punchline on the real weather, not a sign', () => {
+    const sunny = getMorningBriefContent('safe', 0).body.toLowerCase();
+    const rainy = getMorningBriefContent('safe', 61).body.toLowerCase();
+    const signs = ['bélier', 'taureau', 'gémeaux', 'cancer', 'lion', 'vierge', 'balance', 'scorpion', 'sagittaire', 'capricorne', 'verseau', 'poissons'];
+
+    expect(sunny).not.toBe(rainy);
+    for (const sign of signs) {
+      expect(sunny).not.toContain(sign);
+      expect(rainy).not.toContain(sign);
     }
   });
 });
