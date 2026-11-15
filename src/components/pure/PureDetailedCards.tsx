@@ -4,9 +4,6 @@ import {
   Loader2,
   Share2,
   Star,
-  Sunrise,
-  Sunset,
-  Sun,
   TrendingUp,
   TrendingDown
 } from 'lucide-react';
@@ -25,7 +22,6 @@ import AirQualityCard from '../AirQualityCard';
 import InfoBadge from '../ui/InfoBadge';
 
 const WeatherStats = lazy(() => import('../WeatherStats'));
-const RainRadar = lazy(() => import('../RainRadar'));
 
 interface PureDetailedCardsProps {
   weather: WeatherData;
@@ -42,6 +38,7 @@ interface PureDetailedCardsProps {
   setSelectedDayIndex: (idx: number) => void;
   setShowMoonModal: (show: boolean) => void;
   airQuality: any;
+  onOpenRadar?: () => void;
 }
 
 export default function PureDetailedCards({
@@ -59,6 +56,7 @@ export default function PureDetailedCards({
   setSelectedDayIndex,
   setShowMoonModal,
   airQuality,
+  onOpenRadar,
 }: PureDetailedCardsProps) {
   const internalClock = useFrenchClock();
   const frenchDate = propFrenchDate || internalClock.frenchDate;
@@ -175,99 +173,32 @@ export default function PureDetailedCards({
           </div>
         </div>
 
-        {/* Day-length summary: one headline, one weekly total. The precise
-            morning/evening split lives in the three tiles below, so nothing
-            is said twice here. */}
-        <div className="flex items-start justify-between gap-3 px-1">
-          <div className="flex items-start gap-2 min-w-0">
-            <div
-              className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
-                daylight.isGaining ? 'bg-emerald-400/15 text-emerald-300' : 'bg-amber-400/15 text-amber-300'
-              }`}
-            >
-              {daylight.isGaining ? (
-                <TrendingUp className="w-3.5 h-3.5" />
-              ) : (
-                <TrendingDown className="w-3.5 h-3.5" />
-              )}
-            </div>
-            <div className="min-w-0">
-              <p
-                className={`text-[12px] font-semibold tracking-tight ${
-                  daylight.isGaining ? 'text-emerald-200/90' : 'text-amber-200/90'
-                }`}
-              >
-                {daylight.headline}
-              </p>
-              <p className="text-[11px] text-white/50 mt-0.5">
-                {daylight.solsticeContext}
-              </p>
-            </div>
-          </div>
-
-          <span
-            className="text-[11px] text-white/50 shrink-0 tabular-figures whitespace-nowrap"
-            title={`Cumul sur 7 jours : ${weeklySign}${daylight.weeklyDeltaMinutes} min`}
+        {/* Résumé de lumière : une seule ligne. Lever, coucher et durée sont déjà
+            dans l'en-tête ; on ne garde ici que ce qu'il n'affiche pas. */}
+        <div className="flex items-start gap-2 px-1">
+          <div
+            className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+              daylight.isGaining ? 'bg-emerald-400/15 text-emerald-300' : 'bg-amber-400/15 text-amber-300'
+            }`}
           >
-            7 j ·{' '}
-            <strong className={daylight.weeklyDeltaMinutes >= 0 ? 'text-emerald-300/80' : 'text-amber-300/80'}>
-              {weeklySign}{daylight.weeklyDeltaMinutes} min
-            </strong>
-          </span>
-        </div>
-
-        {/* 3-Column Solar Breakdown: Lever / Durée du jour / Coucher */}
-        <div className="grid grid-cols-3 gap-2.5 text-center">
-          {/* Lever */}
-          <div className="tile flex flex-col items-center justify-between">
-            <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-white/65">
-              <Sunrise className="w-3.5 h-3.5 text-amber-300" />
-              <span>Lever</span>
-            </div>
-            <span className="text-base font-extrabold text-white mt-1 tabular-figures">
-              {daylight.sunrise}
-            </span>
-            <span
-              className={`text-[11px] font-medium mt-1 tabular-figures ${
-                daylight.morningDeltaMinutes >= 0 ? 'text-emerald-300/75' : 'text-amber-300/75'
-              }`}
-              title="Minutes de clarté gagnées ou perdues le matin"
-            >
-              Matin {formatSignedMin(daylight.morningDeltaMinutes)}
-            </span>
+            {daylight.isGaining ? (
+              <TrendingUp className="w-3.5 h-3.5" />
+            ) : (
+              <TrendingDown className="w-3.5 h-3.5" />
+            )}
           </div>
-
-          {/* Durée du jour */}
-          <div className="tile flex flex-col items-center justify-between">
-            <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-white/65">
-              <Sun className="w-3.5 h-3.5 text-yellow-300" />
-              <span>Durée</span>
-            </div>
-            <span className="text-base font-extrabold text-white mt-1 tabular-figures">
-              {daylight.dayLengthFormatted}
-            </span>
-            <span className="text-[11px] font-semibold text-white/60 mt-1">
-              d'ensoleillement
-            </span>
-          </div>
-
-          {/* Coucher */}
-          <div className="tile flex flex-col items-center justify-between">
-            <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-white/65">
-              <Sunset className="w-3.5 h-3.5 text-indigo-300" />
-              <span>Coucher</span>
-            </div>
-            <span className="text-base font-extrabold text-white mt-1 tabular-figures">
-              {daylight.sunset}
-            </span>
-            <span
-              className={`text-[11px] font-medium mt-1 tabular-figures ${
-                daylight.eveningDeltaMinutes >= 0 ? 'text-emerald-300/75' : 'text-amber-300/75'
+          <div className="min-w-0">
+            <p
+              className={`text-[12px] font-semibold tracking-tight ${
+                daylight.isGaining ? 'text-emerald-200/90' : 'text-amber-200/90'
               }`}
-              title="Minutes de clarté gagnées ou perdues le soir"
             >
-              Soir {formatSignedMin(daylight.eveningDeltaMinutes)}
-            </span>
+              {daylight.headline}
+            </p>
+            <p className="text-[11px] text-white/60 mt-0.5 tabular-figures">
+              Matin {formatSignedMin(daylight.morningDeltaMinutes)} · Soir {formatSignedMin(daylight.eveningDeltaMinutes)} · 7 j {weeklySign}{daylight.weeklyDeltaMinutes} min
+            </p>
+            <p className="text-[11px] text-white/50 mt-0.5">{daylight.solsticeContext}</p>
           </div>
         </div>
       </div>
@@ -277,6 +208,7 @@ export default function PureDetailedCards({
         <RainForecast
           rainData={weather.rainInTheHour}
           precipitationProbability={weather.hourly[0]?.precipitationProbability || 0}
+          onOpenRadar={onOpenRadar}
         />
         <VigilanceCard
           vigilance={weather.vigilance}
@@ -305,7 +237,7 @@ export default function PureDetailedCards({
         />
       </Suspense>
 
-      {/* 7. NORMALES DE SAISON & LUNE */}
+      {/* 7. NORMALES DE SAISON & LUNE (le radar vit dans l'onglet Carte) */}
       <ClimateComparison
         latitude={weather.latitude}
         longitude={weather.longitude}
@@ -329,15 +261,6 @@ export default function PureDetailedCards({
           Calendrier →
         </span>
       </button>
-
-      {/* 8. RADAR DE PLUIE */}
-      <Suspense fallback={<div className="card h-[260px] flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-white/50" /></div>}>
-        <RainRadar
-          latitude={weather.latitude}
-          longitude={weather.longitude}
-          cityName={weather.city}
-        />
-      </Suspense>
     </div>
   );
 }

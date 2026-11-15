@@ -1,0 +1,48 @@
+/* GÉNÉRÉ — voir themes.css. Chaque couleur redirigée par un thème passe par
+   var(--tc-*) : sans cela, le build de production fige les variantes
+   text-white/60, bg-sky-500/20… en littéraux et les thèmes ne les atteignent pas.
+   Les valeurs de repli sont les valeurs par défaut de Tailwind. */
+@theme {
+  --color-amber-100: var(--tc-amber-100, oklch(96.2% .059 95.617));
+  --color-amber-200: var(--tc-amber-200, oklch(92.4% .12 95.746));
+  --color-amber-300: var(--tc-amber-300, oklch(87.9% .169 91.605));
+  --color-amber-400: var(--tc-amber-400, oklch(82.8% .189 84.429));
+  --color-black: var(--tc-black, #000);
+  --color-blue-200: var(--tc-blue-200, oklch(88.2% .059 254.128));
+  --color-cyan-300: var(--tc-cyan-300, oklch(86.5% .127 207.078));
+  --color-emerald-100: var(--tc-emerald-100, oklch(95% .052 163.051));
+  --color-emerald-200: var(--tc-emerald-200, oklch(90.5% .093 164.15));
+  --color-emerald-300: var(--tc-emerald-300, oklch(84.5% .143 164.978));
+  --color-emerald-400: var(--tc-emerald-400, oklch(76.5% .177 163.223));
+  --color-fuchsia-300: var(--tc-fuchsia-300, oklch(83.3% .145 321.434));
+  --color-green-300: var(--tc-green-300, oklch(87.1% .15 154.449));
+  --color-indigo-100: var(--tc-indigo-100, oklch(93% .034 272.788));
+  --color-indigo-200: var(--tc-indigo-200, oklch(87% .065 274.039));
+  --color-indigo-300: var(--tc-indigo-300, oklch(78.5% .115 274.713));
+  --color-indigo-400: var(--tc-indigo-400, oklch(67.3% .182 276.935));
+  --color-lime-300: var(--tc-lime-300, oklch(89.7% .196 126.665));
+  --color-orange-100: var(--tc-orange-100, oklch(95.4% .038 75.164));
+  --color-orange-300: var(--tc-orange-300, oklch(83.7% .128 66.29));
+  --color-red-100: var(--tc-red-100, oklch(93.6% .032 17.717));
+  --color-red-200: var(--tc-red-200, oklch(88.5% .062 18.334));
+  --color-red-300: var(--tc-red-300, oklch(80.8% .114 19.571));
+  --color-red-400: var(--tc-red-400, oklch(70.4% .191 22.216));
+  --color-rose-100: var(--tc-rose-100, oklch(94.1% .03 12.58));
+  --color-rose-200: var(--tc-rose-200, oklch(89.2% .058 10.001));
+  --color-rose-300: var(--tc-rose-300, oklch(81% .117 11.638));
+  --color-rose-400: var(--tc-rose-400, oklch(71.2% .194 13.428));
+  --color-sky-100: var(--tc-sky-100, oklch(95.1% .026 236.824));
+  --color-sky-200: var(--tc-sky-200, oklch(90.1% .058 230.902));
+  --color-sky-300: var(--tc-sky-300, oklch(82.8% .111 230.318));
+  --color-sky-400: var(--tc-sky-400, oklch(74.6% .16 232.661));
+  --color-sky-500: var(--tc-sky-500, oklch(68.5% .169 237.323));
+  --color-sky-600: var(--tc-sky-600, oklch(58.8% .158 241.966));
+  --color-slate-100: var(--tc-slate-100, oklch(96.8% .007 247.896));
+  --color-slate-200: var(--tc-slate-200, oklch(92.9% .013 255.508));
+  --color-slate-300: var(--tc-slate-300, oklch(86.9% .022 252.894));
+  --color-slate-400: var(--tc-slate-400, oklch(70.4% .04 256.788));
+  --color-violet-300: var(--tc-violet-300, oklch(81.1% .111 293.571));
+  --color-white: var(--tc-white, #fff);
+  --color-yellow-100: var(--tc-yellow-100, oklch(97.3% .071 103.193));
+  --color-yellow-300: var(--tc-yellow-300, oklch(90.5% .182 98.111));
+}

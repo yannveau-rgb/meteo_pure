@@ -73,7 +73,7 @@ export default function PureWeatherHero({
   };
 
   return (
-    <div className="relative w-full flex flex-col justify-between pt-1 pb-1 px-1 z-10 pointer-events-auto">
+    <div className="hero-root relative w-full flex flex-col justify-between pt-1 pb-1 px-1 z-10 pointer-events-auto">
       {/* Top Header Row */}
       <div className="flex items-center justify-between w-full">
         {/* Top Left Frosted Toggle Pill (AQI Leaf / Weather Sun) */}
@@ -192,7 +192,7 @@ export default function PureWeatherHero({
           <span>Max {maxTemp}°</span>
           <span>Min {minTemp}°</span>
           <span className="text-white/30">•</span>
-          <span>{humidity}% Humidité</span>
+          <span>Humidité moy. {humidity}%</span>
           <span className="text-white/30">•</span>
           <span>UV {uvIndex}</span>
         </div>

@@ -35,6 +35,11 @@
     <script>
       (function() {
         try {
+          // Thème choisi : posé avant le premier rendu pour éviter un flash de l'ancien.
+          var th = localStorage.getItem('meteo_pure_theme');
+          if (th === 'aurora' || th === 'kraft' || th === 'radar' || th === 'pop') {
+            document.documentElement.setAttribute('data-theme', th);
+          }
           var c = localStorage.getItem('meteo_pure_sky_color');
           if (c) {
             document.documentElement.style.backgroundColor = c;

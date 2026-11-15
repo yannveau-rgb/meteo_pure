@@ -8,9 +8,11 @@ interface RainForecastProps {
   // the parent computes it for a sibling component and passing it here too
   // costs nothing to keep the call site simple.
   precipitationProbability: number;
+  /** Ouvre le radar (onglet Carte). */
+  onOpenRadar?: () => void;
 }
 
-export default function RainForecast({ rainData }: RainForecastProps) {
+export default function RainForecast({ rainData, onOpenRadar }: RainForecastProps) {
   const [selectedBar, setSelectedBar] = useState<number | null>(null);
 
   const getIntensityLabel = (intensity: string) => {
@@ -46,6 +48,16 @@ export default function RainForecast({ rainData }: RainForecastProps) {
         <span className="text-[11px] font-medium text-white/70 uppercase tracking-wider md:tracking-widest flex items-center gap-1 whitespace-nowrap">
           Pluie dans l'heure
         </span>
+        {onOpenRadar && (
+          <button
+            type="button"
+            onClick={onOpenRadar}
+            className="icon-btn icon-btn--sm !w-6 !h-6 text-[12px] font-bold cursor-pointer"
+            aria-label="Voir le radar de pluie"
+          >
+            ↗
+          </button>
+        )}
       </div>
 
       {/* Rain Graphique with beautiful vertical tube styled cylinders and water drop icons */}

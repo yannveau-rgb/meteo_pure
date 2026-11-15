@@ -1,0 +1,324 @@
+/* ---------------------------------------------------------------------------
+   Thèmes alternatifs (voir src/utils/theme.ts)
+   Le thème par défaut « Ciel vivant » n'a pas d'attribut data-theme : rien
+   ci-dessous ne s'y applique. Chaque thème ne fait que (1) redéfinir des
+   variables, dont les --color-* de Tailwind v4 (text-white, bg-white/20,
+   text-sky-300… suivent donc automatiquement), puis (2) les classes partagées
+   (.card, .tile…) lisent ces variables.
+--------------------------------------------------------------------------- */
+@keyframes auroraSway {
+  0%, 100% { transform: translate3d(-6%, 0, 0) scaleY(1); opacity: 0.85; }
+  50% { transform: translate3d(6%, 4%, 0) scaleY(1.15); opacity: 1; }
+}
+
+@keyframes radarSweep {
+  to { transform: rotate(360deg); }
+}
+
+.theme-aurora-band {
+  filter: blur(34px);
+  will-change: transform;
+}
+
+html[data-theme='aurora'] {
+  color-scheme: dark;
+  --t-accent: #5ef2c0;
+  --t-on-accent: #04251c;
+  --t-card-bg: rgba(20, 27, 52, 0.55);
+  --t-card-border: rgba(139, 108, 255, 0.28);
+  --t-card-shadow: 0 8px 28px rgba(5, 8, 24, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --t-tile-bg: rgba(255, 255, 255, 0.06);
+  --t-tile-border: rgba(139, 108, 255, 0.18);
+  --t-kicker: #8ff7d5;
+  --t-meta: rgba(226, 232, 255, 0.66);
+  --t-chip-bg: rgba(139, 108, 255, 0.16);
+  --t-chip-border: rgba(139, 108, 255, 0.3);
+  --t-chip-fg: rgba(240, 244, 255, 0.9);
+  --t-seg-bg: rgba(5, 8, 24, 0.45);
+  --t-seg-border: rgba(139, 108, 255, 0.22);
+  --t-seg-fg: rgba(226, 232, 255, 0.68);
+  --t-row-hover: rgba(139, 108, 255, 0.12);
+  --t-row-selected: rgba(94, 242, 192, 0.12);
+  --t-focus: rgba(94, 242, 192, 0.9);
+  --tc-sky-100: #d4fdf0;
+  --tc-sky-200: #b0fbe4;
+  --tc-sky-300: #8ff7d5;
+  --tc-sky-400: #5ef2c0;
+  --tc-sky-500: #2fd9a4;
+  --tc-sky-600: #1fb98a;
+  --tc-indigo-300: #b9a6ff;
+  --tc-indigo-400: #9b86ff;
+}
+
+html[data-theme='kraft'] {
+  color-scheme: light;
+  --t-accent: #c4552d;
+  --t-on-accent: #fff8ec;
+  --t-card-bg: rgba(255, 249, 235, 0.62);
+  --t-card-border: rgba(90, 60, 30, 0.26);
+  --t-card-shadow: 0 6px 18px rgba(90, 60, 30, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  --t-tile-bg: rgba(120, 85, 45, 0.08);
+  --t-tile-border: rgba(90, 60, 30, 0.16);
+  --t-kicker: #8f3e1d;
+  --t-meta: rgba(58, 42, 29, 0.68);
+  --t-chip-bg: rgba(120, 85, 45, 0.1);
+  --t-chip-border: rgba(90, 60, 30, 0.22);
+  --t-chip-fg: #3a2a1d;
+  --t-seg-bg: rgba(120, 85, 45, 0.12);
+  --t-seg-border: rgba(90, 60, 30, 0.2);
+  --t-seg-fg: rgba(58, 42, 29, 0.7);
+  --t-row-hover: rgba(120, 85, 45, 0.1);
+  --t-row-selected: rgba(196, 85, 45, 0.12);
+  --t-focus: rgba(196, 85, 45, 0.9);
+  /* « Blanc » devient l'encre : tous les text-white / bg-white/x / border-white/x basculent. */
+  --tc-white: #3a2a1d;
+  --tc-black: #6b4a2a;
+  --tc-slate-100: #3a2a1d;
+  --tc-slate-200: #4a3727;
+  --tc-slate-300: #5a4533;
+  --tc-slate-400: #6f5a46;
+  --tc-sky-100: #6b2d16;
+  --tc-sky-200: #7a3418;
+  --tc-sky-300: #8f3e1d;
+  --tc-sky-400: #b24a25;
+  --tc-sky-500: #c4552d;
+  --tc-sky-600: #a4431f;
+  --tc-amber-100: #6b4310;
+  --tc-amber-200: #7a4c0c;
+  --tc-amber-300: #8a5608;
+  --tc-amber-400: #b87a08;
+  --tc-emerald-100: #1f4a35;
+  --tc-emerald-200: #1f5a3f;
+  --tc-emerald-300: #1f6b47;
+  --tc-emerald-400: #2a7f58;
+  --tc-rose-100: #6b1f2c;
+  --tc-rose-200: #7a1f30;
+  --tc-rose-300: #8f2238;
+  --tc-rose-400: #a32a40;
+  --tc-red-100: #6b1f1f;
+  --tc-red-200: #7a2020;
+  --tc-red-300: #8f2424;
+  --tc-red-400: #a32a2a;
+  --tc-orange-100: #6b3410;
+  --tc-orange-300: #8f4710;
+  --tc-indigo-100: #2f2a66;
+  --tc-indigo-200: #342f73;
+  --tc-indigo-300: #3f3a86;
+  --tc-indigo-400: #4d479c;
+  --tc-yellow-100: #6b5410;
+  --tc-yellow-300: #8a6a08;
+  --tc-green-300: #1f6b47;
+  --tc-lime-300: #4a6b14;
+  --tc-violet-300: #5b3f8f;
+  --tc-fuchsia-300: #8f2e7a;
+  --tc-cyan-300: #1f6b80;
+  --tc-blue-200: #1f4a80;
+}
+
+html[data-theme='kraft'],
+html[data-theme='kraft'] body {
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+}
+
+html[data-theme='radar'] {
+  color-scheme: dark;
+  --t-accent: #3cff6b;
+  --t-on-accent: #03140a;
+  --t-card-bg: rgba(8, 22, 13, 0.72);
+  --t-card-border: rgba(60, 255, 107, 0.32);
+  --t-card-shadow: 0 0 0 1px rgba(60, 255, 107, 0.06), 0 8px 24px rgba(0, 0, 0, 0.55), inset 0 0 24px rgba(60, 255, 107, 0.05);
+  --t-tile-bg: rgba(60, 255, 107, 0.06);
+  --t-tile-border: rgba(60, 255, 107, 0.2);
+  --t-kicker: #3cff6b;
+  --t-meta: rgba(182, 255, 201, 0.66);
+  --t-chip-bg: rgba(60, 255, 107, 0.1);
+  --t-chip-border: rgba(60, 255, 107, 0.32);
+  --t-chip-fg: #b6ffc9;
+  --t-seg-bg: rgba(0, 0, 0, 0.5);
+  --t-seg-border: rgba(60, 255, 107, 0.28);
+  --t-seg-fg: rgba(182, 255, 201, 0.7);
+  --t-row-hover: rgba(60, 255, 107, 0.08);
+  --t-row-selected: rgba(60, 255, 107, 0.14);
+  --t-focus: rgba(60, 255, 107, 0.95);
+  --font-display: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  --tc-white: #d8ffe3;
+  --tc-sky-100: #d4ffe0;
+  --tc-sky-200: #b6ffc9;
+  --tc-sky-300: #7dffa0;
+  --tc-sky-400: #3cff6b;
+  --tc-sky-500: #22d453;
+  --tc-sky-600: #17a840;
+}
+
+html[data-theme='radar'],
+html[data-theme='radar'] body {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+/* Classes partagées, lues depuis les variables du thème actif. */
+html[data-theme] .card,
+html[data-theme] .glass-premium {
+  background: var(--t-card-bg);
+  border-color: var(--t-card-border);
+  box-shadow: var(--t-card-shadow);
+}
+
+html[data-theme] .tile {
+  background: var(--t-tile-bg);
+  border-color: var(--t-tile-border);
+}
+
+html[data-theme] .kicker { color: var(--t-kicker); }
+html[data-theme] .meta { color: var(--t-meta); }
+
+html[data-theme] .icon-btn,
+html[data-theme] .pill {
+  background: var(--t-chip-bg);
+  border-color: var(--t-chip-border);
+  color: var(--t-chip-fg);
+}
+
+html[data-theme] .icon-btn:hover { background: var(--t-row-selected); }
+
+html[data-theme] .segmented {
+  background: var(--t-seg-bg);
+  border-color: var(--t-seg-border);
+}
+
+html[data-theme] .segmented-item { color: var(--t-seg-fg); }
+html[data-theme] .segmented-item:hover { color: var(--color-white); }
+
+html[data-theme] .segmented-item[data-active='true'] {
+  background: var(--t-accent);
+  color: var(--t-on-accent);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--t-accent) 40%, transparent);
+}
+
+html[data-theme] .day-row:hover { background: var(--t-row-hover); }
+
+html[data-theme] .day-row[data-selected='true'] {
+  background: var(--t-row-selected);
+  border-left-color: var(--t-accent);
+}
+
+html[data-theme] :where(button, a, input, [role='tab'], [role='option'], [role='radio']):focus-visible {
+  outline-color: var(--t-focus);
+}
+
+/* Cadre de l'appli sur grand écran : même liseré que les cartes. */
+@media (min-width: 640px) {
+  html[data-theme] .app-shell {
+    border-color: var(--t-card-border);
+    background: transparent;
+  }
+}
+
+html[data-theme='kraft'] .header-shadow { text-shadow: none; }
+
+/* Icônes météo (couleurs forcées en !important dans index.css) : encre pour Kraft. */
+html[data-theme='kraft'] .lucide-sun { color: #c4552d !important; fill: rgba(196, 85, 45, 0.15) !important; }
+html[data-theme='kraft'] .lucide-moon { color: #4d479c !important; fill: rgba(77, 71, 156, 0.1) !important; }
+html[data-theme='kraft'] .lucide-cloud,
+html[data-theme='kraft'] .lucide-cloud-sun path:last-child,
+html[data-theme='kraft'] .lucide-cloud-moon path:last-child,
+html[data-theme='kraft'] .lucide-cloud-rain path:first-of-type,
+html[data-theme='kraft'] .lucide-cloud-drizzle path:first-of-type,
+html[data-theme='kraft'] .lucide-cloud-snow path:first-of-type,
+html[data-theme='kraft'] .lucide-cloud-fog path:first-of-type,
+html[data-theme='kraft'] .lucide-cloud-lightning path:nth-child(1) { stroke: #6f5a46 !important; fill: rgba(111, 90, 70, 0.12) !important; }
+html[data-theme='kraft'] .lucide-cloud-sun circle,
+html[data-theme='kraft'] .lucide-cloud-sun path:not(:last-child) { stroke: #c4552d !important; }
+html[data-theme='kraft'] .lucide-cloud-moon path:not(:last-child) { stroke: #4d479c !important; }
+html[data-theme='kraft'] .lucide-cloud-rain path:not(:first-of-type),
+html[data-theme='kraft'] .lucide-cloud-drizzle path:not(:first-of-type),
+html[data-theme='kraft'] .lucide-cloud-drizzle line { stroke: #1f6b80 !important; }
+html[data-theme='kraft'] .lucide-cloud-snow path:not(:first-of-type),
+html[data-theme='kraft'] .lucide-cloud-snow line { stroke: #3f7a90 !important; }
+html[data-theme='kraft'] .lucide-cloud-fog path:not(:first-of-type),
+html[data-theme='kraft'] .lucide-cloud-fog line { stroke: #8a7864 !important; }
+html[data-theme='kraft'] .lucide-cloud-lightning polygon,
+html[data-theme='kraft'] .lucide-cloud-lightning path:last-child { stroke: #a86a0a !important; fill: #a86a0a !important; }
+
+/* Terminal Radar : soleil et lune en vert phosphore. */
+html[data-theme='radar'] .lucide-sun,
+html[data-theme='radar'] .lucide-moon { color: #b6ffc9 !important; fill: rgba(60, 255, 107, 0.12) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-aurora-band,
+  .theme-radar-sweep { animation: none !important; }
+}
+
+/* Kraft : la barre de navigation passe sur papier clair, et le bouton du
+   Toggle (bg-white = encre ici) reste crème quand l'interrupteur est actif. */
+html[data-theme='kraft'] #tab-navigation-panel {
+  background: rgba(255, 249, 235, 0.78);
+  border-color: var(--t-card-border);
+  box-shadow: 0 6px 18px rgba(90, 60, 30, 0.18);
+}
+html[data-theme='kraft'] [role='switch'][aria-checked='true'] > div {
+  background: #fff8ec;
+}
+
+/* Kraft : surfaces sombres codées en dur (modales, listes déroulantes,
+   infobulles, voiles). Leur texte devient de l'encre, donc le fond passe sur
+   papier clair. Les classes text-slate-800/900 restent sombres, sans remap. */
+html[data-theme='kraft'] [class*='bg-[#06102b]'],
+html[data-theme='kraft'] [class*='bg-slate-900'],
+html[data-theme='kraft'] [class*='bg-slate-800'],
+html[data-theme='kraft'] .bg-white\/95 {
+  background-color: rgba(249, 241, 224, 0.96);
+}
+
+/* ---------------------------------------------------------------------------
+   Pop Party : dégradé rose-orange-jaune, cartes violet profond à bord jaune et
+   ombre dure décalée. Le texte reste blanc, sur violet, donc lisible partout.
+--------------------------------------------------------------------------- */
+@keyframes popFloat {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 8px -14px; }
+}
+
+html[data-theme='pop'] {
+  color-scheme: dark;
+  --t-accent: #ffe14d;
+  --t-on-accent: #2a0a4a;
+  --t-card-bg: rgba(48, 14, 96, 0.9);
+  --t-card-border: #ffe14d;
+  --t-card-shadow: 5px 5px 0 #1b0a3a;
+  --t-tile-bg: rgba(255, 255, 255, 0.1);
+  --t-tile-border: rgba(45, 226, 230, 0.55);
+  --t-kicker: #ffe14d;
+  --t-meta: rgba(255, 240, 255, 0.78);
+  --t-chip-bg: rgba(48, 14, 96, 0.85);
+  --t-chip-border: #2de2e6;
+  --t-chip-fg: #ffffff;
+  --t-seg-bg: rgba(27, 10, 58, 0.85);
+  --t-seg-border: #ffe14d;
+  --t-seg-fg: rgba(255, 255, 255, 0.78);
+  --t-row-hover: rgba(255, 225, 77, 0.14);
+  --t-row-selected: rgba(255, 61, 139, 0.35);
+  --t-focus: #2de2e6;
+  --tc-sky-100: #fff9d6;
+  --tc-sky-200: #fff3a8;
+  --tc-sky-300: #ffe14d;
+  --tc-sky-400: #2de2e6;
+  --tc-sky-500: #ff3d8b;
+  --tc-sky-600: #e0287a;
+}
+
+html[data-theme='pop'] .card,
+html[data-theme='pop'] .glass-premium {
+  border-width: 2px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html[data-theme='pop'] #tab-navigation-panel {
+  background: rgba(27, 10, 58, 0.92);
+  border: 2px solid #ffe14d;
+  box-shadow: 4px 4px 0 #1b0a3a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-pop-shape { animation: none !important; }
+}

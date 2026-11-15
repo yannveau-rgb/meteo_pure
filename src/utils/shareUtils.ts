@@ -187,6 +187,12 @@ export function dataUrlToBlob(dataUrl: string): Blob {
 }
 
 /**
+ * Weights of the static Inter faces declared as "Inter Still" in index.css.
+ * They exist only for the PNG export (see STILL_FONT_LOAD below).
+ */
+const STILL_FONT_WEIGHTS = ['400', '600', '700'];
+
+/**
  * Capture an element on the screen exactly as it looks inside the application,
  * utilizing the non-destructive html2canvas `onclone` lifecycle.
  * This guarantees the user's active UI never shifts, flashes, or behaves erratically.
@@ -260,9 +266,27 @@ export async function generateElementDataUrl(elementId: string): Promise<string>
   if (document.fonts?.ready) {
     try { await document.fonts.ready; } catch { /* non-blocking */ }
   }
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-  });
+  // Wait two frames so entrance animations settle. A background or occluded
+  // window never fires requestAnimationFrame, so cap the wait: otherwise the
+  // share modal sits on "génération en cours" forever.
+  await Promise.race([
+    new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    }),
+    new Promise<void>((resolve) => setTimeout(resolve, 400)),
+  ]);
+
+  // html2canvas draws text with the *live* document's canvas, and the clone's
+  // font stack only applies to the still image. Font faces are lazy: the app
+  // itself never sets "Inter Still", so without this the canvas quietly falls
+  // back to the system UI face and the shared PNG is not in Inter.
+  try {
+    await Promise.all(
+      STILL_FONT_WEIGHTS.map((weight) => document.fonts.load(`${weight} 16px "Inter Still"`))
+    );
+  } catch {
+    // Not fatal: the capture falls back to the app's UI font.
+  }
 
   const runCapture = async (scale: number, safeMode: boolean) => {
     const { default: html2canvas } = await import('html2canvas');
@@ -281,6 +305,11 @@ export async function generateElementDataUrl(elementId: string): Promise<string>
       windowHeight: Math.max(document.documentElement.clientHeight, clonedElement.scrollHeight),
       logging: false,
       onclone: (clonedDoc) => {
+        // 0. The exported card is drawn on a fixed dark navy: always render it
+        //    with the default look, whatever theme the user picked (Kraft turns
+        //    white text into dark ink, unreadable on that background).
+        clonedDoc.documentElement.removeAttribute('data-theme');
+
         // 1. Remove all external stylesheet link tags from the cloned document to prevent html2canvas parsing errors
         const linkTags = clonedDoc.getElementsByTagName('link');
         for (let i = linkTags.length - 1; i >= 0; i--) {
@@ -321,6 +350,16 @@ export async function generateElementDataUrl(elementId: string): Promise<string>
           clonedDoc.head?.appendChild(styleEl);
         }
 
+        // Same faces, but with data URIs: the clone can resolve them without a
+        // network fetch, so text is measured with Inter instead of a fallback.
+        if (false && stillFontCss) {
+          const fontEl = clonedDoc.createElement('style');
+          fontEl.type = 'text/css';
+          fontEl.appendChild(clonedDoc.createTextNode(stillFontCss));
+          clonedDoc.head?.appendChild(fontEl);
+        }
+
+
         const docElement = clonedDoc.getElementById(captureId);
         if (docElement) {
           docElement.style.opacity = '1';
@@ -337,11 +376,10 @@ export async function generateElementDataUrl(elementId: string): Promise<string>
           (docElement.style as any).webkitBackdropFilter = 'none';
           // html2canvas 1.4 mis-measures word gaps with our self-hosted
           // variable Inter inside its cloned iframe: the exported PNG reads
-          // "ModèlesMétéo-France". The clone never finishes loading the
-          // webfont before text is measured, so pin the system stack for the
-          // still image — metrics then match what is drawn.
+          // "ModèlesMétéo-France". The static "Inter Still" faces keep the
+          // shared image in Inter with stable metrics.
           docElement.style.fontFamily =
-            '"Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif';
+            '"Inter Still", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif';
           // A card that clips for a scrolling UI must not clip in a still
           // image: the header was losing its title to `overflow: hidden`.
           docElement.style.overflow = 'visible';

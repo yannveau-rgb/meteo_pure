@@ -1,0 +1,282 @@
+/* ===========================================================================
+   Thèmes v2 — direction visuelle actuelle
+   Mesh gradients interpolés en OKLCH (couleurs vives, sans milieu grisâtre),
+   grain fin, verre liquide (flou + saturation + reflet spéculaire + liseré
+   dégradé), rayons plus généreux, typographie du chiffre héros par thème.
+   Chaque dégradé OKLCH est précédé d'un repli sRGB.
+   Chargé après themes.css : à spécificité égale, ces règles l'emportent.
+=========================================================================== */
+html[data-theme] {
+  --grain-url: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n' x='0' y='0'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 1.4 -.2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+  html[data-theme] {
+    --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.4%, 1.067 22.2%, 1.074 24%, 1.054 27.4%, 0.994 33.3%, 0.983 36.8%, 1 45%, 1);
+  }
+}
+
+.theme-grain { background-image: var(--grain-url); background-size: 200px 200px; }
+
+.theme-blob {
+  will-change: transform;
+  animation: blobDrift 30s ease-in-out infinite alternate;
+}
+
+.theme-blob-morph {
+  filter: blur(26px);
+  animation: blobDrift 18s ease-in-out infinite alternate, blobMorph 11s ease-in-out infinite;
+}
+
+@keyframes blobDrift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(var(--dx, 10%), var(--dy, 8%), 0) scale(1.18); }
+}
+
+@keyframes blobMorph {
+  0%, 100% { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; }
+  33% { border-radius: 63% 37% 41% 59% / 55% 62% 38% 45%; }
+  66% { border-radius: 37% 63% 55% 45% / 62% 38% 62% 38%; }
+}
+
+/* --- Fonds ---------------------------------------------------------------- */
+.bd-aurora {
+  background:
+    radial-gradient(120% 70% at 50% -10%, #231a52 0%, transparent 62%),
+    linear-gradient(180deg, #0b1020 0%, #0a0e1f 60%, #120d2b 100%);
+}
+@supports (background: linear-gradient(in oklch, red, blue)) {
+  .bd-aurora {
+    background:
+      radial-gradient(120% 70% at 50% -10%, oklch(0.3 0.1 290) 0%, transparent 62%),
+      linear-gradient(in oklch 180deg, oklch(0.2 0.05 275) 0%, oklch(0.16 0.04 268) 60%, oklch(0.19 0.07 295) 100%);
+  }
+}
+
+.bd-kraft {
+  background: linear-gradient(165deg, #f8f0e0 0%, #efe3cb 55%, #e6d6b8 100%);
+}
+@supports (background: linear-gradient(in oklab, red, blue)) {
+  .bd-kraft {
+    background: linear-gradient(in oklab 165deg, oklch(0.97 0.02 85) 0%, oklch(0.93 0.035 80) 55%, oklch(0.9 0.045 70) 100%);
+  }
+}
+
+.bd-radar {
+  background: radial-gradient(90% 60% at 50% 30%, #0c2415 0%, #060f09 60%, #040a06 100%);
+}
+@supports (background: linear-gradient(in oklch, red, blue)) {
+  .bd-radar {
+    background: radial-gradient(90% 60% at 50% 30%, oklch(0.25 0.065 150) 0%, oklch(0.14 0.03 155) 58%, oklch(0.1 0.02 160) 100%);
+  }
+}
+.bd-radar-dots {
+  background-image: radial-gradient(circle, rgba(60, 255, 107, 0.4) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 35%, #000 15%, transparent 75%);
+  mask-image: radial-gradient(ellipse at 50% 35%, #000 15%, transparent 75%);
+}
+.bd-radar-mask {
+  -webkit-mask-image: radial-gradient(closest-side, #000 20%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 20%, transparent 100%);
+}
+.bd-radar-sweep {
+  background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, rgba(60, 255, 107, 0.32) 359deg, transparent 360deg);
+  animation: radarSweep 8s linear infinite;
+}
+.bd-radar-rings {
+  background: repeating-radial-gradient(circle at center, transparent 0, transparent 11.4%, rgba(60, 255, 107, 0.26) 11.6%, transparent 11.9%);
+}
+
+.bd-pop {
+  background: linear-gradient(165deg, #ff3d6e 0%, #ff7a3d 48%, #ffc12e 100%);
+}
+@supports (background: linear-gradient(in oklch, red, blue)) {
+  .bd-pop {
+    background: linear-gradient(in oklch 165deg, oklch(0.68 0.25 8) 0%, oklch(0.74 0.2 45) 48%, oklch(0.84 0.17 85) 100%);
+  }
+}
+.bd-pop-halftone {
+  background-image: radial-gradient(rgba(27, 10, 58, 0.4) 1.3px, transparent 1.8px);
+  background-size: 13px 13px;
+  -webkit-mask-image: linear-gradient(160deg, #000 0%, transparent 42%);
+  mask-image: linear-gradient(160deg, #000 0%, transparent 42%);
+}
+
+/* --- Surfaces : liseré dégradé (mask-composite) + reflet intérieur --------- */
+html[data-theme] .card,
+html[data-theme] .glass-premium { border-radius: 1.75rem; }
+html[data-theme] .tile { border-radius: 1.15rem; }
+
+html[data-theme] .card::before,
+html[data-theme] .glass-premium::before {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--t-edge, none);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+/* Interactions : léger rebond au toucher. */
+html[data-theme] .icon-btn,
+html[data-theme] .pill,
+html[data-theme] .segmented-item,
+html[data-theme] .tile {
+  transition-property: background-color, color, transform, box-shadow, border-color;
+  transition-duration: 0.45s;
+  transition-timing-function: var(--ease-spring);
+}
+
+/* --- Aurore : verre liquide ------------------------------------------------ */
+html[data-theme='aurora'] {
+  --t-card-bg: linear-gradient(150deg, rgba(70, 58, 140, 0.46), rgba(22, 26, 64, 0.5));
+  --t-card-border: transparent;
+  --t-card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 rgba(0, 0, 0, 0.25), 0 24px 48px -16px rgba(2, 4, 24, 0.7);
+  --t-tile-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+  --t-tile-border: rgba(255, 255, 255, 0.1);
+  --t-edge: linear-gradient(140deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.05) 36%, rgba(139, 108, 255, 0) 60%, rgba(94, 242, 192, 0.55));
+}
+html[data-theme='aurora'] .card,
+html[data-theme='aurora'] .glass-premium {
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+}
+html[data-theme='aurora'] #main-temp {
+  background: linear-gradient(180deg, #ffffff 15%, #c9fff0 55%, #b9a6ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 0 28px rgba(94, 242, 192, 0.35));
+}
+html[data-theme='aurora'] #tab-navigation-panel {
+  background: linear-gradient(150deg, rgba(70, 58, 140, 0.5), rgba(22, 26, 64, 0.6));
+  border-color: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+}
+
+/* --- Kraft : papier doux, éditorial ---------------------------------------- */
+html[data-theme='kraft'] {
+  --t-card-bg: linear-gradient(180deg, rgba(255, 252, 244, 0.86), rgba(250, 243, 228, 0.72));
+  --t-card-border: rgba(120, 85, 45, 0.1);
+  --t-card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 1px 1px rgba(90, 60, 30, 0.06), 0 4px 10px rgba(90, 60, 30, 0.06), 0 22px 36px -12px rgba(90, 60, 30, 0.22);
+  --t-tile-bg: rgba(120, 85, 45, 0.06);
+  --t-tile-border: rgba(120, 85, 45, 0.1);
+  --t-edge: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(120, 85, 45, 0.1) 50%, rgba(120, 85, 45, 0.22));
+}
+html[data-theme='kraft'] .card,
+html[data-theme='kraft'] .glass-premium {
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+}
+html[data-theme='kraft'] #main-temp {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.045em;
+  filter: none;
+}
+html[data-theme='kraft'] .kicker { letter-spacing: 0.16em; }
+
+/* --- Radar : HUD net et lumineux ------------------------------------------- */
+html[data-theme='radar'] {
+  --t-card-bg: linear-gradient(180deg, rgba(8, 24, 14, 0.66), rgba(5, 14, 9, 0.7));
+  --t-card-border: rgba(60, 255, 107, 0.12);
+  --t-card-shadow: inset 0 1px 0 rgba(60, 255, 107, 0.12), 0 0 40px -12px rgba(60, 255, 107, 0.22), 0 18px 30px -12px rgba(0, 0, 0, 0.7);
+  --t-tile-bg: rgba(60, 255, 107, 0.05);
+  --t-tile-border: rgba(60, 255, 107, 0.14);
+  --t-edge: linear-gradient(135deg, rgba(60, 255, 107, 0.8), rgba(60, 255, 107, 0.06) 28%, rgba(60, 255, 107, 0.06) 72%, rgba(60, 255, 107, 0.6));
+}
+html[data-theme='radar'] .card,
+html[data-theme='radar'] .glass-premium {
+  border-radius: 1.1rem;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+html[data-theme='radar'] #main-temp {
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -0.06em;
+  text-shadow: 0 0 22px rgba(60, 255, 107, 0.55);
+  filter: none;
+}
+html[data-theme='radar'] .kicker::before { content: '▸ '; opacity: 0.7; }
+html[data-theme='radar'] #tab-navigation-panel {
+  background: rgba(5, 14, 9, 0.8);
+  border-color: rgba(60, 255, 107, 0.3);
+  box-shadow: 0 0 28px -8px rgba(60, 255, 107, 0.3);
+}
+
+/* --- Pop : stickers néo-brutalistes ---------------------------------------- */
+html[data-theme='pop'] {
+  --t-card-bg: linear-gradient(160deg, #4b1d9e 0%, #2e0f6b 100%);
+  --t-card-border: #1b0a3a;
+  --t-card-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.22), 6px 6px 0 #1b0a3a;
+  --t-tile-bg: rgba(255, 255, 255, 0.1);
+  --t-tile-border: rgba(255, 255, 255, 0.18);
+  --t-edge: none;
+  --t-chip-border: #1b0a3a;
+  --t-chip-bg: #ffe14d;
+  --t-chip-fg: #2a0a4a;
+  --t-seg-border: #1b0a3a;
+}
+html[data-theme='pop'] .card,
+html[data-theme='pop'] .glass-premium {
+  border: 2.5px solid #1b0a3a;
+  border-radius: 1.6rem;
+}
+html[data-theme='pop'] .icon-btn,
+html[data-theme='pop'] .pill {
+  border-width: 2px;
+  box-shadow: 2px 2px 0 #1b0a3a;
+}
+html[data-theme='pop'] .icon-btn svg { color: #2a0a4a !important; }
+html[data-theme='pop'] .segmented { border-width: 2px; box-shadow: 3px 3px 0 #1b0a3a; }
+html[data-theme='pop'] .segmented-item[data-active='true'] { box-shadow: 2px 2px 0 #1b0a3a; }
+html[data-theme='pop'] .icon-btn:active,
+html[data-theme='pop'] .pill:active { transform: translate(2px, 2px); box-shadow: 0 0 0 #1b0a3a; }
+html[data-theme='pop'] #main-temp {
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  -webkit-text-stroke: 2.5px #1b0a3a;
+  paint-order: stroke fill;
+  text-shadow: 5px 5px 0 #1b0a3a;
+  filter: none;
+}
+html[data-theme='pop'] #tab-navigation-panel {
+  background: #2e0f6b;
+  border: 2.5px solid #1b0a3a;
+  box-shadow: 5px 5px 0 #1b0a3a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-blob, .theme-blob-morph, .bd-radar-sweep { animation: none !important; }
+}
+
+/* Pop : le héros repose directement sur le dégradé clair, donc ses textes
+   passent à l'encre violette (« blanc » et « noir » sont inversés localement). */
+html[data-theme='pop'] .hero-root {
+  --color-white: #2a0a4a;
+  --color-black: #ffffff;
+}
+html[data-theme='pop'] .hero-root #main-temp {
+  -webkit-text-fill-color: #ffffff;
+  color: #ffffff;
+}
+
+/* Aurore : chiffre héros plus présent (le trait extra-fin se perdait sur le mesh). */
+html[data-theme='aurora'] #main-temp { font-weight: 300; }
+
+html[data-theme='pop'] .hero-root {
+  --color-amber-300: #9a4a00;
+  --color-emerald-300: #0a6a3a;
+  --color-indigo-300: #4b2fb0;
+  --color-sky-300: #5a1fa8;
+}

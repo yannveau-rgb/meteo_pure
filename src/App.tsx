@@ -56,6 +56,10 @@ import { lazyWithRetry } from './utils/lazyWithRetry';
 
 // Pure minimalist components — unified single-page forecast, kept eager.
 import CelestialSky, { getSkyTopColor } from './components/pure/CelestialSky';
+import ThemeBackdrop from './components/pure/ThemeBackdrop';
+import ThemePicker from './components/ui/ThemePicker';
+import { useTheme } from './hooks/useTheme';
+import { getThemeMeta } from './utils/theme';
 import HourlyForecast from './components/HourlyForecast';
 import PureWeatherHero from './components/pure/PureWeatherHero';
 import PureDetailedCards from './components/pure/PureDetailedCards';
@@ -405,6 +409,7 @@ export default function App() {
     // 2. Clear localStorage
     localStorage.clear();
     // 3. Reset state
+    setTheme('auto');
     setNotifSettings(DEFAULT_NOTIFICATION_SETTINGS);
     setNotifLogs([]);
     setFavorites([]);
@@ -425,9 +430,12 @@ export default function App() {
   };
 
 
+  const [theme, setTheme] = useTheme();
+
   const topSkyColor = React.useMemo(() => {
+    if (theme !== 'auto') return getThemeMeta(theme).topColor;
     return getSkyTopColor(currentFloatHour, activeWeatherCode, sunriseFloat, sunsetFloat);
-  }, [currentFloatHour, activeWeatherCode, sunriseFloat, sunsetFloat]);
+  }, [theme, currentFloatHour, activeWeatherCode, sunriseFloat, sunsetFloat]);
 
   useEffect(() => {
     document.body.style.background = topSkyColor;
@@ -527,12 +535,16 @@ export default function App() {
         <Toast toast={activeToast} cityName={currentCommune.nom} onDismiss={() => setActiveToast(null)} />
         
         {/* Dynamic Celestial Sky (Sun arc, Moon crescent, Stars, Gradients) */}
-        <CelestialSky
-          hour={currentFloatHour}
-          sunriseHour={sunriseFloat}
-          sunsetHour={sunsetFloat}
-          weatherCode={activeWeatherCode}
-        />
+        {theme === 'auto' ? (
+          <CelestialSky
+            hour={currentFloatHour}
+            sunriseHour={sunriseFloat}
+            sunsetHour={sunsetFloat}
+            weatherCode={activeWeatherCode}
+          />
+        ) : (
+          <ThemeBackdrop theme={theme} />
+        )}
 
         {/* TOP PANEL: Auto-suggest Search and Geolocation pin (Shown on Villes tab or secondary tabs) */}
         {activeTab === 'villes' && (
@@ -759,6 +771,7 @@ export default function App() {
                       setSelectedDayIndex={setSelectedDayIndex}
                       setShowMoonModal={setShowMoonModal}
                       airQuality={airQuality}
+                      onOpenRadar={() => { setCartesMode('radar'); setActiveTab('cartes'); }}
                     />
                   </>
                 ) : (
@@ -961,6 +974,15 @@ export default function App() {
                 transition={{ duration: 0.15 }}
                 className="flex-1 flex flex-col text-white space-y-4 pb-6 focus:outline-none"
               >
+                {/* Apparence */}
+                <section className="card space-y-3">
+                  <div>
+                    <h2 className="kicker">Apparence</h2>
+                    <p className="meta mt-0.5">Choisissez l'ambiance de l'application.</p>
+                  </div>
+                  <ThemePicker value={theme} onChange={setTheme} />
+                </section>
+
                 {/* Alert settings */}
                 <section className="card space-y-4">
                   <div className="flex items-center gap-2.5 pb-3 border-b border-white/10">
