@@ -278,7 +278,7 @@ export default function CelestialSky({
 
   return (
     <div 
-      className="absolute inset-0 pointer-events-none overflow-hidden z-0"
+      className="fixed inset-0 sm:absolute pointer-events-none overflow-hidden z-0"
     >
       {/* Base Sky Layer */}
       <div 

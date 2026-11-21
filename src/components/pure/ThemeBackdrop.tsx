@@ -11,7 +11,7 @@ import type { ThemeId } from '../../utils/theme';
  * comprend pas. Un style inline n'aurait pas pu porter ce repli.
  */
 
-const LAYER = 'absolute inset-0 pointer-events-none overflow-hidden z-0';
+const LAYER = 'fixed inset-0 sm:absolute pointer-events-none overflow-hidden z-0';
 
 function Blob({
   className,
