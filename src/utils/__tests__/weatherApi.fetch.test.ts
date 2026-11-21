@@ -211,7 +211,7 @@ describe('calculateVigilance — vent inconnu', () => {
   });
 
   it('évalue toujours le vent quand seules les rafales sont connues', () => {
-    const v = calculateVigilance(18, undefined, 1, 0, 0, 60);
+    const v = calculateVigilance(18, undefined, 1, 0, 0, 95);
     const wind = v.categories.find((c) => c.name === 'Vent violent');
     expect(wind?.level).toBe('orange');
   });

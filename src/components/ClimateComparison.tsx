@@ -25,7 +25,7 @@ function ClimateComparison({
       color: "text-amber-300",
       bgColor: "bg-amber-500/15 border-amber-500/25",
       badgeColor: "bg-red-500/20 text-red-200 border-red-500/35",
-      icon: <TrendingUp className="w-5 h-5 text-red-400 animate-pulse" />,
+      icon: <TrendingUp className="w-5 h-5 text-red-400" />,
       label: "Anomalie chaude",
       gradient: "from-amber-400/20 to-red-500/10"
     },
@@ -33,7 +33,7 @@ function ClimateComparison({
       color: "text-sky-300",
       bgColor: "bg-sky-500/15 border-sky-500/25",
       badgeColor: "bg-blue-500/20 text-blue-200 border-blue-500/35",
-      icon: <TrendingDown className="w-5 h-5 text-sky-400 animate-pulse" />,
+      icon: <TrendingDown className="w-5 h-5 text-sky-400" />,
       label: "Anomalie froide",
       gradient: "from-sky-400/20 to-blue-500/10"
     },
@@ -57,7 +57,7 @@ function ClimateComparison({
   return (
     <div 
       id="climatology-comparison-card"
-      className="glass-premium rounded-3xl p-5 shadow-lg select-none text-white space-y-4"
+      className="card select-none text-white space-y-4"
     >
       {/* Card Header title */}
       <div className="flex justify-between items-center border-b border-white/10 pb-2.5">
@@ -72,14 +72,14 @@ function ClimateComparison({
       {/* Comparison Grid */}
       <div className="grid grid-cols-2 gap-3">
         {/* Box 1: Température Minimale */}
-        <div className="bg-white/5 p-3 rounded-2xl border border-white/10 flex flex-col justify-between">
-          <span className="text-[11px] text-white/60 font-medium">Température de nuit (Min)</span>
+        <div className="tile flex flex-col justify-between">
+          <span className="text-[11px] text-white/65 font-medium">Température de nuit (Min)</span>
           <div className="flex items-baseline gap-1.5 mt-1.5">
-            <span className="text-xl font-extrabold">{currentMin}°C</span>
-            <span className="text-[11px] text-white/50">actuel</span>
+            <span className="text-xl font-extrabold tabular-figures">{Math.round(currentMin * 10) / 10}°C</span>
+            <span className="text-[11px] text-white/60">actuel</span>
           </div>
           <div className="mt-2 pt-2 border-t border-white/5 flex justify-between items-center text-[11px]">
-            <span className="text-white/60">Habituel : {stats.normalMin}°C</span>
+            <span className="text-white/65">Habituel : {stats.normalMin}°C</span>
             <span className={`font-bold ${stats.deviationMin > 1.2 ? 'text-rose-300' : stats.deviationMin < -1.2 ? 'text-sky-300' : 'text-emerald-300'}`}>
               {stats.deviationMin === 0 ? '±0' : formatDiff(stats.deviationMin)}
             </span>
@@ -87,14 +87,14 @@ function ClimateComparison({
         </div>
 
         {/* Box 2: Température Maximale */}
-        <div className="bg-white/5 p-3 rounded-2xl border border-white/10 flex flex-col justify-between">
-          <span className="text-[11px] text-white/60 font-medium">Température de jour (Max)</span>
+        <div className="tile flex flex-col justify-between">
+          <span className="text-[11px] text-white/65 font-medium">Température de jour (Max)</span>
           <div className="flex items-baseline gap-1.5 mt-1.5">
-            <span className="text-xl font-extrabold">{currentMax}°C</span>
-            <span className="text-[11px] text-white/50">actuel</span>
+            <span className="text-xl font-extrabold tabular-figures">{Math.round(currentMax * 10) / 10}°C</span>
+            <span className="text-[11px] text-white/60">actuel</span>
           </div>
           <div className="mt-2 pt-2 border-t border-white/5 flex justify-between items-center text-[11px]">
-            <span className="text-white/60">Habituel : {stats.normalMax}°C</span>
+            <span className="text-white/65">Habituel : {stats.normalMax}°C</span>
             <span className={`font-bold ${stats.deviationMax > 1.2 ? 'text-rose-300' : stats.deviationMax < -1.2 ? 'text-sky-300' : 'text-emerald-300'}`}>
               {stats.deviationMax === 0 ? '±0' : formatDiff(stats.deviationMax)}
             </span>

@@ -25,9 +25,9 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
         id="vigilance-widget"
         onClick={() => setIsOpen(true)}
         aria-haspopup="dialog"
-        className="w-full text-left glass-premium rounded-3xl p-4 flex flex-col justify-between shadow-lg cursor-pointer transition-all duration-300 hover:brightness-105 hover:scale-[1.02] active:scale-95 min-h-40 relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-sky-400/60"
+        className="card w-full text-left flex flex-col justify-between cursor-pointer transition-all duration-300 hover:brightness-105 hover:scale-[1.02] active:scale-95 min-h-40 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
       >
-        <div className="flex justify-between items-center text-[11px] text-white/50 uppercase tracking-widest leading-none select-none w-full">
+        <div className="flex justify-between items-center text-[11px] text-white/65 uppercase tracking-widest leading-none select-none w-full">
           <span className="whitespace-nowrap">Vigilance</span>
           <ShieldAlert className={`w-3.5 h-3.5 shrink-0 ${activeColor.accentText}`} />
         </div>
@@ -42,7 +42,7 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
           <span className={`text-2xl sm:text-3xl font-black tracking-wide drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)] ${activeColor.accentText}`}>
             {activeColor.label}
           </span>
-          <span className="text-[11px] font-semibold text-white/50 uppercase tracking-wider mt-1 whitespace-nowrap">
+          <span className="text-[11px] font-semibold text-white/65 uppercase tracking-wider mt-1 whitespace-nowrap">
             {vigilance.globalLevel !== 'green' ? 'Voir les détails' : 'Aucune alerte'}
           </span>
         </div>
@@ -118,12 +118,16 @@ export default function VigilanceCard({ vigilance, uvIndex }: VigilanceCardProps
                            uvIndex >= 3 ? 'MODÉRÉ' : 'FAIBLE'}
                         </span>
                       </div>
-                      <p className="text-xs text-white/70 mt-2 leading-relaxed">
-                        {uvIndex >= 11 && "Protection maximale requise : évitez l'exposition, portez un chapeau, de la crème indice 50+, des lunettes de soleil et des vêtements longs de protection."}
-                        {uvIndex >= 8 && "Risque de brûlure solaire très élevé. Recherchez l'ombre entre 11h et 16h, utilisez de la crème indice 50+ et portez un chapeau de protection."}
-                        {uvIndex >= 6 && "Risque de brûlure élevé. Protection nécessaire : portez du chapeau de protection, des lunettes de soleil de catégorie active et de la crème de très haute protection."}
-                        {uvIndex >= 3 && "Protection conseillée pour toute exposition prolongée au soleil. Appliquez de la crème solaire et couvrez-vous la tête."}
-                        {uvIndex <= 2 && "Le rayonnement solaire présente peu de risques. L'exposition normale ne requiert pas de mesure particulière."}
+                      <p className="text-xs text-white/75 mt-2 leading-relaxed">
+                        {uvIndex >= 11
+                          ? "Protection maximale requise : évitez l'exposition, portez un chapeau, de la crème indice 50+, des lunettes de soleil et des vêtements longs de protection."
+                          : uvIndex >= 8
+                          ? "Risque de brûlure solaire très élevé. Recherchez l'ombre entre 11h et 16h, utilisez de la crème indice 50+ et portez un chapeau de protection."
+                          : uvIndex >= 6
+                          ? "Risque de brûlure élevé. Protection nécessaire : portez un chapeau de protection, des lunettes de soleil et de la crème haute protection."
+                          : uvIndex >= 3
+                          ? "Protection conseillée pour toute exposition prolongée au soleil. Appliquez de la crème solaire et couvrez-vous la tête."
+                          : "Le rayonnement solaire présente peu de risques. L'exposition normale ne requiert pas de mesure particulière."}
                       </p>
                     </div>
                   )}

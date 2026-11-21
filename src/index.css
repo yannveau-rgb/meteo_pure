@@ -595,23 +595,21 @@
   fill: rgba(148, 163, 184, 0.1) !important;
 }
 
-/* 2. Multi-part coloring for Cloud + Sun */
+/* 2. Multi-part coloring for Cloud + Sun (preserve component colorClass on cloud/sun tint) */
 .lucide-cloud-sun circle,
 .lucide-cloud-sun path:not(:last-child) {
-  stroke: #fbbf24 !important; /* Yellow sun */
+  stroke: #fbbf24;
 }
 .lucide-cloud-sun path:last-child {
-  stroke: #94a3b8 !important; /* Gray cloud overlapping */
-  fill: rgba(148, 163, 184, 0.1) !important;
+  fill: rgba(148, 163, 184, 0.12);
 }
 
 /* 3. Multi-part coloring for Cloud + Moon */
 .lucide-cloud-moon path:not(:last-child) {
-  stroke: #a5b4fc !important; /* Indigo moon */
+  stroke: #a5b4fc;
 }
 .lucide-cloud-moon path:last-child {
-  stroke: #94a3b8 !important; /* Gray cloud overlapping */
-  fill: rgba(148, 163, 184, 0.1) !important;
+  fill: rgba(148, 163, 184, 0.12);
 }
 
 /* 4. Multi-part coloring for Cloud + Rain */

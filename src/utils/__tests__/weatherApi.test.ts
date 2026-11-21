@@ -212,5 +212,31 @@ describe('computeRepresentativeDailyCode', () => {
 
     expect(result).toBe(0); // Soleil
   });
+
+  it('preserves fog (45) when persistent over daytime hours', () => {
+    const daytimeHours = [
+      { weatherCode: 45, precipitation: 0, precipitationProbability: 0 },
+      { weatherCode: 45, precipitation: 0, precipitationProbability: 0 },
+      { weatherCode: 3, precipitation: 0, precipitationProbability: 0 },
+      { weatherCode: 2, precipitation: 0, precipitationProbability: 0 },
+    ];
+    expect(computeRepresentativeDailyCode({ apiDailyCode: 45, daytimeHours, dayPrecipSum: 0 })).toBe(45);
+  });
+
+  it('prioritizes freezing rain (66) over standard rain/dry codes', () => {
+    const daytimeHours = [
+      { weatherCode: 3, precipitation: 0, precipitationProbability: 10 },
+      { weatherCode: 66, precipitation: 0.5, precipitationProbability: 70 },
+    ];
+    expect(computeRepresentativeDailyCode({ apiDailyCode: 66, daytimeHours, dayPrecipSum: 0.5 })).toBe(66);
+  });
+
+  it('breaks dry-sky ties toward the cloudier sky rather than optimistically showing sun', () => {
+    const daytimeHours = [
+      { weatherCode: 0, precipitation: 0, precipitationProbability: 0 },
+      { weatherCode: 3, precipitation: 0, precipitationProbability: 0 },
+    ];
+    expect(computeRepresentativeDailyCode({ apiDailyCode: 0, daytimeHours, dayPrecipSum: 0 })).toBe(3);
+  });
 });
 

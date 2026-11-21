@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useReducedMotion } from 'motion/react';
 
 interface CelestialSkyProps {
   /** Hour in float, e.g. 14.5 for 14:30 */
@@ -43,23 +44,21 @@ export function getSkyTopColor(
     return isDay ? '#4b5563' : (isDawn || isDusk) ? '#262d38' : '#0b0f14';
   }
   if (weatherCode === 2) {
-    if (hour < 4.5 || hour > 22.5) return '#080d1a';
-    if (hour < 6.5) return '#0d1429';
-    if (hour < 8.5) return '#37537e';
-    if (hour < 16.5) return '#3b74b3';
-    if (hour < 18.5) return '#3a68aa';
-    if (hour < 20.5) return '#18203d';
-    return '#0e162f';
+    if (hour < sunriseHour - 1.5 || hour > sunsetHour + 1.5) return '#080d1a';
+    if (hour < sunriseHour) return '#0d1429';
+    if (hour < sunriseHour + 1.5) return '#37537e';
+    if (hour < sunsetHour - 1.5) return '#3b74b3';
+    if (hour < sunsetHour) return '#3a68aa';
+    return '#18203d';
   }
   // Ciel clair (0 & 1)
-  if (hour < 4.5 || hour > 22.5) return '#050813';
-  if (hour < 6.5) return '#090e1f';
-  if (hour < 8.5) return '#324b77';
+  if (hour < sunriseHour - 1.5 || hour > sunsetHour + 1.5) return '#050813';
+  if (hour < sunriseHour) return '#090e1f';
+  if (hour < sunriseHour + 1.5) return '#324b77';
   if (hour < 11.5) return '#3d7fd6';
-  if (hour < 16.5) return '#3878cf';
-  if (hour < 18.5) return '#3c6db8';
-  if (hour < 20.5) return '#161e38';
-  return '#0b1022';
+  if (hour < sunsetHour - 1.5) return '#3878cf';
+  if (hour < sunsetHour) return '#3c6db8';
+  return '#161e38';
 }
 
 export default function CelestialSky({
@@ -68,6 +67,7 @@ export default function CelestialSky({
   sunriseHour = 7,
   sunsetHour = 19.5,
 }: CelestialSkyProps) {
+  const prefersReducedMotion = useReducedMotion();
   // Determine diurnal time frames
   const isDay = hour >= sunriseHour && hour <= sunsetHour;
   const isDawn = hour >= sunriseHour - 1.5 && hour < sunriseHour + 1;
@@ -140,51 +140,45 @@ export default function CelestialSky({
 
     // 6. PARTLY CLOUDY / ÉCLAIRCIES (WMO 2)
     if (isPartlyCloudy) {
-      if (hour < 4.5 || hour > 22.5) {
+      if (hour < sunriseHour - 1.5 || hour > sunsetHour + 1.5) {
         return 'linear-gradient(180deg, #080d1a 0%, #0e172a 45%, #18243c 100%)';
       }
-      if (hour < 6.5) {
+      if (hour < sunriseHour) {
         return 'linear-gradient(180deg, #0d1429 0%, #202744 40%, #4a3e57 75%, #7e5668 100%)';
       }
-      if (hour < 8.5) {
+      if (hour < sunriseHour + 1.5) {
         return 'linear-gradient(180deg, #37537e 0%, #607297 40%, #b58985 75%, #eec4a0 100%)';
       }
-      if (hour < 16.5) {
+      if (hour < sunsetHour - 1.5) {
         return 'linear-gradient(180deg, #3b74b3 0%, #5a8ec6 40%, #82abdb 75%, #b9d2ef 100%)';
       }
-      if (hour < 18.5) {
+      if (hour < sunsetHour) {
         return 'linear-gradient(180deg, #3a68aa 0%, #6381ab 40%, #b08d88 75%, #e2b490 100%)';
       }
-      if (hour < 20.5) {
-        return 'linear-gradient(180deg, #18203d 0%, #3a3250 40%, #7b4c5d 75%, #c88164 100%)';
-      }
-      return 'linear-gradient(180deg, #0e162f 0%, #172343 45%, #1e2c4f 100%)';
+      return 'linear-gradient(180deg, #18203d 0%, #3a3250 40%, #7b4c5d 75%, #c88164 100%)';
     }
 
     // 7. CLEAR / ENSOLEILLÉ (WMO 0 & 1)
-    if (hour < 4.5 || hour > 22.5) {
+    if (hour < sunriseHour - 1.5 || hour > sunsetHour + 1.5) {
       return 'linear-gradient(180deg, #050813 0%, #0b1120 40%, #111a2e 75%, #18233c 100%)';
     }
-    if (hour < 6.5) {
+    if (hour < sunriseHour) {
       return 'linear-gradient(180deg, #090e1f 0%, #1a1e38 35%, #3d2d48 70%, #754452 100%)';
     }
-    if (hour < 8.5) {
+    if (hour < sunriseHour + 1.5) {
       return 'linear-gradient(180deg, #324b77 0%, #5d688c 35%, #b87a74 70%, #f6b382 100%)';
     }
-    if (hour < 11.5) {
+    if (hour < 11.5 && sunriseHour + 1.5 < 11.5) {
       return 'linear-gradient(180deg, #3d7fd6 0%, #5f9eef 45%, #92c3fa 80%, #c4e0fd 100%)';
     }
-    if (hour < 16.5) {
+    if (hour < sunsetHour - 1.5) {
       return 'linear-gradient(180deg, #3878cf 0%, #5495e8 40%, #7eb8f7 75%, #b4daf9 100%)';
     }
-    if (hour < 18.5) {
+    if (hour < sunsetHour) {
       return 'linear-gradient(180deg, #3c6db8 0%, #6885b5 40%, #bc8880 75%, #f2ae7a 100%)';
     }
-    if (hour < 20.5) {
-      return 'linear-gradient(180deg, #161e38 0%, #3a2e4e 35%, #884351 70%, #d8754b 100%)';
-    }
-    return 'linear-gradient(180deg, #0b1022 0%, #121932 40%, #1a2542 75%, #1f2c4b 100%)';
-  }, [hour, isDay, isDawn, isDusk, isOvercast, isRain, isDrizzle, isStorm, isSnow, isFog, isPartlyCloudy]);
+    return 'linear-gradient(180deg, #161e38 0%, #3a2e4e 35%, #884351 70%, #d8754b 100%)';
+  }, [hour, sunriseHour, sunsetHour, isDay, isDawn, isDusk, isOvercast, isRain, isDrizzle, isStorm, isSnow, isFog, isPartlyCloudy]);
 
   // Position and intensity of the sun in daylight
   const sunData = useMemo(() => {
@@ -317,7 +311,7 @@ export default function CelestialSky({
                 height: `${s.size}px`,
                 opacity: s.opacity,
                 boxShadow: s.size > 1.5 ? '0 0 3px rgba(255,255,255,0.8)' : 'none',
-                animation: `twinkle ${s.blinkDuration}s infinite ease-in-out ${s.blinkDelay}s`,
+                animation: prefersReducedMotion ? 'none' : `twinkle ${s.blinkDuration}s infinite ease-in-out ${s.blinkDelay}s`,
               }}
             />
           ))}
@@ -478,7 +472,7 @@ export default function CelestialSky({
       )}
 
       {/* Atmospheric Rain & Drizzle Streaks (WMO 51-67, 80-82) */}
-      {(isRain || isDrizzle) && (
+      {(isRain || isDrizzle) && !prefersReducedMotion && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden transition-opacity duration-700">
           <div className="absolute inset-0 bg-slate-900/10 mix-blend-multiply" />
           {Array.from({ length: isRain ? 20 : 10 }).map((_, i) => (
@@ -499,7 +493,7 @@ export default function CelestialSky({
       )}
 
       {/* Atmospheric Snow Drift (WMO 71-86) */}
-      {isSnow && (
+      {isSnow && !prefersReducedMotion && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden transition-opacity duration-700">
           {Array.from({ length: 18 }).map((_, i) => (
             <div
@@ -520,7 +514,7 @@ export default function CelestialSky({
       )}
 
       {/* Atmospheric Thunderstorm & Sheet Lightning (WMO 95, 96, 99) */}
-      {isStorm && (
+      {isStorm && !prefersReducedMotion && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden transition-opacity duration-700">
           <div 
             className="absolute -top-12 -left-1/4 w-[150%] h-80 rounded-full opacity-60"

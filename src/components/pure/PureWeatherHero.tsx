@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { Leaf, CloudSun, MapPin, Sparkles, Sunrise, Sunset } from 'lucide-react';
 import { WeatherData, Commune } from '../../types';
-import { getWeatherUI, isNightTime } from '../../utils/weatherUtils';
+import { getWeatherUI, isNightTime, calculateCurrentUv } from '../../utils/weatherUtils';
+import { getAqiBand } from '../../utils/airQuality';
 import { getDaylightInfo } from '../../utils/ephemeris';
 
 interface PureWeatherHeroProps {
@@ -37,15 +38,17 @@ export default function PureWeatherHero({
   const isNight = isNightTime(weather.sunrise, weather.sunset);
   const activeCode = weather.current.weatherCode;
   const weatherUI = getWeatherUI(activeCode, isNight);
-  const conditionDesc = weather.current.weatherDesc;
+  const conditionDesc = weatherUI.label;
   const WeatherConditionIcon = weatherUI.icon;
   
-  // High and low for today
+  // High and low for today, plus tomorrow's high for the editorial summary
   const todayDaily = weather.daily[0];
+  const tomorrowDaily = weather.daily[1];
   const maxTemp = todayDaily ? Math.round(todayDaily.tempMax) : Math.round(temp + 3);
   const minTemp = todayDaily ? Math.round(todayDaily.tempMin) : Math.round(temp - 4);
-  const humidity = todayDaily?.humidity ?? weather.current.humidity;
-  const uvIndex = todayDaily?.uvIndex;
+  const tomorrowMaxTemp = tomorrowDaily ? Math.round(tomorrowDaily.tempMax) : maxTemp;
+  const humidity = weather.current.humidity ?? todayDaily?.humidity;
+  const uvIndex = calculateCurrentUv(todayDaily?.uvIndex, weather.sunrise, weather.sunset) ?? todayDaily?.uvIndex;
 
   // Daylight duration & daily minutes gained/lost
   const daylight = useMemo(
@@ -58,13 +61,19 @@ export default function PureWeatherHero({
     if (mode === 'aqi') {
       return airQualityIndex === undefined
         ? "Indice qualité de l'air indisponible"
-        : `Indice qualité de l'air : ${airQualityLabel || '—'} (${airQualityIndex} AQI)`;
+        : `Qualité de l'air ${airQualityLabel?.toLowerCase() || '—'} sur la commune`;
     }
-    if (weather.current.weatherCode === 3) return "Ciel actuellement couvert et feutré";
-    if (weather.current.weatherCode === 45 || weather.current.weatherCode === 48) return "Brouillard matinal et visibilité limitée";
-    if ([61, 63, 65, 80, 81, 82].includes(weather.current.weatherCode)) return "Pluie en cours sur la commune";
-    if ([95, 96, 99].includes(weather.current.weatherCode)) return "Risque d'orage et atmosphère électrique";
-    return `Ce soir autour de ${minTemp}°C, demain atteindra ${maxTemp}°C`;
+    const code = weather.current.weatherCode;
+    if (code === 3) return "Ciel actuellement couvert et feutré";
+    if (code === 45 || code === 48) {
+      return isNight ? "Brouillard nocturne et visibilité réduite" : "Brouillard et visibilité limitée";
+    }
+    if ([51, 53, 55].includes(code)) return "Bruine fine en cours sur la commune";
+    if ([56, 57, 66, 67].includes(code)) return "Risque de pluie verglaçante, prudence";
+    if ([61, 63, 65, 80, 81, 82].includes(code)) return "Pluie en cours sur la commune";
+    if ([71, 73, 75, 77, 85, 86].includes(code)) return "Chutes de neige en cours sur la commune";
+    if ([95, 96, 99].includes(code)) return "Risque d'orage et atmosphère électrique";
+    return `Ce soir autour de ${minTemp}°C, demain atteindra ${tomorrowMaxTemp}°C`;
   })();
 
   const handleScrollToDaylight = () => {
@@ -113,7 +122,7 @@ export default function PureWeatherHero({
             className="pill !py-1.5 !px-3 !text-[11px] !bg-white/15 hover:!bg-white/25 active:scale-95 border-white/25 text-amber-200 shadow-md transition-all cursor-pointer"
             title="Lire votre brief météo du jour"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
             <span>Brief</span>
           </button>
         ) : (
@@ -136,19 +145,38 @@ export default function PureWeatherHero({
       {/* Lower Section: Giant Temperature + Prominent Daylight Gain/Loss Pill */}
       <div className="relative mt-2">
         <div className="flex items-end justify-between gap-2">
-          {/* Left: Giant Temperature */}
-          <div className="flex items-start">
-            <span
-              id="main-temp"
-              key={temp}
-              className="text-[68px] sm:text-[84px] font-extralight tracking-tighter leading-none text-white select-none drop-shadow-md transition-all duration-200 tabular-figures"
-            >
-              {temp}
-            </span>
-            <span className="text-[30px] sm:text-[38px] font-light text-white/70 ml-0.5 leading-tight select-none">
-              °
-            </span>
-          </div>
+          {/* Left: Giant Temperature (or AQI index when AQI mode is active) */}
+          {mode === 'aqi' && airQualityIndex !== undefined ? (
+            <div className="flex items-baseline gap-2">
+              <span
+                id="main-temp"
+                className="text-[68px] sm:text-[84px] font-extralight tracking-tighter leading-none text-white select-none drop-shadow-md transition-all duration-200 tabular-figures"
+              >
+                {Math.round(airQualityIndex)}
+              </span>
+              <div className="flex flex-col leading-tight pb-1">
+                <span className="text-sm font-bold uppercase tracking-wider text-emerald-300">
+                  {airQualityLabel || getAqiBand(airQualityIndex).label}
+                </span>
+                <span className="text-[11px] font-medium text-white/65">
+                  Indice EAQI
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start">
+              <span
+                id="main-temp"
+                key={temp}
+                className="text-[68px] sm:text-[84px] font-extralight tracking-tighter leading-none text-white select-none drop-shadow-md transition-all duration-200 tabular-figures"
+              >
+                {temp}
+              </span>
+              <span className="text-[30px] sm:text-[38px] font-light text-white/70 ml-0.5 leading-tight select-none">
+                °
+              </span>
+            </div>
+          )}
 
           {/* Right: daylight summary — sunrise/sunset and day length. The
               daily delta stays present but as quiet secondary text, not a
@@ -194,7 +222,7 @@ export default function PureWeatherHero({
           <span>Max {maxTemp}°</span>
           <span>Min {minTemp}°</span>
           <span className="text-white/30">•</span>
-          <span>Humidité moy. {humidity !== undefined ? `${humidity}%` : '—'}</span>
+          <span>Humidité {humidity !== undefined ? `${humidity}%` : '—'}</span>
           <span className="text-white/30">•</span>
           <span>UV {uvIndex ?? '—'}</span>
         </div>

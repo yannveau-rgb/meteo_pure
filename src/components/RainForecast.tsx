@@ -45,10 +45,10 @@ export default function RainForecast({ rainData, onOpenRadar }: RainForecastProp
   return (
     <div 
       id="rain-forecast-widget"
-      className="glass-premium rounded-3xl p-3 min-[360px]:p-3.5 flex flex-col justify-between shadow-lg relative overflow-hidden transition-all duration-300 hover:brightness-105 min-h-40 gap-2"
+      className="card flex flex-col justify-between transition-all duration-300 hover:brightness-105 min-h-40 gap-2"
     >
       <div className="flex justify-between items-start gap-1 select-none">
-        <span className="text-[11px] font-medium text-white/70 uppercase tracking-wide leading-tight">
+        <span className="text-[11px] font-medium text-white/75 uppercase tracking-wide leading-tight">
           Pluie dans l'heure
         </span>
         {onOpenRadar && (
@@ -95,7 +95,7 @@ export default function RainForecast({ rainData, onOpenRadar }: RainForecastProp
               >
                 <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
               </svg>
-              <span className="text-[11px] text-white/50 font-bold leading-none tracking-tighter">
+              <span className="text-[11px] text-white/65 font-bold leading-none tracking-tighter">
                 +{item.minutes}m
               </span>
             </div>

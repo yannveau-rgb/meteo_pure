@@ -153,7 +153,7 @@ export function getWeatherUI(code: number, isNight = false): WeatherUI {
         label: 'Éclaircies',
         icon: isNight ? CloudMoon : CloudSun,
         colorClass: isNight ? 'text-indigo-100' : 'text-sky-200',
-        bgGradient: 'from-sky-300 via-slate-200 to-indigo-100'
+        bgGradient: isNight ? 'from-slate-900 via-slate-800 to-indigo-950' : 'from-sky-300 via-slate-200 to-indigo-100'
       };
     case 3:
       return {
@@ -171,10 +171,22 @@ export function getWeatherUI(code: number, isNight = false): WeatherUI {
         bgGradient: 'from-zinc-400 via-zinc-200 to-zinc-100'
       };
     case 51:
-    case 53:
-    case 55:
       return {
         label: 'Bruine légère',
+        icon: CloudDrizzle,
+        colorClass: 'text-sky-300',
+        bgGradient: 'from-sky-300 via-slate-300 to-sky-100'
+      };
+    case 53:
+      return {
+        label: 'Bruine modérée',
+        icon: CloudDrizzle,
+        colorClass: 'text-sky-300',
+        bgGradient: 'from-sky-300 via-slate-300 to-sky-100'
+      };
+    case 55:
+      return {
+        label: 'Bruine dense',
         icon: CloudDrizzle,
         colorClass: 'text-sky-300',
         bgGradient: 'from-sky-300 via-slate-300 to-sky-100'
@@ -197,26 +209,44 @@ export function getWeatherUI(code: number, isNight = false): WeatherUI {
         bgGradient: 'from-sky-400 via-indigo-200 to-indigo-100'
       };
     case 63:
-    case 65:
       return {
         label: 'Pluie modérée',
         icon: CloudRain,
         colorClass: 'text-sky-300',
         bgGradient: 'from-sky-500 via-blue-300 to-slate-200'
       };
+    case 65:
+      return {
+        label: 'Pluie forte',
+        icon: CloudRain,
+        colorClass: 'text-sky-300',
+        bgGradient: 'from-sky-600 via-blue-400 to-slate-300'
+      };
     case 71:
     case 73:
     case 75:
     case 77:
+      return {
+        label: 'Chutes de neige',
+        icon: CloudSnow,
+        colorClass: 'text-blue-200',
+        bgGradient: 'from-slate-200 via-blue-100 to-white'
+      };
     case 85:
     case 86:
       return {
-        label: 'Averses de Neige',
+        label: 'Averses de neige',
         icon: CloudSnow,
         colorClass: 'text-blue-200',
         bgGradient: 'from-slate-200 via-blue-100 to-white'
       };
     case 80:
+      return {
+        label: 'Averses faibles',
+        icon: CloudRain,
+        colorClass: 'text-sky-300',
+        bgGradient: 'from-blue-500 via-sky-300 to-indigo-200'
+      };
     case 81:
     case 82:
       return {
@@ -277,9 +307,18 @@ export function parseRealMinutelyRain(minutely15: {
 
     // Take next 4 slots (= next hour at 0, 15, 30, 45 minutes)
     const minuteOffsets = [0, 15, 30, 45];
-    return minuteOffsets.map((offset, i) => {
+    const rawValues = minuteOffsets.map((_, i) => {
       const idx = slotIdx + i;
-      const precip = idx < minutely15.precipitation.length ? (minutely15.precipitation[idx] ?? 0) : 0;
+      return idx < minutely15.precipitation.length ? minutely15.precipitation[idx] : null;
+    });
+    // Si tous les créneaux sont null/undefined, le modèle n'a pas fourni de donnée minutely_15
+    if (!rawValues.some((v): v is number => typeof v === 'number' && !Number.isNaN(v))) {
+      return null;
+    }
+
+    return minuteOffsets.map((offset, i) => {
+      const raw = rawValues[i];
+      const precip = typeof raw === 'number' && !Number.isNaN(raw) ? raw : 0;
 
       let intensity: 'none' | 'light' | 'moderate' | 'heavy' = 'none';
       let percentage = 5;
@@ -325,7 +364,7 @@ export function calculateVigilance(
       name: 'Orages',
       level: 'green',
       description: 'Aucune vigilance particulière.',
-      advice: 'Pas dexigences de sécurité particulières.'
+      advice: 'Pas d\'exigences de sécurité particulières.'
     },
     {
       name: 'Vent violent',
@@ -337,7 +376,7 @@ export function calculateVigilance(
       name: 'Inondation / Pluie-Inondation',
       level: 'green',
       description: 'Aucune vigilance particulière.',
-      advice: 'Pas dactivité à risque identifiée.'
+      advice: 'Pas d\'activité à risque identifiée.'
     },
     {
       name: 'Canicule / Grand Froid',
@@ -364,21 +403,21 @@ export function calculateVigilance(
     categories[0].advice = 'Évitez d\'utiliser des téléphones fixes et de vous abriter sous les arbres.';
   }
 
-  // 2. Vent violent (basé sur les rafales, critère réel de Météo-France)
+  // 2. Vent violent (basé sur les rafales, critères Météo-France en plaine)
   // Sans mesure de vent, on ne conclut pas « aucune vigilance » : on le dit.
   if (!windKnown) {
     categories[1].description = 'Vent : donnée indisponible, niveau non évalué.';
     categories[1].advice = 'Consultez la vigilance officielle pour le vent.';
   } else
-  if (effectiveWind >= 70) {
+  if (effectiveWind >= 120) {
     categories[1].level = 'red';
     categories[1].description = 'Tempête majeure avec risques de chutes d\'arbres massives et dégâts matériels importants.';
     categories[1].advice = 'Restez chez vous. Ne vous déplacez sous aucun prétexte. Restez vigilant face aux chutes d\'objets.';
-  } else if (effectiveWind >= 50) {
+  } else if (effectiveWind >= 90) {
     categories[1].level = 'orange';
     categories[1].description = 'Rafales très fortes pouvant provoquer des perturbations locales importantes.';
     categories[1].advice = 'Limitez vos déplacements. Fixez solidement tous les objets extérieurs légers.';
-  } else if (effectiveWind >= 30) {
+  } else if (effectiveWind >= 65) {
     categories[1].level = 'yellow';
     categories[1].description = 'Vent soutenu sensible, soyez attentif dans vos activités de plein air.';
     categories[1].advice = 'Prenez garde aux branches mortes, objets volants et échafaudages lors de vos sorties.';
@@ -413,7 +452,7 @@ export function calculateVigilance(
     categories[3].level = 'orange';
     categories[3].description = 'Chaleur étouffante exceptionnelle persistant de jour comme de nuit.';
     categories[3].advice = 'Buvez régulièrement de l\'eau. Mouillez-vous le corps. Fermez les volets le jour et évitez les efforts physiques.';
-  } else if (temp >= 29) {
+  } else if (temp >= 30) {
     categories[3].name = 'Canicule';
     categories[3].level = 'yellow';
     categories[3].description = 'Températures élevées, prudence pour les personnes fragiles ou âgées.';
@@ -428,7 +467,7 @@ export function calculateVigilance(
     categories[3].level = 'orange';
     categories[3].description = 'Froid polaire extrême persistant, vent aggravant fortement le ressenti de gel.';
     categories[3].advice = 'Limitez l\'exposition des enfants et personnes sensibles dehors. Habillez-vous chaudement en multipliant les couches.';
-  } else if (temp < 1) {
+  } else if (temp <= 0) {
     categories[3].name = 'Grand Froid';
     categories[3].level = 'yellow';
     categories[3].description = 'Gelées généralisées. Verglas fréquent sur chaussées et trottoirs.';

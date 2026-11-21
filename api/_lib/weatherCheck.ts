@@ -42,17 +42,19 @@ export async function checkAllSubscriptions(): Promise<{ checked: number; sent: 
       if (!weather?.current) continue;
 
       const currentTemp = weather.current.temperature_2m;
-      const currentWind = Math.max(weather.current.wind_speed_10m || 0, weather.current.wind_gusts_10m || 0);
-      const isRainingNow = weather.current.precipitation > 0;
+      const windSpeed = weather.current.wind_speed_10m ?? undefined;
+      const windGusts = weather.current.wind_gusts_10m ?? undefined;
+      const isRainingNow = (weather.current.precipitation ?? 0) >= 0.1;
       const isStormingNow = [95, 96, 99].includes(weather.current.weather_code);
       const isHotNow = (weather.current.apparent_temperature ?? currentTemp) >= 30;
 
       const vigilanceStatus = calculateVigilance(
         currentTemp,
-        currentWind,
+        windSpeed,
         weather.current.weather_code || 0,
         weather.current.precipitation || 0,
-        weather.daily?.precipitation_sum?.[0]
+        weather.daily?.precipitation_sum?.[0],
+        windGusts
       );
       const currentVigilance = vigilanceStatus.globalLevel || 'green';
 

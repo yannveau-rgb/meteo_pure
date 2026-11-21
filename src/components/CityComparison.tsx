@@ -125,8 +125,8 @@ export default function CityComparison({ currentCommune, currentWeather }: CityC
 
     const code1 = currentWeather.current.weatherCode;
     const code2 = comparedWeather.current.weatherCode;
-    const isRaining1 = code1 >= 51 && code1 <= 82;
-    const isRaining2 = code2 >= 51 && code2 <= 82;
+    const isRaining1 = (code1 >= 51 && code1 <= 67) || (code1 >= 80 && code1 <= 82);
+    const isRaining2 = (code2 >= 51 && code2 <= 67) || (code2 >= 80 && code2 <= 82);
 
     if (t1 > 30 && t2 > 30) {
       return {

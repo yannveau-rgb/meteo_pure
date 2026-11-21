@@ -152,10 +152,34 @@ export default function App() {
     if (weather && selectedDayIndex >= weather.daily.length) setSelectedDayIndex(0);
   }, [weather, selectedDayIndex]);
 
-  // Position of the sun in the sky. The hour-by-hour ruler was removed, so the
-  // sky always reflects the live hour (stable within a given minute).
-  const now = new Date();
-  const currentFloatHour = now.getHours() + now.getMinutes() / 60;
+  // Position of the sun in the sky in Europe/Paris, refreshed every minute so
+  // the sky stays in sync if the app remains open across dusk/dawn.
+  const getParisFloatHour = () => {
+    try {
+      const parts = new Intl.DateTimeFormat('fr-FR', {
+        timeZone: 'Europe/Paris',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).formatToParts(new Date());
+      let h = 12;
+      let m = 0;
+      for (const p of parts) {
+        if (p.type === 'hour') h = parseInt(p.value, 10);
+        if (p.type === 'minute') m = parseInt(p.value, 10);
+      }
+      if (h === 24) h = 0;
+      return h + m / 60;
+    } catch {
+      const d = new Date();
+      return d.getHours() + d.getMinutes() / 60;
+    }
+  };
+  const [currentFloatHour, setCurrentFloatHour] = useState<number>(getParisFloatHour);
+  useEffect(() => {
+    const id = setInterval(() => setCurrentFloatHour(getParisFloatHour()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const sunriseFloat = React.useMemo(() => {
     if (!weather?.sunrise) return 7.0;
@@ -735,33 +759,13 @@ export default function App() {
                       onSelectFavorite={setCurrentCommune}
                     />
 
-                    {/* Real hour-by-hour strip for the selected day */}
+                    {/* Real hour-by-hour strip for the next 12 hours */}
                     <HourlyForecast
-                      hourlyData={
-                        selectedDayIndex === 0
-                          ? weather.hourly
-                          : (weather.daily[selectedDayIndex]?.hourly || [])
-                      }
-                      humidity={
-                        selectedDayIndex === 0
-                          ? weather.current.humidity
-                          : (weather.daily[selectedDayIndex]?.humidity ?? weather.current.humidity)
-                      }
-                      dayName={
-                        selectedDayIndex === 0
-                          ? "Aujourd'hui"
-                          : (weather.daily[selectedDayIndex]?.date || 'Sélectionné')
-                      }
-                      sunrise={
-                        selectedDayIndex === 0
-                          ? weather.sunrise
-                          : (weather.daily[selectedDayIndex]?.sunrise || weather.sunrise)
-                      }
-                      sunset={
-                        selectedDayIndex === 0
-                          ? weather.sunset
-                          : (weather.daily[selectedDayIndex]?.sunset || weather.sunset)
-                      }
+                      hourlyData={weather.hourly}
+                      humidity={weather.current.humidity}
+                      dayName="Prochaines heures"
+                      sunrise={weather.sunrise}
+                      sunset={weather.sunset}
                     />
 
                     {/* All 7-day forecast, daylight gain/loss, hourly & detailed cards on the same page */}

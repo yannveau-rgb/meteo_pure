@@ -57,10 +57,11 @@ export function skyCodeFromCloudCover(
  * Ensures full consistency between the daily card icon and the hourly forecast:
  * 1. Priority to Storm (95) if storm is predicted in any model and confirmed by hourly data or high rain prob (>= 35%).
  * 2. Priority to Snow if snow hours are present, or daily snow code with measurable precipitation (>= 0.2mm).
- * 3. Priority to Rain if rain hours are present, or daily rain code with measurable precipitation (>= 0.2mm).
- * 4. If no measurable precipitation (totalPrecip < 0.2mm and dayPrecipSum < 0.2mm) and no rain hours,
- *    demote to dominant daytime sky (Soleil, Peu nuageux, Éclaircies, Couvert) to avoid showing a rain cloud
- *    icon on days where every hour shows 0 mm and dry sky.
+ * 3. Priority to Freezing Rain (56, 57, 66, 67) if present.
+ * 4. Priority to Rain if rain hours are present (picking the most frequent/intense code), or daily rain code with measurable precipitation (>= 0.2mm).
+ * 5. Priority to Fog (45, 48) if significant fog hours are present on a dry day.
+ * 6. If no measurable precipitation (totalPrecip < 0.2mm and dayPrecipSum < 0.2mm) and no rain hours,
+ *    demote to dominant daytime sky (Soleil, Peu nuageux, Éclaircies, Couvert) — breaking ties toward the cloudier sky.
  */
 export function computeRepresentativeDailyCode(params: {
   apiDailyCode: number;
@@ -72,6 +73,22 @@ export function computeRepresentativeDailyCode(params: {
   if (!daytimeHours || daytimeHours.length === 0) {
     return apiDailyCode;
   }
+
+  const mostFrequentCode = (items: Array<{ weatherCode: number }>): number => {
+    const freq = new Map<number, number>();
+    for (const item of items) {
+      freq.set(item.weatherCode, (freq.get(item.weatherCode) ?? 0) + 1);
+    }
+    let bestCode = items[0].weatherCode;
+    let bestCount = -1;
+    for (const [c, count] of freq.entries()) {
+      if (count > bestCount || (count === bestCount && c > bestCode)) {
+        bestCode = c;
+        bestCount = count;
+      }
+    }
+    return bestCode;
+  };
 
   // Priority 1: High-impact storm events
   const stormHours = daytimeHours.filter(h => h.weatherCode === 95 || h.weatherCode === 96 || h.weatherCode === 99);
@@ -89,7 +106,12 @@ export function computeRepresentativeDailyCode(params: {
     (h.weatherCode >= 71 && h.weatherCode <= 77) || h.weatherCode === 85 || h.weatherCode === 86
   );
 
-  // Priority 3: Rain/drizzle
+  // Priority 3: Freezing rain
+  const freezingRainHours = daytimeHours.filter(h =>
+    h.weatherCode === 56 || h.weatherCode === 57 || h.weatherCode === 66 || h.weatherCode === 67
+  );
+
+  // Priority 4: Rain/drizzle
   const hasDailyRainCode = (apiDailyCode >= 50 && apiDailyCode <= 69) || (apiDailyCode >= 80 && apiDailyCode <= 84);
   const heavyRainHours = daytimeHours.filter(h =>
     (h.weatherCode === 63 || h.weatherCode === 65 || h.weatherCode === 81 || h.weatherCode === 82)
@@ -102,28 +124,38 @@ export function computeRepresentativeDailyCode(params: {
   const hasMeasurablePrecip = totalPrecip >= 0.2 || dayPrecipSum >= 0.2;
 
   if (snowHours.length > 0) {
-    return snowHours[0].weatherCode;
+    return mostFrequentCode(snowHours);
   }
   if (hasDailySnowCode && hasMeasurablePrecip) {
     return apiDailyCode;
   }
+  if (freezingRainHours.length > 0) {
+    return mostFrequentCode(freezingRainHours);
+  }
   if (heavyRainHours.length > 0) {
-    return heavyRainHours[0].weatherCode;
+    return mostFrequentCode(heavyRainHours);
   }
   if (lightRainHours.length > 0) {
-    return lightRainHours[0].weatherCode;
+    return mostFrequentCode(lightRainHours);
   }
   if (hasDailyRainCode && hasMeasurablePrecip) {
     return apiDailyCode;
   }
 
+  // Priority 5: Fog when persistent over daytime hours
+  const fogHours = daytimeHours.filter(h => h.weatherCode === 45 || h.weatherCode === 48);
+  if (fogHours.length >= 2 || fogHours.length >= Math.ceil(daytimeHours.length * 0.25)) {
+    return fogHours[0].weatherCode;
+  }
+
   // Dry day or negligible virga/trace:
   // Daytime hourly codes are already derived from cloud cover and filtered for false drizzle.
   // The day's icon is the dominant sky over daytime hours (0=Soleil, 1=Peu nuageux, 2=Éclaircies, 3=Couvert).
+  // Ties break toward the cloudier sky (`lastIndexOf`) to avoid over-optimistic sun icons.
   const counts = [0, 1, 2, 3].map(c => daytimeHours.filter(h => h.weatherCode === c).length);
   const maxCount = Math.max(...counts);
   if (maxCount > 0) {
-    return counts.indexOf(maxCount);
+    return counts.lastIndexOf(maxCount);
   }
 
   return daytimeHours[0]?.weatherCode ?? apiDailyCode;
@@ -228,6 +260,29 @@ export async function getCommuneByCoords(lat: number, lon: number): Promise<Comm
   }
 }
 
+/** Longest wait per Open-Meteo model endpoint so one slow endpoint never blocks the others. */
+const MODEL_FETCH_TIMEOUT_MS = 6500;
+
+function fetchJsonWithTimeout(url: string, label: string, parentSignal?: AbortSignal): Promise<any> {
+  const controller = new AbortController();
+  const onParentAbort = () => controller.abort();
+  if (parentSignal) {
+    if (parentSignal.aborted) controller.abort();
+    else parentSignal.addEventListener('abort', onParentAbort, { once: true });
+  }
+  const timer = setTimeout(() => controller.abort(), MODEL_FETCH_TIMEOUT_MS);
+
+  return fetch(url, { signal: controller.signal })
+    .then(r => {
+      if (!r.ok) throw new Error(`${label} status ${r.status}`);
+      return r.json();
+    })
+    .finally(() => {
+      clearTimeout(timer);
+      parentSignal?.removeEventListener('abort', onParentAbort);
+    });
+}
+
 /**
  * Fetch Weather Data for selected French commune via Open-Meteo using Météo-France high-resolution model.
  */
@@ -279,9 +334,9 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
 
   try {
     const [resMF, resStd, resEcmwf] = await Promise.allSettled([
-      fetch(urlMeteoFrance, { signal }).then(r => { if (!r.ok) throw new Error(`MeteoFrance status ${r.status}`); return r.json(); }),
-      fetch(urlStandard, { signal }).then(r => { if (!r.ok) throw new Error(`Standard API status ${r.status}`); return r.json(); }),
-      fetch(urlEcmwf, { signal }).then(r => { if (!r.ok) throw new Error(`ECMWF status ${r.status}`); return r.json(); })
+      fetchJsonWithTimeout(urlMeteoFrance, 'MeteoFrance', signal),
+      fetchJsonWithTimeout(urlStandard, 'Standard API', signal),
+      fetchJsonWithTimeout(urlEcmwf, 'ECMWF', signal),
     ]);
 
     if (resMF.status === 'fulfilled') {
@@ -359,7 +414,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
     const isoStringPrefix = `${tMap.year}-${tMap.month}-${tMap.day}T${hourStr}`;
     
     // Find closest hour index in data
-    let startIdx = 0;
+    let startIdx = -1;
     for (let i = 0; i < hourlyTimes.length; i++) {
       if (hourlyTimes[i].startsWith(isoStringPrefix)) {
         startIdx = i;
@@ -367,7 +422,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       }
     }
     
-    if (startIdx === 0) {
+    if (startIdx === -1) {
       // Fallback: use Paris hour to avoid offset with API data (always Europe/Paris)
       startIdx = Math.max(0, localHour);
     }
@@ -442,14 +497,13 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
 
     if (imminentStorm) {
       currentCode = 95; // Display Orageux
-    } else if (imminentRainCode > 0 && currentCode < 50) {
+    } else if (imminentRainCode > 0 && (currentCode <= 3 || currentCode === 45 || currentCode === 48)) {
       currentCode = imminentRainCode; // Display Rain
     }
 
     // 4. Dry-sky refinement from observed cloud cover.
-    // This used to key off precipitation probability, which turned a 100%
-    // overcast sky into "Peu nuageux" whenever rain was unlikely.
-    if (currentCode < 50) {
+    // Only applies to clear/cloudy sky codes (0-3) — never overwrite fog (45, 48)!
+    if (currentCode <= 3) {
       currentCode = skyCodeFromCloudCover(currentCloudCover, currentCode, lowCloud, midCloud);
     }
 
@@ -474,7 +528,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
     // temperature is used; the models keep the rest.
     const observedLocal = observed && observed.distanceKm <= OBSERVATION_LOCAL_KM ? observed : null;
     const observedRate = observedLocal?.precipitationRateMmH;
-    if (observedRate !== undefined && observedRate > 0 && currentCode < 50) {
+    if (observedRate !== undefined && observedRate > 0 && (currentCode <= 3 || currentCode === 45 || currentCode === 48)) {
       currentCode = observedRate >= 2.5 ? 63 : 61; // pluie modérée / faible
     }
 
@@ -569,6 +623,37 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
         models.blend.hourlyCloud[idx],
       ]) ?? hourlyCloud[idx] ?? fallbackData?.hourly?.cloud_cover?.[idx] ?? 0;
 
+    /** Resolves one hourly slot's weather code with multi-model blending, false-drizzle fix & fog preservation. */
+    const resolveHourlyCode = (idx: number): number => {
+      let code = hourlyCodes[idx] ?? 0;
+      const fallbackCode = fallbackData?.hourly?.weather_code?.[idx] ?? 0;
+
+      // 1. Multi-model hourly blending for active rain/storm
+      const codeIsDry = code <= 3;
+      const fallbackIsActive = (fallbackCode >= 50 && fallbackCode <= 69) || (fallbackCode >= 80 && fallbackCode <= 99);
+      const prob = hourlyProb[idx] ?? fallbackData?.hourly?.precipitation_probability?.[idx] ?? 0;
+
+      if (codeIsDry && fallbackIsActive && prob >= 30) {
+        code = fallbackCode;
+      }
+
+      // 2. Fix false drizzle
+      const precip = hourlyPrecip[idx] ?? fallbackData?.hourly?.precipitation?.[idx] ?? 0;
+      const cloud = hourlyConsensusCloud(idx);
+      if ((code >= 50 && code <= 59) || (code >= 60 && code <= 69)) {
+        if (precip === 0) {
+          code = skyCodeFromCloudCover(cloud, 3);
+        }
+      }
+
+      // 3. Dry-sky codes (0-3) come from cloud cover, preserving fog (45, 48)
+      if (code <= 3) {
+        code = skyCodeFromCloudCover(cloud, code);
+      }
+
+      return code;
+    };
+
     for (let j = 0; j < 12; j++) {
       const idx = startIdx + j;
       if (idx < hourlyTimes.length) {
@@ -577,33 +662,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
         if (hTemp === null) continue;
         const timeStr = hourlyTimes[idx];
         const hourLabel = timeStr ? timeStr.split('T')[1].substring(0, 5) : `${(localHour + j) % 24}:00`;
-        let code = hourlyCodes[idx] ?? 0;
-        const fallbackCode = fallbackData?.hourly?.weather_code?.[idx] ?? 0;
-
-        // 1. Multi-model hourly blending:
-        // If MeteoFrance hourly code is dry (or overcast) but the standard GFS/ECMWF model predicts a storm or rain,
-        // and the precipitation probability is significant, prioritize the active weather code!
-        const codeIsDry = code < 50 || code === 3;
-        const fallbackIsActive = (fallbackCode >= 50 && fallbackCode <= 69) || (fallbackCode >= 80 && fallbackCode <= 99);
-        const prob = hourlyProb[idx] ?? fallbackData?.hourly?.precipitation_probability?.[idx] ?? 0;
-
-        if (codeIsDry && fallbackIsActive && prob >= 30) {
-          code = fallbackCode;
-        }
-        
-        // 2. Fix false drizzle
-        const precip = hourlyPrecip[idx] ?? fallbackData?.hourly?.precipitation?.[idx] ?? 0;
-        const cloud = hourlyConsensusCloud(idx);
-        if ((code >= 50 && code <= 59) || (code >= 60 && code <= 69)) {
-          if (precip === 0) {
-            code = skyCodeFromCloudCover(cloud, 3);
-          }
-        }
-
-        // 3. Dry-sky codes come from cloud cover, not from rain probability
-        if (code < 50) {
-          code = skyCodeFromCloudCover(cloud, code);
-        }
+        const code = resolveHourlyCode(idx);
 
         const hourKey = hourlyTimes[idx]?.substring(0, 13) ?? '';
         const lpMax = lightningByHour.get(hourKey) ?? 0;
@@ -669,33 +728,7 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
         if (idx < hourlyTimes.length) {
           const timeStr = hourlyTimes[idx];
           const hourLabel = timeStr ? timeStr.split('T')[1].substring(0, 5) : `${h.toString().padStart(2, '0')}:00`;
-          let hCode = hourlyCodes[idx] ?? 0;
-          const fallbackHCode = fallbackData?.hourly?.weather_code?.[idx] ?? 0;
-
-          // 1. Multi-model hourly blending for daily forecast:
-          // If MeteoFrance hourly code is dry (or overcast) but the standard model predicts storm/rain,
-          // and the precipitation probability is significant, prioritize the active weather!
-          const hCodeIsDry = hCode < 50 || hCode === 3;
-          const fallbackHIsActive = (fallbackHCode >= 50 && fallbackHCode <= 69) || (fallbackHCode >= 80 && fallbackHCode <= 99);
-          const hProb = hourlyProb[idx] ?? fallbackData?.hourly?.precipitation_probability?.[idx] ?? 0;
-
-          if (hCodeIsDry && fallbackHIsActive && hProb >= 30) {
-            hCode = fallbackHCode;
-          }
-
-          // 2. Fix false drizzle
-          const hPrecip = hourlyPrecip[idx] ?? fallbackData?.hourly?.precipitation?.[idx] ?? 0;
-          const hCloud = hourlyConsensusCloud(idx);
-          if ((hCode >= 50 && hCode <= 59) || (hCode >= 60 && hCode <= 69)) {
-            if (hPrecip === 0) {
-              hCode = skyCodeFromCloudCover(hCloud, 3);
-            }
-          }
-
-          // 3. Dry-sky codes come from cloud cover, not from rain probability
-          if (hCode < 50) {
-            hCode = skyCodeFromCloudCover(hCloud, hCode);
-          }
+          const hCode = resolveHourlyCode(idx);
 
           const dTemp = hourlyConsensusTemp(idx);
           if (dTemp === null) continue;
@@ -739,10 +772,17 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
           return hr >= 7 && hr <= 21;
         });
 
-        if (daytimeHours.length > 0) {
+        // For today (k === 0), prefer upcoming daytime hours if at least 3 remain,
+        // so an early-morning shower doesn't keep a rain icon over a sunny afternoon.
+        const remainingDaytime = k === 0
+          ? daytimeHours.filter(h => parseInt(h.time.split(':')[0], 10) >= localHour)
+          : daytimeHours;
+        const targetDaytime = (k === 0 && remainingDaytime.length >= 3) ? remainingDaytime : daytimeHours;
+
+        if (targetDaytime.length > 0) {
           representativeCode = computeRepresentativeDailyCode({
             apiDailyCode,
-            daytimeHours,
+            daytimeHours: targetDaytime,
             fallbackDailyCode: fallbackData?.daily?.weather_code?.[k],
             dayPrecipSum: dailyPrecipSum[k],
           });
@@ -780,18 +820,27 @@ export async function fetchWeatherData(commune: Commune, signal?: AbortSignal): 
       });
     }
 
-    // Use real minutely_15 data for precise rain-in-the-hour nowcast; fall back to probability model
-    const minutely15 = data.minutely_15 ?? null;
-    const realRain = minutely15
-      ? parseRealMinutelyRain({
-          time: minutely15.time ?? [],
-          precipitation: minutely15.precipitation ?? [],
-          weather_code: minutely15.weather_code ?? [],
-        })
-      : null;
+    // Use real minutely_15 data for precise rain-in-the-hour nowcast; fall back to standard blend if MF is null
+    const extractMinutely = (src: any) =>
+      src?.minutely_15
+        ? parseRealMinutelyRain({
+            time: src.minutely_15.time ?? [],
+            precipitation: src.minutely_15.precipitation ?? [],
+            weather_code: src.minutely_15.weather_code ?? [],
+          })
+        : null;
+    const realRain = extractMinutely(data) ?? extractMinutely(fallbackData);
     // No minutely_15 data: leave it empty (the card says "indisponible") rather than
     // draw a rain curve out of a probability.
     const rainInTheHour = realRain ?? [];
+    // If a local station is actively measuring rain right now, reflect it on the +0m bar
+    if (observedRate !== undefined && observedRate > 0 && rainInTheHour.length > 0 && rainInTheHour[0].intensity === 'none') {
+      rainInTheHour[0] = {
+        minutes: rainInTheHour[0].minutes,
+        intensity: observedRate >= 2.5 ? 'heavy' : observedRate >= 0.5 ? 'moderate' : 'light',
+        percentage: observedRate >= 2.5 ? 85 : observedRate >= 0.5 ? 58 : 30,
+      };
+    }
 
     // Dynamic Vigilance Status calculation — includes today's accumulated
     // rain and current wind gusts for a more realistic risk assessment.

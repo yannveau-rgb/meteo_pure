@@ -8,16 +8,20 @@ describe('calculateVigilance', () => {
     expect(v.categories.every(c => c.level === 'green')).toBe(true);
   });
 
-  it('flags wind orange at 50 km/h', () => {
-    const v = calculateVigilance(18, 55, 1, 0);
-    const wind = v.categories.find(c => c.name === 'Vent violent');
-    expect(wind?.level).toBe('orange');
+  it('flags wind yellow at 65 km/h, orange at 90 km/h and red at 120 km/h+', () => {
+    const yellow = calculateVigilance(18, 68, 1, 0);
+    expect(yellow.categories.find(c => c.name === 'Vent violent')?.level).toBe('yellow');
+
+    const orange = calculateVigilance(18, 95, 1, 0);
+    expect(orange.categories.find(c => c.name === 'Vent violent')?.level).toBe('orange');
+
+    const red = calculateVigilance(18, 125, 1, 0);
+    expect(red.categories.find(c => c.name === 'Vent violent')?.level).toBe('red');
   });
 
-  it('flags wind red at 70 km/h+', () => {
-    const v = calculateVigilance(18, 75, 1, 0);
-    const wind = v.categories.find(c => c.name === 'Vent violent');
-    expect(wind?.level).toBe('red');
+  it('does not trigger frost vigilance above 0°C', () => {
+    const v = calculateVigilance(0.9, 10, 1, 0);
+    expect(v.categories.find(c => c.name === 'Canicule / Grand Froid')?.level).toBe('green');
   });
 
   it('flags thunderstorm yellow for code 95', () => {

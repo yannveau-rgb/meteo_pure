@@ -24,13 +24,21 @@ export interface CachedWeather {
 
 const keyFor = (cityKey: string) => `${PREFIX}${cityKey}`;
 
+function parisDateKey(ts: number): string {
+  try {
+    return new Date(ts).toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
+  } catch {
+    return new Date(ts).toISOString().slice(0, 10);
+  }
+}
+
 export function readWeatherCache(cityKey: string): CachedWeather | null {
   try {
     const raw = localStorage.getItem(keyFor(cityKey));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedWeather;
     if (!parsed?.data?.current || typeof parsed.at !== 'number') return null;
-    if (Date.now() - parsed.at > MAX_AGE_MS) {
+    if (Date.now() - parsed.at > MAX_AGE_MS || parisDateKey(parsed.at) !== parisDateKey(Date.now())) {
       localStorage.removeItem(keyFor(cityKey));
       return null;
     }

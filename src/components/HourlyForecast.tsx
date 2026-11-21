@@ -80,7 +80,7 @@ function HourlyForecast({ hourlyData, humidity, dayName = "Aujourd'hui", sunrise
         <div className="space-y-2 pt-2 border-t border-white/10">
           <div className="flex justify-between items-center text-[11px] font-bold text-white/50 tracking-wider">
             <span className="uppercase">Modèle AROME</span>
-            <span className="text-white/80">Humidité {dayName === "Aujourd'hui" ? 'actuelle' : 'moyenne'} : {humidity}%</span>
+            <span className="text-white/80">Humidité {dayName === "Aujourd'hui" || dayName === "Prochaines heures" ? 'actuelle' : 'moyenne'} : {humidity}%</span>
           </div>
           <div className="relative w-full h-[3px] bg-white/15 rounded-full overflow-hidden">
             <div 

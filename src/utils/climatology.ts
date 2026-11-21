@@ -140,7 +140,16 @@ export function getLocalClimatology(
   elevationM?: number
 ): LocalClimatology {
   const date = new Date();
-  const monthIdx = date.getMonth(); // 0-11
+  let monthIdx = date.getMonth(); // 0-11
+  try {
+    const mStr = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Paris', month: 'numeric' }).format(date);
+    const parsed = parseInt(mStr, 10);
+    if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 12) {
+      monthIdx = parsed - 1;
+    }
+  } catch {
+    // fallback to local month
+  }
   
   const FrenchMonths = [
     "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", 

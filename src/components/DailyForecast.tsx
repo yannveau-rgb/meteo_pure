@@ -1,10 +1,10 @@
 import React, { useState, lazy, Suspense, useMemo } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { DailyForecastItem } from '../types';
-import { getWeatherUI } from '../utils/weatherUtils';
+import { getWeatherUI, isHourNight } from '../utils/weatherUtils';
 import { CONFIDENCE_LABELS } from '../utils/forecastConfidence';
 import { getDaylightInfo } from '../utils/ephemeris';
-import { Calendar, Share2, Sun } from 'lucide-react';
+import { Calendar, Share2, Sun, Droplets, Wind, ChevronDown } from 'lucide-react';
 import { generateElementDataUrl, copyDataUrlToClipboard, downloadDataUrl } from '../utils/shareUtils';
 
 const SharePreviewModal = lazy(() => import('./SharePreviewModal'));
@@ -30,6 +30,7 @@ function DailyForecast({
   const [isGenerating, setIsGenerating] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<'copied' | 'downloaded' | 'error' | null>(null);
+  const [expandedDay, setExpandedDay] = useState<number | null>(null);
 
   // Per-day daylight duration and daily minutes gained/lost
   const dailyDaylight = useMemo(
@@ -42,11 +43,16 @@ function DailyForecast({
 
   const weeklyDelta = dailyDaylight[0]?.weeklyDeltaMinutes ?? 0;
 
-  // Find global min and max temperature across all 7 days to calibrate custom temperature line meters
+  // Calibrate temperature spectrum bars to the week's actual min/max (with a
+  // minimum 8°C span so a flat week doesn't exaggerate 1°C differences).
   const temperaturesMax = dailyData.map(d => d.tempMax);
   const temperaturesMin = dailyData.map(d => d.tempMin);
-  const absoluteMax = Math.max(...temperaturesMax, 35);
-  const absoluteMin = Math.min(...temperaturesMin, -5);
+  const rawMax = temperaturesMax.length > 0 ? Math.max(...temperaturesMax) : 25;
+  const rawMin = temperaturesMin.length > 0 ? Math.min(...temperaturesMin) : 5;
+  const rawSpan = rawMax - rawMin;
+  const pad = rawSpan < 8 ? (8 - rawSpan) / 2 : 1;
+  const absoluteMax = rawMax + pad;
+  const absoluteMin = rawMin - pad;
   const temperatureSpan = absoluteMax - absoluteMin || 1;
 
   const handleShareWeek = () => {
@@ -136,27 +142,34 @@ function DailyForecast({
           const maxRightPercentage = ((day.tempMax - absoluteMin) / temperatureSpan) * 100;
           const barWidth = Math.max(8, maxRightPercentage - minLeftPercentage);
 
+          const isExpanded = expandedDay === index;
+
           return (
+            <div key={index} className="space-y-1.5">
             <motion.button
               type="button"
-              key={index}
               initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.4), ease: 'easeOut' }}
               whileTap={{ scale: 0.97 }}
-              onClick={() => onSelectDay(index)}
+              onClick={() => {
+                onSelectDay(index);
+                setExpandedDay(isExpanded ? null : index);
+              }}
+              aria-expanded={isExpanded}
               aria-pressed={selectedDayIndex === index}
               data-selected={selectedDayIndex === index}
               className="day-row justify-between !gap-1.5"
-              title="Cliquez pour afficher la météo heure par heure et l'éphéméride de ce jour"
+              title="Cliquez pour déplier la météo heure par heure de ce jour"
             >
               {/* Day Name + Daylight Delta */}
               <div className="w-[5.25rem] shrink-0 text-left flex flex-col leading-tight">
-                <span className="text-white font-bold whitespace-nowrap">
+                <span className="text-white font-bold whitespace-nowrap flex items-center gap-1">
                   {day.date}
+                  <ChevronDown className={`w-3 h-3 text-white/50 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-sky-300' : ''}`} />
                 </span>
                 {dayLight && (
-                  <span className="text-[11px] text-white/45 font-medium tabular-figures mt-0.5">
+                  <span className="text-[11px] text-white/65 font-medium tabular-figures mt-0.5">
                     {dayLight.dayLengthFormatted}&nbsp;de jour
                   </span>
                 )}
@@ -168,7 +181,7 @@ function DailyForecast({
               </div>
 
               {/* Min Temperature label */}
-              <span className="w-8 text-right text-white/60 font-bold pr-1 tabular-figures">
+              <span className="w-8 text-right text-white/70 font-bold pr-1 tabular-figures">
                 {Math.round(day.tempMin)}°
               </span>
 
@@ -208,12 +221,73 @@ function DailyForecast({
                   return (
                     <span
                       title={reasons}
-                      className={`w-1.5 h-1.5 rounded-full ${strong ? 'bg-orange-400/80' : 'bg-white/30'}`}
+                      className={`w-1.5 h-1.5 rounded-full ${strong ? 'bg-orange-400/80' : 'bg-white/40'}`}
                     />
                   );
                 })()}
               </span>
             </motion.button>
+
+            <AnimatePresence initial={false}>
+              {isExpanded && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
+                  className="overflow-hidden"
+                  data-html2canvas-ignore="true"
+                >
+                  <div className="tile space-y-2.5 mx-1 mb-1">
+                    {/* Day summary metrics */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/80 font-medium">
+                      <span className="font-semibold text-white">{weatherUI.label}</span>
+                      <div className="flex items-center gap-3 tabular-figures">
+                        {day.precipitationSum !== undefined && (
+                          <span className="flex items-center gap-1 text-sky-200">
+                            <Droplets className="w-3 h-3" />
+                            {day.precipitationSum.toFixed(1)} mm
+                            {day.precipProbMax !== undefined && ` (${Math.round(day.precipProbMax)}%)`}
+                          </span>
+                        )}
+                        {(day.windGusts ?? day.windMax) !== undefined && (
+                          <span className="flex items-center gap-1 text-white/75">
+                            <Wind className="w-3 h-3" />
+                            {Math.round((day.windGusts ?? day.windMax)!)} km/h
+                          </span>
+                        )}
+                        {day.uvIndex !== undefined && (
+                          <span className="text-amber-200">UV {day.uvIndex}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Inline 24h horizontal scroll */}
+                    {day.hourly && day.hourly.length > 0 && (
+                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                        {day.hourly.map((h, hIdx) => {
+                          const hr = parseInt(h.time.split(':')[0], 10);
+                          const hNight = isHourNight(hr, day.sunrise, day.sunset);
+                          const hUI = getWeatherUI(h.weatherCode, hNight);
+                          const HIcon = hUI.icon;
+                          return (
+                            <div
+                              key={hIdx}
+                              className="flex flex-col items-center justify-between min-w-[46px] py-1.5 px-1 rounded-xl bg-white/5 border border-white/10 gap-1 shrink-0"
+                            >
+                              <span className="text-[11px] text-white/65 font-semibold tabular-figures">{h.time}</span>
+                              <HIcon className={`w-4 h-4 ${hUI.colorClass}`} />
+                              <span className="text-[11px] text-white font-bold tabular-figures">{Math.round(h.temp)}°</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            </div>
           );
         })}
       </div>

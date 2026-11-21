@@ -15,7 +15,7 @@ const TABS: Array<{
   ariaLabel: string;
   Icon: React.ComponentType<{ className?: string }>;
 }> = [
-  { id: 'meteo', label: 'Proche', ariaLabel: 'Météo actuelle', Icon: Navigation },
+  { id: 'meteo', label: 'Météo', ariaLabel: 'Météo actuelle', Icon: Navigation },
   { id: 'villes', label: 'Villes', ariaLabel: 'Villes favorites', Icon: Heart },
   { id: 'cartes', label: 'Carte', ariaLabel: 'Radar et cartes', Icon: Map },
   { id: 'alertes', label: 'Vigilance', ariaLabel: 'Vigilance Météo', Icon: ShieldAlert },
