@@ -467,13 +467,11 @@ export default function App() {
   }, [theme, currentFloatHour, activeWeatherCode, sunriseFloat, sunsetFloat]);
 
   useEffect(() => {
-    const pageBg = getThemePageBackground(theme) ?? topSkyColor;
     const fallbackBgColor = theme !== 'auto' ? getThemeMeta(theme).bottomColor : topSkyColor;
-    document.body.style.background = pageBg;
-    document.body.style.backgroundColor = fallbackBgColor;
-    document.documentElement.style.background = pageBg;
-    document.documentElement.style.backgroundColor = fallbackBgColor;
-    document.documentElement.style.backgroundAttachment = 'fixed';
+    // Solid backgroundColor (not a gradient) on html/body lets Android Chrome /
+    // Samsung One UI tint the bottom gesture bar accurately to match the theme.
+    document.body.style.background = fallbackBgColor;
+    document.documentElement.style.background = fallbackBgColor;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', topSkyColor);
     // Remember the live sky so the first paint of the next visit matches.

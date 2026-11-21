@@ -1,5 +1,5 @@
 // Météo Pure Service Worker - Offline cache + Web Push
-const CACHE_NAME = 'meteo-pure-v11';
+const CACHE_NAME = 'meteo-pure-v12';
 const META_CACHE_NAME = 'meteo-pure-meta';
 const ASSETS_TO_CACHE = [
   '/',
