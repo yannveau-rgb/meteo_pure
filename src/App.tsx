@@ -722,7 +722,7 @@ export default function App() {
         )}
 
         {/* VIEW ROUTER (MAIN BODY AREA) */}
-        <div id="main-content" className="flex-1 min-h-0 flex flex-col relative z-10 overflow-y-auto no-scrollbar">
+        <div id="main-content" className="flex-1 min-h-0 flex flex-col relative z-10 overflow-y-auto overscroll-y-contain no-scrollbar">
           <AnimatePresence mode="wait">
             
             {/* SCREEN 1: UNIFIED METEO VIEW (HERO + HOURLY + 7-DAY & DETAILS ON ONE PAGE) */}
@@ -984,7 +984,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.15 }}
-                className="flex-1 flex flex-col text-white space-y-4 pb-6 focus:outline-none"
+                className="w-full shrink-0 flex flex-col text-white space-y-4 pb-8 focus:outline-none"
               >
                 {/* Apparence */}
                 <section className="card space-y-3">
