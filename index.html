@@ -18,10 +18,15 @@
       html, body {
         margin: 0;
         padding: 0;
+        width: 100%;
         height: 100%;
-        background-color: #3878cf;
+        background-color: #0b1020;
         color: #ffffff;
         overflow: hidden;
+      }
+      #root {
+        width: 100%;
+        height: 100%;
       }
       #root:empty {
         height: 100%;
@@ -37,15 +42,21 @@
         try {
           // Thème choisi : posé avant le premier rendu pour éviter un flash de l'ancien.
           var th = localStorage.getItem('meteo_pure_theme');
-          if (th === 'aurora' || th === 'kraft' || th === 'radar' || th === 'pop') {
+          var themeColors = { aurora: '#0b1020', kraft: '#f2e8d5', radar: '#030a06', pop: '#ff3d8b' };
+          var initialColor = '#3878cf';
+          if (th && themeColors[th]) {
             document.documentElement.setAttribute('data-theme', th);
+            initialColor = themeColors[th];
+          } else {
+            var c = localStorage.getItem('meteo_pure_sky_color');
+            if (c) initialColor = c;
           }
-          var c = localStorage.getItem('meteo_pure_sky_color');
-          if (c) {
-            document.documentElement.style.backgroundColor = c;
-            var m = document.querySelector('meta[name="theme-color"]');
-            if (m) m.setAttribute('content', c);
-          }
+          document.documentElement.style.backgroundColor = initialColor;
+          document.addEventListener('DOMContentLoaded', function() {
+            if (document.body) document.body.style.backgroundColor = initialColor;
+          });
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m) m.setAttribute('content', initialColor);
         } catch (e) {}
       })();
     </script>

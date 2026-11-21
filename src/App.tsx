@@ -468,13 +468,16 @@ export default function App() {
 
   useEffect(() => {
     const pageBg = getThemePageBackground(theme) ?? topSkyColor;
+    const fallbackBgColor = theme !== 'auto' ? getThemeMeta(theme).bottomColor : topSkyColor;
     document.body.style.background = pageBg;
+    document.body.style.backgroundColor = fallbackBgColor;
     document.documentElement.style.background = pageBg;
+    document.documentElement.style.backgroundColor = fallbackBgColor;
     document.documentElement.style.backgroundAttachment = 'fixed';
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', topSkyColor);
     // Remember the live sky so the first paint of the next visit matches.
-    if (weather) {
+    if (weather && theme === 'auto') {
       try { localStorage.setItem(SKY_COLOR_KEY, topSkyColor); } catch { /* optional */ }
     }
   }, [topSkyColor, weather, theme]);
@@ -487,7 +490,7 @@ export default function App() {
 
   return (
     <div 
-      className="h-[100dvh] w-full flex justify-center items-center p-0 sm:p-6 text-white antialiased overflow-hidden"
+      className="h-full w-full flex justify-center items-center p-0 sm:p-6 text-white antialiased overflow-hidden"
       style={{ background: getThemePageBackground(theme) ?? topSkyColor }}
     >
       
